@@ -6,297 +6,251 @@
 <title>lendings.kz — Мои сайты</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-
   :root {
-    --bg:        #0a0a0f;
-    --surface:   #111118;
-    --surface2:  #16161f;
-    --border:    #1e1e2e;
-    --accent:    #7c5cff;
-    --accent-dim:#5b3fd4;
-    --accent-glow: #7c5cff33;
-    --text:      #f0eeff;
-    --muted:     #6b6b8a;
-    --muted2:    #3d3d55;
-    --green:     #34d896;
-    --radius:    16px;
+    --bg:#0a0a0f; --surface:#111118; --surface2:#16161f; --border:#1e1e2e;
+    --accent:#7c5cff; --accent-dim:#5b3fd4; --accent-glow:#7c5cff33;
+    --text:#f0eeff; --muted:#6b6b8a; --muted2:#3d3d55;
+    --green:#34d896; --red:#ff4f6a; --radius:16px;
   }
-
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
   html { scroll-behavior:smooth; }
-
-  body {
-    font-family: 'Sora', -apple-system, sans-serif;
-    background: var(--bg); color: var(--text);
-    min-height:100vh; overflow-x:hidden;
-  }
-
-  /* Ambient */
+  body { font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
   body::before {
     content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background:
-      radial-gradient(ellipse 70% 30% at 10% 5%, #7c5cff14 0%, transparent 60%),
-      radial-gradient(ellipse 40% 25% at 90% 80%, #5b3fd40c 0%, transparent 60%);
+    background: radial-gradient(ellipse 70% 30% at 10% 5%, #7c5cff14 0%, transparent 60%),
+                radial-gradient(ellipse 40% 25% at 90% 80%, #5b3fd40c 0%, transparent 60%);
   }
 
-  /* ─── HEADER ─── */
+  /* Header */
   .header {
     position:sticky; top:0; z-index:100;
-    background: #0a0a0fee;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background:#0a0a0fee; backdrop-filter:blur(20px) saturate(180%);
     border-bottom:1px solid var(--border);
-    padding:0 20px;
-    height:58px;
+    padding:0 20px; height:58px;
     display:flex; align-items:center; justify-content:space-between; gap:12px;
   }
-  .logo { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; flex-shrink:0; }
-  .logo span { color: var(--accent); }
-
-  .header-right {
-    display:flex; align-items:center; gap:10px;
-    min-width:0;
-  }
-  .user-phone {
-    font-size:.8rem; color: var(--muted);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:120px;
-  }
+  .logo { font-size:1.05rem; font-weight:700; letter-spacing:-.02em; flex-shrink:0; }
+  .logo span { color:var(--accent); }
+  .header-right { display:flex; align-items:center; gap:10px; min-width:0; }
   .token-badge {
     display:inline-flex; align-items:center; gap:5px;
-    background: var(--accent-glow); border:1px solid #7c5cff44;
-    color: var(--accent); border-radius:20px;
-    padding:5px 10px; font-size:.76rem; font-weight:600;
-    white-space:nowrap; flex-shrink:0;
+    background:var(--accent-glow); border:1px solid #7c5cff44;
+    color:var(--accent); border-radius:20px;
+    padding:5px 10px; font-size:.76rem; font-weight:600; white-space:nowrap; flex-shrink:0;
   }
   .token-badge svg { width:11px; height:11px; }
-
-  .logout-btn {
-    background:none; border:1px solid var(--border);
-    color: var(--muted); border-radius:9px;
-    padding:7px 12px; font-family:inherit; font-size:.78rem;
-    cursor:pointer; transition: all .2s; white-space:nowrap; flex-shrink:0;
+  .header-btn {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    border-radius:9px; padding:7px 12px; font-family:inherit; font-size:.78rem;
+    cursor:pointer; white-space:nowrap; flex-shrink:0; text-decoration:none;
+    display:inline-flex; align-items:center; gap:5px; transition:all .2s;
   }
-  .logout-btn:hover { border-color:#ff4f6a44; color:#ff4f6a; }
+  .header-btn:hover { color:var(--text); border-color:#7c5cff44; }
+  .header-btn.danger:hover { border-color:#ff4f6a44; color:var(--red); }
 
-  /* ─── CONTENT ─── */
-  .content {
-    position:relative; z-index:1;
-    max-width:680px; margin:0 auto;
-    padding:28px 20px 60px;
+  /* Toast */
+  .toast {
+    position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-8px);
+    background:#1a1430; border:1px solid #7c5cff44; border-radius:12px;
+    padding:12px 20px; font-size:.84rem; font-weight:500; color:var(--text);
+    box-shadow:0 8px 32px #00000088; z-index:200;
+    opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; white-space:nowrap;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* Content */
+  .content { position:relative; z-index:1; max-width:680px; margin:0 auto; padding:24px 20px 60px; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  /* New site banner */
+  .new-banner {
+    display:none; align-items:center; gap:12px;
+    background:linear-gradient(135deg,#1a2a1a,#111c14);
+    border:1px solid #34d89633; border-radius:14px;
+    padding:14px 18px; margin-bottom:20px;
+    animation:fadeUp .4s both;
+  }
+  .new-banner.show { display:flex; }
+  .new-banner-icon { font-size:1.4rem; flex-shrink:0; }
+  .new-banner-text { flex:1; font-size:.85rem; line-height:1.5; }
+  .new-banner-text strong { color:var(--green); }
+  .new-banner-link {
+    color:var(--green); text-decoration:none; font-size:.8rem; font-weight:600;
+    white-space:nowrap; display:flex; align-items:center; gap:4px;
   }
 
-  /* ─── HERO CARD ─── */
+  /* Hero card */
   .hero-card {
-    background: linear-gradient(135deg, #1a1430 0%, #12111c 100%);
-    border:1px solid #7c5cff33;
-    border-radius: calc(var(--radius) + 4px);
-    padding:28px 24px;
-    margin-bottom:32px;
-    position:relative; overflow:hidden;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both;
+    background:linear-gradient(135deg,#1a1430,#12111c);
+    border:1px solid #7c5cff33; border-radius:calc(var(--radius) + 4px);
+    padding:24px 20px; margin-bottom:28px; position:relative; overflow:hidden;
+    animation:fadeUp .4s both;
   }
   .hero-card::before {
     content:''; position:absolute; top:-40px; right:-40px;
-    width:180px; height:180px; border-radius:50%;
-    background: radial-gradient(circle, #7c5cff22 0%, transparent 70%);
-    pointer-events:none;
+    width:160px; height:160px; border-radius:50%;
+    background:radial-gradient(circle,#7c5cff22 0%,transparent 70%); pointer-events:none;
   }
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(20px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-
-  .hero-label {
-    font-size:.75rem; font-weight:500; text-transform:uppercase;
-    letter-spacing:.08em; color: var(--muted); margin-bottom:8px;
-  }
-  .hero-title {
-    font-size:1.25rem; font-weight:700; letter-spacing:-.02em;
-    margin-bottom:4px; line-height:1.3;
-  }
-  .hero-sub {
-    font-size:.84rem; color: var(--muted); margin-bottom:22px; line-height:1.5;
-  }
-  .hero-sub strong { color: var(--accent); }
-
+  .hero-label { font-size:.72rem; font-weight:500; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
+  .hero-title { font-size:1.15rem; font-weight:700; letter-spacing:-.02em; margin-bottom:4px; }
+  .hero-sub { font-size:.82rem; color:var(--muted); margin-bottom:18px; line-height:1.5; }
+  .hero-sub strong { color:var(--accent); }
   .btn-create {
-    display:inline-flex; align-items:center; gap:8px;
-    background: var(--accent); color:#fff;
-    border:none; border-radius:12px;
-    padding:14px 24px; font-family:inherit; font-size:.95rem; font-weight:600;
-    cursor:pointer; text-decoration:none; letter-spacing:-.01em;
-    transition: transform .15s, box-shadow .2s, opacity .15s;
-    box-shadow: 0 4px 24px #7c5cff44;
+    display:inline-flex; align-items:center; gap:7px;
+    background:var(--accent); color:#fff; border:none; border-radius:11px;
+    padding:12px 20px; font-family:inherit; font-size:.9rem; font-weight:600;
+    cursor:pointer; text-decoration:none;
+    transition:transform .15s, box-shadow .2s, opacity .15s;
+    box-shadow:0 4px 20px #7c5cff44;
   }
-  .btn-create:hover { opacity:.9; transform:translateY(-2px); box-shadow: 0 8px 32px #7c5cff55; }
-  .btn-create:active { transform:translateY(0); }
-  .btn-create svg { width:18px; height:18px; }
+  .btn-create:hover { opacity:.9; transform:translateY(-2px); box-shadow:0 8px 28px #7c5cff55; }
+  .hero-meta {
+    margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
+    font-size:.76rem; color:var(--muted); display:flex; align-items:center; gap:6px;
+  }
+  .hero-meta a { color:var(--accent); text-decoration:none; font-weight:600; }
 
-  .token-info {
-    margin-top:20px; padding-top:20px;
-    border-top:1px solid var(--border);
-    font-size:.78rem; color: var(--muted); line-height:1.6;
-    display:flex; align-items:flex-start; gap:8px;
-  }
-  .token-info svg { width:14px; height:14px; flex-shrink:0; margin-top:2px; color: var(--accent); }
+  /* Section */
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; animation:fadeUp .4s .1s both; }
+  .section-title { font-size:.95rem; font-weight:600; letter-spacing:-.01em; }
+  .section-count { font-size:.76rem; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; }
 
-  /* ─── SECTION TITLE ─── */
-  .section-head {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:16px;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .1s both;
-  }
-  .section-title {
-    font-size:1rem; font-weight:600; letter-spacing:-.01em;
-  }
-  .section-count {
-    font-size:.78rem; color: var(--muted);
-    background: var(--surface2); border:1px solid var(--border);
-    border-radius:20px; padding:3px 10px;
-  }
-
-  /* ─── SITES GRID ─── */
-  .sites-grid {
-    display:flex; flex-direction:column; gap:12px;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .15s both;
-  }
+  /* Sites grid */
+  .sites-grid { display:flex; flex-direction:column; gap:10px; animation:fadeUp .4s .15s both; }
 
   .site-card {
-    background: var(--surface);
-    border:1px solid var(--border);
-    border-radius: var(--radius);
-    padding:20px;
-    transition: border-color .2s, transform .2s;
-    position:relative; overflow:hidden;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px; transition:border-color .2s, transform .2s; position:relative; overflow:hidden;
   }
-  .site-card:hover {
-    border-color:#7c5cff44;
-    transform:translateY(-1px);
-  }
+  .site-card:hover { border-color:#7c5cff33; transform:translateY(-1px); }
   .site-card::before {
     content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
-    background: var(--accent); border-radius:2px 0 0 2px;
-    opacity:0; transition: opacity .2s;
+    background:var(--accent); border-radius:2px 0 0 2px; opacity:0; transition:opacity .2s;
   }
   .site-card:hover::before { opacity:1; }
 
-  .site-card-top {
-    display:flex; align-items:flex-start; justify-content:space-between;
-    gap:12px; margin-bottom:12px;
-  }
-  .site-title {
-    font-size:.98rem; font-weight:600; letter-spacing:-.01em;
-    line-height:1.3;
-  }
-  .site-slug {
-    font-size:.74rem; color: var(--muted);
-    margin-top:3px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:180px;
-  }
-
-  .token-cost {
+  .site-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .site-title { font-size:.95rem; font-weight:600; letter-spacing:-.01em; line-height:1.3; }
+  .site-slug { font-size:.72rem; color:var(--muted); margin-top:2px; }
+  .site-badge {
     display:inline-flex; align-items:center; gap:4px;
     background:#7c5cff18; border:1px solid #7c5cff33;
-    color: var(--accent); border-radius:8px;
-    padding:4px 8px; font-size:.72rem; font-weight:600;
-    flex-shrink:0;
+    color:var(--accent); border-radius:7px; padding:3px 8px; font-size:.7rem; font-weight:600; flex-shrink:0;
   }
 
-  .site-meta {
-    font-size:.76rem; color: var(--muted);
-    margin-bottom:14px;
-    display:flex; align-items:center; gap:6px;
-  }
-  .site-meta svg { width:12px; height:12px; }
+  .site-meta { font-size:.74rem; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
 
-  .site-actions {
-    display:flex; gap:8px; flex-wrap:wrap;
-  }
+  .site-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .btn-open {
     display:inline-flex; align-items:center; gap:5px;
-    background: var(--accent); color:#fff;
-    border:none; border-radius:9px;
-    padding:9px 16px; font-family:inherit; font-size:.82rem; font-weight:600;
-    cursor:pointer; text-decoration:none;
-    transition: opacity .15s, transform .15s;
+    background:var(--accent); color:#fff; border:none; border-radius:9px;
+    padding:8px 14px; font-family:inherit; font-size:.8rem; font-weight:600;
+    cursor:pointer; text-decoration:none; transition:opacity .15s, transform .15s;
   }
   .btn-open:hover { opacity:.9; transform:translateY(-1px); }
-  .btn-edit {
+  .btn-copy {
     display:inline-flex; align-items:center; gap:5px;
-    background: var(--surface2); color: var(--muted);
-    border:1px solid var(--border); border-radius:9px;
-    padding:9px 16px; font-family:inherit; font-size:.82rem; font-weight:500;
-    cursor:pointer; text-decoration:none;
-    transition: border-color .2s, color .2s;
+    background:var(--surface2); color:var(--muted); border:1px solid var(--border); border-radius:9px;
+    padding:8px 14px; font-family:inherit; font-size:.8rem; cursor:pointer;
+    transition:all .2s;
   }
-  .btn-edit:hover { border-color:#7c5cff44; color: var(--text); }
+  .btn-copy:hover { border-color:#7c5cff44; color:var(--text); }
+  .btn-copy.copied { border-color:#34d89644; color:var(--green); }
+  .btn-delete {
+    display:inline-flex; align-items:center; gap:4px;
+    background:none; color:var(--muted2); border:none;
+    font-family:inherit; font-size:.78rem; cursor:pointer;
+    padding:8px 10px; border-radius:9px; margin-left:auto;
+    transition:color .2s, background .2s;
+  }
+  .btn-delete:hover { color:var(--red); background:#ff4f6a12; }
 
-  /* ─── EMPTY STATE ─── */
-  .empty-state {
-    text-align:center; padding:56px 24px;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .2s both;
+  /* Empty */
+  .empty-state { text-align:center; padding:48px 24px; animation:fadeUp .4s .2s both; }
+  .empty-icon { width:60px; height:60px; border-radius:18px; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; color:var(--muted); }
+  .empty-title { font-size:.98rem; font-weight:600; margin-bottom:8px; }
+  .empty-sub { font-size:.82rem; color:var(--muted); line-height:1.6; margin-bottom:22px; }
+
+  /* Confirm delete modal */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:#00000088;
+    z-index:300; align-items:center; justify-content:center; padding:20px;
   }
-  .empty-icon {
-    width:64px; height:64px; border-radius:20px;
-    background: var(--surface2); border:1px solid var(--border);
-    display:flex; align-items:center; justify-content:center;
-    margin:0 auto 20px; color: var(--muted);
+  .modal-overlay.show { display:flex; }
+  .modal {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:28px 24px; max-width:360px; width:100%; text-align:center;
+    animation:fadeUp .25s both;
   }
-  .empty-icon svg { width:28px; height:28px; }
-  .empty-title {
-    font-size:1rem; font-weight:600; margin-bottom:8px;
+  .modal-title { font-size:1rem; font-weight:700; margin-bottom:8px; }
+  .modal-sub { font-size:.84rem; color:var(--muted); margin-bottom:22px; line-height:1.5; }
+  .modal-actions { display:flex; gap:10px; }
+  .modal-cancel {
+    flex:1; padding:12px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--muted); border-radius:11px; font-family:inherit; font-size:.88rem; cursor:pointer;
+    transition:all .2s;
   }
-  .empty-sub {
-    font-size:.84rem; color: var(--muted); line-height:1.6; margin-bottom:24px;
+  .modal-cancel:hover { color:var(--text); }
+  .modal-confirm {
+    flex:1; padding:12px; background:#ff4f6a22; border:1px solid #ff4f6a44;
+    color:var(--red); border-radius:11px; font-family:inherit; font-size:.88rem; font-weight:600; cursor:pointer;
+    transition:all .2s;
   }
+  .modal-confirm:hover { background:#ff4f6a33; }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <header class="header">
   <div class="logo">lendings<span>.kz</span></div>
   <div class="header-right">
-    <span class="user-phone">{{ user.phone }}</span>
     <div class="token-badge">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
       {{ user.tokens }} токенов
     </div>
+    <a href="/profile" class="header-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Профиль
+    </a>
     <form method="POST" action="/auth/logout" style="margin:0">
-      <button type="submit" class="logout-btn">Выйти</button>
+      <button type="submit" class="header-btn danger">Выйти</button>
     </form>
   </div>
 </header>
 
-<!-- Content -->
+<div class="toast" id="toast"></div>
+
 <main class="content">
 
-  <!-- Hero: Create new site -->
-  <div class="hero-card">
-    <div class="hero-label">Генерация сайта</div>
-    <div class="hero-title">Создать новый сайт</div>
-    <div class="hero-sub">
-      Ответьте на несколько вопросов — ИИ соберёт сайт за минуту.<br>
-      У вас <strong>{{ user.tokens }} токенов</strong>.
+  <!-- New site banner -->
+  <div class="new-banner" id="newBanner">
+    <div class="new-banner-icon">🎉</div>
+    <div class="new-banner-text">
+      <strong>Сайт готов!</strong> Ссылка скопирована — отправляй клиентам.
     </div>
+    <a href="#" id="newBannerLink" class="new-banner-link" target="_blank">
+      Открыть
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+    </a>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero-card">
+    <div class="hero-label">Новый сайт</div>
+    <div class="hero-title">Создать сайт-визитку</div>
+    <div class="hero-sub">ИИ соберёт сайт за минуту по твоим ответам.<br>Баланс: <strong>{{ user.tokens }} токенов</strong></div>
     <a href="/create" class="btn-create">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Создать сайт
     </a>
-    <div class="token-info">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      1 генерация сайта ≈ 10 токенов. &nbsp;<a href="/payment" style="color:var(--accent);text-decoration:none;font-weight:600;">Пополнить →</a>
+    <div class="hero-meta">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      1 сайт ≈ 10 токенов · <a href="/payment">Пополнить баланс →</a>
     </div>
   </div>
 
-  <!-- Sites list -->
+  <!-- Sites -->
   {% if sites %}
   <div class="section-head">
     <div class="section-title">Мои сайты</div>
@@ -305,52 +259,48 @@
 
   <div class="sites-grid">
     {% for site in sites %}
-    <div class="site-card">
-      <div class="site-card-top">
+    <div class="site-card" id="card-{{ site.slug }}">
+      <div class="site-top">
         <div>
           <div class="site-title">{{ site.title }}</div>
-          <div class="site-slug">lendings.kz/s/{{ site.slug }}</div>
+          <div class="site-slug">/site/{{ site.slug }}</div>
         </div>
-        <div class="token-cost">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+        <div class="site-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
           {{ site.tokens_used }}
         </div>
       </div>
       <div class="site-meta">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        {{ site.created }}
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        {{ site.created[:10] }}
       </div>
       <div class="site-actions">
         <a href="/site/{{ site.slug }}" class="btn-open" target="_blank">
           Открыть
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         </a>
-        <a href="/create" class="btn-edit">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Редактировать
-        </a>
+        <button class="btn-copy" onclick="copyLink('/site/{{ site.slug }}', this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Копировать
+        </button>
+        <button class="btn-delete" onclick="confirmDelete('{{ site.slug }}', '{{ site.title }}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          Удалить
+        </button>
       </div>
     </div>
     {% endfor %}
   </div>
 
   {% else %}
-  <!-- Empty state -->
   <div class="empty-state">
     <div class="empty-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <rect x="3" y="3" width="18" height="18" rx="3"/>
-        <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-      </svg>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     </div>
     <div class="empty-title">Сайтов пока нет</div>
-    <div class="empty-sub">Создайте свой первый сайт за 5 минут —<br>ИИ сгенерирует его по вашим ответам.</div>
+    <div class="empty-sub">Создайте первый — ИИ соберёт<br>по вашим ответам за минуту.</div>
     <a href="/create" class="btn-create">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="18" height="18">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Создать первый сайт
     </a>
   </div>
@@ -358,5 +308,69 @@
 
 </main>
 
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Удалить сайт?</div>
+    <div class="modal-sub" id="deleteModalSub">Сайт будет удалён безвозвратно. Токены не возвращаются.</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Отмена</button>
+      <form id="deleteForm" method="POST">
+        <button type="submit" class="modal-confirm" style="width:100%">Удалить</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// New site banner from URL param
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const newUrl = params.get('new');
+  if (newUrl) {
+    const banner = document.getElementById('newBanner');
+    const link = document.getElementById('newBannerLink');
+    link.href = newUrl;
+    banner.classList.add('show');
+    // Clean URL
+    history.replaceState({}, '', '/dashboard');
+  }
+})();
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function copyLink(path, btn) {
+  const url = window.location.origin + path;
+  navigator.clipboard.writeText(url).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Скопировано`;
+    showToast('Ссылка скопирована!');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Копировать`;
+    }, 2000);
+  });
+}
+
+let pendingDeleteSlug = null;
+function confirmDelete(slug, title) {
+  pendingDeleteSlug = slug;
+  document.getElementById('deleteModalSub').textContent = `«${title}» будет удалён безвозвратно. Токены не возвращаются.`;
+  document.getElementById('deleteForm').action = `/site/${slug}/delete`;
+  document.getElementById('deleteModal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('deleteModal').classList.remove('show');
+  pendingDeleteSlug = null;
+}
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
 </body>
 </html>

@@ -3,199 +3,198 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Сайт за 5 минут</title>
+<title>Создать сайт — lendings.kz</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f0f0f; color:#fff; height:100vh; display:flex; flex-direction:column; }
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --border: #1e1e2e;
+    --accent: #7c5cff; --accent-glow: #7c5cff33; --text: #f0eeff; --muted: #6b6b8a;
+  }
+  html, body { height:100%; font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
 
-  .photo-upload-area { margin-top:10px; }
+  /* Top bar */
+  .top-bar {
+    padding:14px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:#0a0a0fee; backdrop-filter:blur(12px);
+    position:sticky; top:0; z-index:10;
+  }
+  .logo { font-size:.95rem; font-weight:700; }
+  .logo span { color:var(--accent); }
+  .top-right { display:flex; align-items:center; gap:10px; }
+  .token-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--accent-glow); border:1px solid #7c5cff44;
+    color:var(--accent); border-radius:20px;
+    padding:5px 10px; font-size:.76rem; font-weight:600;
+  }
+  .back-link {
+    color:var(--muted); text-decoration:none; font-size:.8rem;
+    display:flex; align-items:center; gap:4px; transition:color .2s;
+  }
+  .back-link:hover { color:var(--text); }
+
+  /* Chat */
+  .chat-wrap { display:flex; flex-direction:column; height:calc(100vh - 57px); }
+  .chat-area { flex:1; overflow-y:auto; padding:20px 20px 8px; display:flex; flex-direction:column; gap:10px; }
+
+  .msg { max-width:78%; padding:12px 16px; border-radius:18px; line-height:1.55; font-size:.9rem; white-space:pre-wrap; }
+  .msg.bot  { background:var(--surface); border:1px solid var(--border); border-bottom-left-radius:4px; color:#ddd; align-self:flex-start; }
+  .msg.user { background:var(--accent); border-bottom-right-radius:4px; color:#fff; align-self:flex-end; }
+
+  /* Photo upload */
+  .photo-upload-area { align-self:flex-start; margin-top:4px; }
   .upload-btn {
     display:inline-flex; align-items:center; gap:8px;
-    background:#252525; border:1.5px dashed #444; color:#aaa;
+    background:#1a1a2a; border:1.5px dashed #333; color:#aaa;
     padding:10px 18px; border-radius:12px; font-size:.85rem;
-    cursor:pointer; transition:all .18s;
+    cursor:pointer; transition:all .18s; font-family:inherit;
   }
-  .upload-btn:hover { border-color:#7c5cff; color:#fff; background:#1a1a2e; }
+  .upload-btn:hover { border-color:var(--accent); color:#fff; }
   .photos-preview { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .photo-thumb { width:70px; height:70px; border-radius:8px; object-fit:cover; border:2px solid #333; }
-  .photo-count { font-size:.75rem; color:#7c5cff; margin-top:6px; }
+  .photo-count { font-size:.75rem; color:var(--accent); margin-top:6px; }
 
-  .top-bar { padding:16px 24px; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; }
-  .logo { font-size:1rem; font-weight:700; color:#fff; }
-  .logo span { color:#7c5cff; }
-
-  .chat-area { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:12px; }
-
-  .msg { max-width:78%; padding:12px 16px; border-radius:18px; line-height:1.55; font-size:0.9rem; white-space:pre-wrap; }
-  .msg.bot  { background:#1a1a1a; border-bottom-left-radius:4px; color:#ddd; align-self:flex-start; }
-  .msg.user { background:#7c5cff; border-bottom-right-radius:4px; color:#fff; align-self:flex-end; }
-
-  /* Chips — обычные */
-  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  /* Chips */
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-self:flex-start; max-width:90%; }
   .chip {
-    background:#252525; border:1px solid #333; color:#ccc;
-    padding:7px 14px; border-radius:20px; font-size:0.82rem;
-    cursor:pointer; transition:all .18s; user-select:none;
+    background:#1a1a2a; border:1px solid #2a2a3a; color:#ccc;
+    padding:7px 14px; border-radius:20px; font-size:.82rem;
+    cursor:pointer; transition:all .18s; user-select:none; font-family:inherit;
   }
-  .chip:hover { background:#7c5cff22; border-color:#7c5cff; color:#fff; }
-  .chip.selected { background:#7c5cff; border-color:#7c5cff; color:#fff; }
+  .chip:hover { background:#7c5cff22; border-color:var(--accent); color:#fff; }
+  .chip.selected { background:var(--accent); border-color:var(--accent); color:#fff; }
 
-  /* Vibe cards — визуальные превью стилей */
-  .vibe-cards { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  /* Vibe cards */
+  .vibe-cards { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; align-self:flex-start; max-width:95%; }
   .vibe-card {
-    width:110px; border-radius:14px; overflow:hidden; cursor:pointer;
-    border:2px solid transparent; transition:all .2s; flex-shrink:0;
-    user-select:none;
+    width:100px; border-radius:12px; overflow:hidden; cursor:pointer;
+    border:2px solid transparent; transition:all .2s; flex-shrink:0; user-select:none;
   }
   .vibe-card:hover { transform:translateY(-3px); }
-  .vibe-card.selected { border-color:#7c5cff; box-shadow:0 0 0 1px #7c5cff; }
-  .vibe-preview {
-    height:80px; display:flex; flex-direction:column;
-    justify-content:flex-end; padding:10px 10px 6px; position:relative; overflow:hidden;
-  }
-  .vibe-preview .line1 { height:8px; border-radius:4px; margin-bottom:5px; width:70%; }
-  .vibe-preview .line2 { height:5px; border-radius:3px; width:50%; }
-  .vibe-preview .dot {
-    position:absolute; top:10px; right:10px;
-    width:20px; height:20px; border-radius:50%;
-  }
-  .vibe-label {
-    padding:7px 8px; font-size:0.72rem; text-align:center;
-    font-weight:500; background:#111; color:#ccc; line-height:1.3;
-  }
+  .vibe-card.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .vibe-preview { height:70px; display:flex; flex-direction:column; justify-content:flex-end; padding:8px; position:relative; }
+  .vibe-preview .line1 { height:7px; border-radius:4px; margin-bottom:4px; width:65%; }
+  .vibe-preview .line2 { height:4px; border-radius:3px; width:45%; }
+  .vibe-preview .dot { position:absolute; top:8px; right:8px; width:16px; height:16px; border-radius:50%; }
+  .vibe-label { padding:6px 7px; font-size:.68rem; text-align:center; font-weight:500; line-height:1.3; }
 
-  .input-area { padding:14px 20px; border-top:1px solid #1a1a1a; display:flex; gap:10px; }
-  input[type=text] {
-    flex:1; background:#1a1a1a; border:1px solid #2a2a2a;
-    border-radius:24px; padding:11px 18px; color:#fff;
-    font-size:0.9rem; outline:none;
+  /* Input */
+  .input-area {
+    padding:12px 16px; border-top:1px solid var(--border);
+    display:flex; gap:10px; background:var(--bg);
   }
-  input[type=text]:focus { border-color:#7c5cff55; }
-  input[type=text]::placeholder { color:#444; }
-  button.send {
-    background:#7c5cff; border:none; border-radius:50%;
-    width:42px; height:42px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    transition:opacity .15s;
+  .text-inp {
+    flex:1; background:#111118; border:1px solid var(--border);
+    border-radius:24px; padding:11px 18px; color:var(--text);
+    font-family:inherit; font-size:.9rem; outline:none; transition:border-color .2s;
   }
-  button.send:hover { opacity:.85; }
-  button.send svg { fill:white; width:17px; height:17px; }
+  .text-inp:focus { border-color:#7c5cff55; }
+  .text-inp::placeholder { color:#444; }
+  .send-btn {
+    background:var(--accent); border:none; border-radius:50%;
+    width:42px; height:42px; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; transition:opacity .15s;
+  }
+  .send-btn:hover { opacity:.85; }
+  .send-btn:disabled { opacity:.4; cursor:not-allowed; }
 
-  .site-link {
-    display:inline-flex; align-items:center; gap:8px; margin-top:8px;
-    background:#7c5cff; color:white; padding:12px 22px;
-    border-radius:12px; text-decoration:none; font-weight:600; font-size:.9rem;
-  }
-
-  .typing { display:flex; gap:4px; padding:12px 16px; background:#1a1a1a; border-radius:18px; border-bottom-left-radius:4px; width:56px; align-self:flex-start; }
+  /* Typing */
+  .typing { display:flex; gap:4px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; border-bottom-left-radius:4px; width:56px; align-self:flex-start; }
   .typing span { width:6px; height:6px; background:#444; border-radius:50%; animation:bounce 1.2s infinite; }
   .typing span:nth-child(2) { animation-delay:.2s; }
   .typing span:nth-child(3) { animation-delay:.4s; }
-  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* Done */
+  .done-card {
+    background:linear-gradient(135deg,#1a1430,#12111c);
+    border:1px solid #7c5cff44; border-radius:18px;
+    padding:20px; align-self:flex-start; max-width:300px;
+  }
+  .done-title { font-size:.9rem; font-weight:600; margin-bottom:4px; }
+  .done-sub { font-size:.78rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
+  .done-actions { display:flex; flex-direction:column; gap:8px; }
+  .btn-open {
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--accent); color:#fff; border:none; border-radius:10px;
+    padding:11px 16px; font-family:inherit; font-size:.85rem; font-weight:600;
+    cursor:pointer; text-decoration:none; transition:opacity .15s;
+  }
+  .btn-open:hover { opacity:.9; }
+  .btn-dash {
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background:#1e1e2e; color:var(--muted); border:1px solid var(--border);
+    border-radius:10px; padding:11px 16px; font-family:inherit; font-size:.85rem;
+    cursor:pointer; text-decoration:none; transition:all .15s;
+  }
+  .btn-dash:hover { color:var(--text); border-color:#7c5cff44; }
+
+  /* No tokens */
+  .no-tokens {
+    background:#ff4f6a15; border:1px solid #ff4f6a33; border-radius:16px;
+    padding:20px; align-self:flex-start; max-width:300px; text-align:center;
+  }
+  .no-tokens-title { font-size:.9rem; font-weight:600; color:#ff4f6a; margin-bottom:6px; }
+  .no-tokens-sub { font-size:.8rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
+  .btn-topup {
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--accent); color:#fff; border:none; border-radius:10px;
+    padding:11px 20px; font-family:inherit; font-size:.85rem; font-weight:600;
+    cursor:pointer; text-decoration:none;
+  }
 </style>
 </head>
 <body>
+
 <div class="top-bar">
   <div class="logo">lendings<span>.kz</span></div>
+  <div class="top-right">
+    <div class="token-badge" id="tokenBadge">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+      {{ user.tokens }} токенов
+    </div>
+    <a href="/dashboard" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Дашборд
+    </a>
+  </div>
 </div>
 
-<div class="chat-area" id="chat"></div>
-
-<div class="input-area">
-  <input type="text" id="inp" placeholder="Напиши ответ..." onkeydown="if(event.key==='Enter')send()">
-  <button class="send" onclick="send()">
-    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
-  </button>
+<div class="chat-wrap">
+  <div class="chat-area" id="chat"></div>
+  <div class="input-area">
+    <input type="text" id="inp" class="text-inp" placeholder="Напиши ответ..." onkeydown="if(event.key==='Enter')send()">
+    <button class="send-btn" id="sendBtn" onclick="send()">
+      <svg viewBox="0 0 24 24" fill="white" width="17" height="17"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
 </div>
 
 <script>
 let step = 0, data = {}, uploadedPhotos = [];
+let userTokens = {{ user.tokens }};
 
-function showPhotoUpload() {
-  const chat = document.getElementById('chat');
-  const wrap = document.createElement('div');
-  wrap.className = 'photo-upload-area';
-  wrap.id = 'photo-upload-wrap';
-  wrap.innerHTML = `
-    <label class="upload-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      Загрузить фото
-      <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
-    </label>
-    <div class="photos-preview" id="photos-preview"></div>
-    <div class="photo-count" id="photo-count"></div>
-  `;
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
+const STEP_IDS = ['name','services','city','photos','vibe','extra'];
 
-async function handlePhotos(input) {
-  const files = Array.from(input.files);
-  const preview = document.getElementById('photos-preview');
-  const count = document.getElementById('photo-count');
-
-  for (const file of files) {
-    const fd = new FormData();
-    fd.append('file', file);
-    const r = await fetch('/upload-photo', { method:'POST', body:fd });
-    const j = await r.json();
-    uploadedPhotos.push(j.url);  // сохраняем URL, не base64
-
-    const img = document.createElement('img');
-    img.className = 'photo-thumb';
-    img.src = j.url;
-    preview.appendChild(img);
-  }
-  count.textContent = `${uploadedPhotos.length} фото загружено`;
-  data.photo_urls = uploadedPhotos;  // передаём как URL список
-}
-
-// Конфиг чипов для конкретных шагов (по id шага)
-// Визуальные карточки стилей
 const VIBE_STYLES = [
-  { label:"Уютно\nи тепло",       value:"Уютно и тепло",         bg:"#FBF0EA", line1:"#C8847A", line2:"#E8C4BE", dot:"#C8847A", font:"Georgia,serif",    text:"#3a2a24" },
-  { label:"Дорого\nи стильно",    value:"Дорого и стильно",       bg:"#0D0D0D", line1:"#C9A84C", line2:"#7a6830", dot:"#C9A84C", font:"serif",            text:"#f0ead8" },
-  { label:"Свежо\nи современно",  value:"Свежо и современно",     bg:"#F0F7FF", line1:"#2D7DD2", line2:"#a8cbf0", dot:"#2D7DD2", font:"Helvetica,sans-serif", text:"#1a2333" },
-  { label:"Строго\nпрофи",        value:"Строго и профессионально",bg:"#F5F5F5", line1:"#222",   line2:"#888",   dot:"#222",    font:"Arial,sans-serif",  text:"#222" },
-  { label:"Ярко\nи молодёжно",    value:"Ярко и молодёжно",       bg:"#1a0a2e", line1:"#ff3cac", line2:"#784ba0", dot:"#ff3cac", font:"sans-serif",        text:"#fff" },
-  { label:"Нежно\nпастельно",     value:"Нежно и пастельно",      bg:"#FFF0F8", line1:"#F4A7C3", line2:"#fad4e5", dot:"#F4A7C3", font:"Georgia,serif",    text:"#6b3a52" },
-  { label:"Тёмно\nзагадочно",     value:"Тёмно и загадочно",      bg:"#121212", line1:"#8B5CF6", line2:"#4c2a80", dot:"#8B5CF6", font:"serif",            text:"#e0d0ff" },
-  { label:"Минимализм\nчистота",  value:"Минимализм и чистота",   bg:"#FFFFFF", line1:"#000",   line2:"#ccc",   dot:"#000",    font:"Helvetica,sans-serif", text:"#111" },
+  { label:"Уютно\nи тепло",        value:"Уютно и тепло",          bg:"#FBF0EA", line1:"#C8847A", line2:"#E8C4BE", dot:"#C8847A" },
+  { label:"Дорого\nи стильно",     value:"Дорого и стильно",        bg:"#0D0D0D", line1:"#C9A84C", line2:"#7a6830", dot:"#C9A84C" },
+  { label:"Свежо\nсовременно",     value:"Свежо и современно",      bg:"#F0F7FF", line1:"#2D7DD2", line2:"#a8cbf0", dot:"#2D7DD2" },
+  { label:"Строго\nпрофи",         value:"Строго и профессионально",bg:"#F5F5F5", line1:"#222",   line2:"#888",   dot:"#222"    },
+  { label:"Ярко\nмолодёжно",       value:"Ярко и молодёжно",        bg:"#1a0a2e", line1:"#ff3cac", line2:"#784ba0",dot:"#ff3cac" },
+  { label:"Нежно\nпастельно",      value:"Нежно и пастельно",       bg:"#FFF0F8", line1:"#F4A7C3", line2:"#fad4e5",dot:"#F4A7C3" },
+  { label:"Тёмно\nзагадочно",      value:"Тёмно и загадочно",       bg:"#121212", line1:"#8B5CF6", line2:"#4c2a80",dot:"#8B5CF6" },
+  { label:"Минимализм",            value:"Минимализм и чистота",    bg:"#FFFFFF", line1:"#000",   line2:"#ccc",   dot:"#000"    },
 ];
 
-const STEP_CHIPS = {
-  extra: [
-    "Всё ок 👍",
-    "Побольше анимаций",
-    "Только светлые тона",
-    "Только тёмные тона",
-    "Розовые/персиковые цвета",
-    "Золотые акценты",
-    "Без лишнего текста",
-  ],
-  photos: ["Пропустить →"],
-};
-
-const DEMO = [
-  { q: "Как тебя зовут и чем занимаешься? Например: «Я Айгуль, мастер маникюра»", a: "Я Айгуль, мастер маникюра" },
-  { q: "Какие услуги ты оказываешь? Перечисли с ценами как удобно",               a: "Маникюр от 5 000 ₸\nПедикюр от 6 000 ₸\nНаращивание от 12 000 ₸" },
-  { q: "В каком городе работаешь и как к тебе записаться? (WhatsApp, Telegram или телефон)", a: "Астана, WhatsApp 87064177628" },
-  { q: "Есть фотки работ? Пока пропустим — просто напиши «пропустить»",            a: "пропустить" },
-];
+const EXTRA_CHIPS = ["Всё ок 👍","Больше анимаций","Только светлые тона","Тёмные тона","Розовые/персиковые","Золотые акценты"];
 
 async function init() {
-  // показываем первые 3 шага как уже заполненные
-  const preFilled = DEMO.slice(0, 3);
-  for (const {q, a} of preFilled) {
-    addMsg(q, 'bot');
-    addMsg(a, 'user');
-  }
-  // шаг photos
-  addMsg("Добавь фотки своих работ — они появятся на сайте! Можно загрузить несколько. Или напиши «пропустить»", 'bot');
-  showPhotoUpload();
-  step = preFilled.length; // step = 3 (photos)
-  data = { name: DEMO[0].a, services: DEMO[1].a, city: DEMO[2].a };
-  document.getElementById('chat').scrollTop = 99999;
+  const r = await fetch('/start');
+  const j = await r.json();
+  addMsg(j.message, 'bot');
 }
 
 function addMsg(text, who, html=false) {
@@ -206,74 +205,6 @@ function addMsg(text, who, html=false) {
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   return div;
-}
-
-function showVibeCards(text) {
-  const chat = document.getElementById('chat');
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-self:flex-start;max-width:95%';
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'msg bot';
-  msgDiv.textContent = text;
-  wrap.appendChild(msgDiv);
-
-  const row = document.createElement('div');
-  row.className = 'vibe-cards';
-
-  VIBE_STYLES.forEach(s => {
-    const card = document.createElement('div');
-    card.className = 'vibe-card';
-    card.innerHTML = `
-      <div class="vibe-preview" style="background:${s.bg}">
-        <div class="dot" style="background:${s.dot}"></div>
-        <div class="line1" style="background:${s.line1};font-family:${s.font}"></div>
-        <div class="line2" style="background:${s.line2}"></div>
-      </div>
-      <div class="vibe-label" style="background:${s.bg}22;color:${s.text === '#fff' || s.bg.startsWith('#0') || s.bg === '#121212' || s.bg === '#1a' ? '#ccc' : '#555'}">${s.label}</div>
-    `;
-    card.onclick = () => {
-      row.querySelectorAll('.vibe-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      document.getElementById('inp').value = s.value;
-    };
-    row.appendChild(card);
-  });
-
-  wrap.appendChild(row);
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function addBotWithChips(text, chips) {
-  const chat = document.getElementById('chat');
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-self:flex-start;max-width:85%';
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'msg bot';
-  msgDiv.textContent = text;
-  wrap.appendChild(msgDiv);
-
-  if (chips && chips.length) {
-    const row = document.createElement('div');
-    row.className = 'chips';
-    chips.forEach(label => {
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.textContent = label;
-      chip.onclick = () => {
-        row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-        chip.classList.add('selected');
-        document.getElementById('inp').value = label.replace(/\s*[^\w\s,а-яёА-ЯЁ].*/u, '').trim();
-      };
-      row.appendChild(chip);
-    });
-    wrap.appendChild(row);
-  }
-
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
 }
 
 function showTyping() {
@@ -290,14 +221,140 @@ function removeTyping() {
   if (t) t.remove();
 }
 
-// Определяем id текущего шага по номеру
-const STEP_IDS = ['name','services','city','photos','vibe','extra'];
+function showPhotoUpload() {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'photo-upload-area';
+  wrap.innerHTML = `
+    <label class="upload-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Загрузить фото
+      <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+    </label>
+    <div class="photos-preview" id="photos-preview"></div>
+    <div class="photo-count" id="photo-count"></div>
+  `;
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function handlePhotos(input) {
+  const files = Array.from(input.files);
+  const preview = document.getElementById('photos-preview');
+  const count = document.getElementById('photo-count');
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/upload-photo', { method:'POST', body:fd });
+    const j = await r.json();
+    uploadedPhotos.push(j.url);
+    const img = document.createElement('img');
+    img.className = 'photo-thumb'; img.src = j.url;
+    preview.appendChild(img);
+  }
+  count.textContent = `${uploadedPhotos.length} фото загружено`;
+  data.photo_urls = uploadedPhotos;
+}
+
+function showVibeCards() {
+  const chat = document.getElementById('chat');
+  const row = document.createElement('div');
+  row.className = 'vibe-cards';
+  VIBE_STYLES.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'vibe-card';
+    const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg === '#121212';
+    card.innerHTML = `
+      <div class="vibe-preview" style="background:${s.bg}">
+        <div class="dot" style="background:${s.dot}"></div>
+        <div class="line1" style="background:${s.line1}"></div>
+        <div class="line2" style="background:${s.line2}"></div>
+      </div>
+      <div class="vibe-label" style="background:${isDark ? '#ffffff10' : '#00000008'};color:${isDark ? '#ccc':'#555'}">${s.label}</div>
+    `;
+    card.onclick = () => {
+      row.querySelectorAll('.vibe-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      document.getElementById('inp').value = s.value;
+    };
+    row.appendChild(card);
+  });
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showChips(items) {
+  const chat = document.getElementById('chat');
+  const row = document.createElement('div');
+  row.className = 'chips';
+  items.forEach(label => {
+    const chip = document.createElement('div');
+    chip.className = 'chip'; chip.textContent = label;
+    chip.onclick = () => {
+      row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      document.getElementById('inp').value = label.replace(/\s*[\p{Emoji}].*/u, '').trim() || label;
+    };
+    row.appendChild(chip);
+  });
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showDone(siteUrl) {
+  const chat = document.getElementById('chat');
+  const card = document.createElement('div');
+  card.className = 'done-card';
+  card.innerHTML = `
+    <div class="done-title">✅ Сайт готов!</div>
+    <div class="done-sub">Ссылка скопирована — можно сразу отправлять клиентам.</div>
+    <div class="done-actions">
+      <a href="${siteUrl}" target="_blank" class="btn-open">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        Открыть сайт
+      </a>
+      <a href="/dashboard?new=${siteUrl}" class="btn-dash">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Все мои сайты
+      </a>
+    </div>
+  `;
+  chat.appendChild(card);
+  chat.scrollTop = chat.scrollHeight;
+
+  // copy link to clipboard silently
+  const fullUrl = window.location.origin + siteUrl;
+  navigator.clipboard?.writeText(fullUrl).catch(() => {});
+
+  document.getElementById('inp').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+}
+
+function showNoTokens() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'no-tokens';
+  div.innerHTML = `
+    <div class="no-tokens-title">Недостаточно токенов</div>
+    <div class="no-tokens-sub">Пополните баланс — и сайт будет готов за минуту.</div>
+    <a href="/payment" class="btn-topup">Пополнить баланс →</a>
+  `;
+  chat.appendChild(div);
+  document.getElementById('inp').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+}
 
 async function send() {
   const inp = document.getElementById('inp');
   const answer = inp.value.trim();
   if (!answer) return;
   inp.value = '';
+
+  // photos step — save and continue
+  if (STEP_IDS[step] === 'photos') {
+    data.photo_urls = uploadedPhotos;
+  }
+
   addMsg(answer, 'user');
   showTyping();
 
@@ -307,29 +364,42 @@ async function send() {
     body: JSON.stringify({step, answer, data})
   });
   const j = await r.json();
-  data = j.data;
-  step = j.step;
 
   setTimeout(() => {
     removeTyping();
-    if (j.done) {
-      addMsg("Готово! Генерирую твой сайт...", 'bot');
-      if (j.site_url) {
-        setTimeout(() => {
-          addMsg(`<a class="site-link" href="${j.site_url}" target="_blank">🔗 Открыть сайт →</a>`, 'bot', true);
-        }, 400);
+
+    if (j.error) {
+      if (j.error.includes('токен')) {
+        showNoTokens();
+      } else {
+        addMsg(j.error, 'bot');
       }
+      return;
+    }
+
+    data = j.data;
+    step = j.step;
+
+    if (j.done) {
+      // Update token badge
+      userTokens = j.tokens_left;
+      document.getElementById('tokenBadge').innerHTML = `
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+        ${userTokens} токенов
+      `;
+      showDone(j.site_url);
     } else {
-      // проверяем есть ли чипы для следующего шага
       const nextId = STEP_IDS[step];
-      const chips = STEP_CHIPS[nextId];
       if (nextId === 'photos') {
         addMsg(j.message, 'bot');
         showPhotoUpload();
+        showChips(['Пропустить →']);
       } else if (nextId === 'vibe') {
-        showVibeCards(j.message);
-      } else if (chips) {
-        addBotWithChips(j.message, chips);
+        addMsg(j.message, 'bot');
+        showVibeCards();
+      } else if (nextId === 'extra') {
+        addMsg(j.message, 'bot');
+        showChips(EXTRA_CHIPS);
       } else {
         addMsg(j.message, 'bot');
       }

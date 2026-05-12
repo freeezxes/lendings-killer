@@ -610,6 +610,46 @@ async def start(request: Request):
 
 # ── Payment routes ────────────────────────────────────────────────────────────
 
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request):
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    log = db.get_token_log(user["id"])
+    sites = db.get_user_sites(user["id"])
+    return templates.TemplateResponse(request, "profile.html", {
+        "user": user,
+        "log": log,
+        "sites_count": len(sites),
+    })
+
+
+@app.post("/profile/update")
+async def profile_update(request: Request, name: str = Form(...)):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    db.update_user_name(user["id"], name)
+    return RedirectResponse("/profile", status_code=302)
+
+
+@app.post("/site/{slug}/delete")
+async def site_delete(slug: str, request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    slug = re.sub(r"[^a-zA-Z0-9_-]", "", slug)
+    site = db.get_site_by_slug(slug)
+    if not site or site["user_id"] != user["id"]:
+        return JSONResponse({"error": "Не найдено"}, status_code=404)
+    db.delete_site(site["id"], user["id"])
+    # Remove generated HTML file
+    html_file = GENERATED_DIR / f"{slug}.html"
+    if html_file.exists():
+        html_file.unlink()
+    return RedirectResponse("/dashboard", status_code=302)
+
+
 @app.get("/payment", response_class=HTMLResponse)
 async def payment_page(request: Request):
     user = _require_auth(request)

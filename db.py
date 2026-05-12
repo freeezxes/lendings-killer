@@ -26,7 +26,7 @@ def init_db():
             phone     TEXT UNIQUE NOT NULL,
             password  TEXT NOT NULL,
             name      TEXT,
-            tokens    INTEGER DEFAULT 500,
+            tokens    INTEGER DEFAULT 30,
             created   TEXT DEFAULT (datetime('now'))
         );
 
@@ -161,6 +161,23 @@ def update_site_html(site_id: int, html_path: str, tokens_used: int):
     with get_conn() as c:
         c.execute("UPDATE sites SET html_path=?,tokens_used=?,updated=datetime('now') WHERE id=?",
                   (html_path, tokens_used, site_id))
+
+def delete_site(site_id: int, user_id: int) -> bool:
+    with get_conn() as c:
+        cur = c.execute("DELETE FROM sites WHERE id=? AND user_id=?", (site_id, user_id))
+        return cur.rowcount > 0
+
+def get_token_log(user_id: int, limit: int = 20) -> list:
+    with get_conn() as c:
+        rows = c.execute(
+            "SELECT delta, reason, cost_usd, ts FROM token_log WHERE user_id=? ORDER BY ts DESC LIMIT ?",
+            (user_id, limit)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+def update_user_name(user_id: int, name: str):
+    with get_conn() as c:
+        c.execute("UPDATE users SET name=? WHERE id=?", (name.strip(), user_id))
 
 # ── Sessions ───────────────────────────────────────────────────────────────
 import uuid as _uuid
