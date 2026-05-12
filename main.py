@@ -257,26 +257,19 @@ def _ai_generate(data: dict) -> dict:
         dialogue_block = ""
 
     edit_request = data.get("edit_request", "").strip()
-    prev_snippet = data.get("prev_html_snippet", "").strip()
+    prev_html_full = data.get("prev_html_full", "").strip()
 
-    if edit_request:
-        # Edit mode — regenerate with specific change request
-        user_content = f"""Данные клиента:
-- Имя/профессия: {data.get('name', '')}
-- Услуги и цены: {data.get('services', '')}
-- Город и контакт: {data.get('city', '')}
-{dialogue_block}
-{photos_block}
+    if edit_request and prev_html_full:
+        # Edit mode — patch existing HTML, don't regenerate from scratch
+        user_content = f"""Вот ТЕКУЩИЙ HTML сайта клиента — измени только то, о чём просит клиент, всё остальное оставь точно как есть:
 
-=== СТИЛЬ И ДИЗАЙН ===
-{style_block}
+=== ТЕКУЩИЙ HTML ===
+{prev_html_full}
 
-=== ЗАПРОС НА ИЗМЕНЕНИЕ ===
-Клиент просит: «{edit_request}»
+=== ЗАПРОС КЛИЕНТА ===
+«{edit_request}»
 
-{"=== ФРАГМЕНТ ТЕКУЩЕГО САЙТА (для контекста) ===\n" + prev_snippet if prev_snippet else ""}
-
-Сгенерируй ПОЛНЫЙ обновлённый HTML сайт с учётом запроса на изменение. Сохрани всё остальное содержимое."""
+Верни ПОЛНЫЙ HTML с внесёнными изменениями. Только чистый HTML начиная с <!DOCTYPE html>, никакого markdown."""
     else:
         user_content = f"""Данные клиента:
 - Имя/профессия: {data.get('name', '')}
@@ -793,9 +786,9 @@ async def site_edit(slug: str, request: Request):
     ]
 
     prev_html = (GENERATED_DIR / f"{slug}.html").read_text(encoding="utf-8") if (GENERATED_DIR / f"{slug}.html").exists() else ""
-    data["edit_request"]      = edit_request
-    data["chat_history"]      = combined_history
-    data["prev_html_snippet"] = prev_html[:3000] if prev_html else ""
+    data["edit_request"]  = edit_request
+    data["chat_history"]  = combined_history
+    data["prev_html_full"] = prev_html  # full HTML so model patches, not regenerates
 
     gen = _ai_generate(data)
 
