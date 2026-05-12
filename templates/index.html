@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Сайт за 5 минут</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f0f0f; color:#fff; height:100vh; display:flex; flex-direction:column; }
+
+  .photo-upload-area { margin-top:10px; }
+  .upload-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    background:#252525; border:1.5px dashed #444; color:#aaa;
+    padding:10px 18px; border-radius:12px; font-size:.85rem;
+    cursor:pointer; transition:all .18s;
+  }
+  .upload-btn:hover { border-color:#7c5cff; color:#fff; background:#1a1a2e; }
+  .photos-preview { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .photo-thumb { width:70px; height:70px; border-radius:8px; object-fit:cover; border:2px solid #333; }
+  .photo-count { font-size:.75rem; color:#7c5cff; margin-top:6px; }
+
+  .top-bar { padding:16px 24px; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; }
+  .logo { font-size:1rem; font-weight:700; color:#fff; }
+  .logo span { color:#7c5cff; }
+
+  .chat-area { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:12px; }
+
+  .msg { max-width:78%; padding:12px 16px; border-radius:18px; line-height:1.55; font-size:0.9rem; white-space:pre-wrap; }
+  .msg.bot  { background:#1a1a1a; border-bottom-left-radius:4px; color:#ddd; align-self:flex-start; }
+  .msg.user { background:#7c5cff; border-bottom-right-radius:4px; color:#fff; align-self:flex-end; }
+
+  /* Chips — обычные */
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip {
+    background:#252525; border:1px solid #333; color:#ccc;
+    padding:7px 14px; border-radius:20px; font-size:0.82rem;
+    cursor:pointer; transition:all .18s; user-select:none;
+  }
+  .chip:hover { background:#7c5cff22; border-color:#7c5cff; color:#fff; }
+  .chip.selected { background:#7c5cff; border-color:#7c5cff; color:#fff; }
+
+  /* Vibe cards — визуальные превью стилей */
+  .vibe-cards { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .vibe-card {
+    width:110px; border-radius:14px; overflow:hidden; cursor:pointer;
+    border:2px solid transparent; transition:all .2s; flex-shrink:0;
+    user-select:none;
+  }
+  .vibe-card:hover { transform:translateY(-3px); }
+  .vibe-card.selected { border-color:#7c5cff; box-shadow:0 0 0 1px #7c5cff; }
+  .vibe-preview {
+    height:80px; display:flex; flex-direction:column;
+    justify-content:flex-end; padding:10px 10px 6px; position:relative; overflow:hidden;
+  }
+  .vibe-preview .line1 { height:8px; border-radius:4px; margin-bottom:5px; width:70%; }
+  .vibe-preview .line2 { height:5px; border-radius:3px; width:50%; }
+  .vibe-preview .dot {
+    position:absolute; top:10px; right:10px;
+    width:20px; height:20px; border-radius:50%;
+  }
+  .vibe-label {
+    padding:7px 8px; font-size:0.72rem; text-align:center;
+    font-weight:500; background:#111; color:#ccc; line-height:1.3;
+  }
+
+  .input-area { padding:14px 20px; border-top:1px solid #1a1a1a; display:flex; gap:10px; }
+  input[type=text] {
+    flex:1; background:#1a1a1a; border:1px solid #2a2a2a;
+    border-radius:24px; padding:11px 18px; color:#fff;
+    font-size:0.9rem; outline:none;
+  }
+  input[type=text]:focus { border-color:#7c5cff55; }
+  input[type=text]::placeholder { color:#444; }
+  button.send {
+    background:#7c5cff; border:none; border-radius:50%;
+    width:42px; height:42px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:opacity .15s;
+  }
+  button.send:hover { opacity:.85; }
+  button.send svg { fill:white; width:17px; height:17px; }
+
+  .site-link {
+    display:inline-flex; align-items:center; gap:8px; margin-top:8px;
+    background:#7c5cff; color:white; padding:12px 22px;
+    border-radius:12px; text-decoration:none; font-weight:600; font-size:.9rem;
+  }
+
+  .typing { display:flex; gap:4px; padding:12px 16px; background:#1a1a1a; border-radius:18px; border-bottom-left-radius:4px; width:56px; align-self:flex-start; }
+  .typing span { width:6px; height:6px; background:#444; border-radius:50%; animation:bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay:.2s; }
+  .typing span:nth-child(3) { animation-delay:.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="logo">lendings<span>.kz</span></div>
+</div>
+
+<div class="chat-area" id="chat"></div>
+
+<div class="input-area">
+  <input type="text" id="inp" placeholder="Напиши ответ..." onkeydown="if(event.key==='Enter')send()">
+  <button class="send" onclick="send()">
+    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+  </button>
+</div>
+
+<script>
+let step = 0, data = {}, uploadedPhotos = [];
+
+function showPhotoUpload() {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'photo-upload-area';
+  wrap.id = 'photo-upload-wrap';
+  wrap.innerHTML = `
+    <label class="upload-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Загрузить фото
+      <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+    </label>
+    <div class="photos-preview" id="photos-preview"></div>
+    <div class="photo-count" id="photo-count"></div>
+  `;
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function handlePhotos(input) {
+  const files = Array.from(input.files);
+  const preview = document.getElementById('photos-preview');
+  const count = document.getElementById('photo-count');
+
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/upload-photo', { method:'POST', body:fd });
+    const j = await r.json();
+    uploadedPhotos.push(j.url);  // сохраняем URL, не base64
+
+    const img = document.createElement('img');
+    img.className = 'photo-thumb';
+    img.src = j.url;
+    preview.appendChild(img);
+  }
+  count.textContent = `${uploadedPhotos.length} фото загружено`;
+  data.photo_urls = uploadedPhotos;  // передаём как URL список
+}
+
+// Конфиг чипов для конкретных шагов (по id шага)
+// Визуальные карточки стилей
+const VIBE_STYLES = [
+  { label:"Уютно\nи тепло",       value:"Уютно и тепло",         bg:"#FBF0EA", line1:"#C8847A", line2:"#E8C4BE", dot:"#C8847A", font:"Georgia,serif",    text:"#3a2a24" },
+  { label:"Дорого\nи стильно",    value:"Дорого и стильно",       bg:"#0D0D0D", line1:"#C9A84C", line2:"#7a6830", dot:"#C9A84C", font:"serif",            text:"#f0ead8" },
+  { label:"Свежо\nи современно",  value:"Свежо и современно",     bg:"#F0F7FF", line1:"#2D7DD2", line2:"#a8cbf0", dot:"#2D7DD2", font:"Helvetica,sans-serif", text:"#1a2333" },
+  { label:"Строго\nпрофи",        value:"Строго и профессионально",bg:"#F5F5F5", line1:"#222",   line2:"#888",   dot:"#222",    font:"Arial,sans-serif",  text:"#222" },
+  { label:"Ярко\nи молодёжно",    value:"Ярко и молодёжно",       bg:"#1a0a2e", line1:"#ff3cac", line2:"#784ba0", dot:"#ff3cac", font:"sans-serif",        text:"#fff" },
+  { label:"Нежно\nпастельно",     value:"Нежно и пастельно",      bg:"#FFF0F8", line1:"#F4A7C3", line2:"#fad4e5", dot:"#F4A7C3", font:"Georgia,serif",    text:"#6b3a52" },
+  { label:"Тёмно\nзагадочно",     value:"Тёмно и загадочно",      bg:"#121212", line1:"#8B5CF6", line2:"#4c2a80", dot:"#8B5CF6", font:"serif",            text:"#e0d0ff" },
+  { label:"Минимализм\nчистота",  value:"Минимализм и чистота",   bg:"#FFFFFF", line1:"#000",   line2:"#ccc",   dot:"#000",    font:"Helvetica,sans-serif", text:"#111" },
+];
+
+const STEP_CHIPS = {
+  extra: [
+    "Всё ок 👍",
+    "Побольше анимаций",
+    "Только светлые тона",
+    "Только тёмные тона",
+    "Розовые/персиковые цвета",
+    "Золотые акценты",
+    "Без лишнего текста",
+  ],
+  photos: ["Пропустить →"],
+};
+
+const DEMO = [
+  { q: "Как тебя зовут и чем занимаешься? Например: «Я Айгуль, мастер маникюра»", a: "Я Айгуль, мастер маникюра" },
+  { q: "Какие услуги ты оказываешь? Перечисли с ценами как удобно",               a: "Маникюр от 5 000 ₸\nПедикюр от 6 000 ₸\nНаращивание от 12 000 ₸" },
+  { q: "В каком городе работаешь и как к тебе записаться? (WhatsApp, Telegram или телефон)", a: "Астана, WhatsApp 87064177628" },
+  { q: "Есть фотки работ? Пока пропустим — просто напиши «пропустить»",            a: "пропустить" },
+];
+
+async function init() {
+  // показываем первые 3 шага как уже заполненные
+  const preFilled = DEMO.slice(0, 3);
+  for (const {q, a} of preFilled) {
+    addMsg(q, 'bot');
+    addMsg(a, 'user');
+  }
+  // шаг photos
+  addMsg("Добавь фотки своих работ — они появятся на сайте! Можно загрузить несколько. Или напиши «пропустить»", 'bot');
+  showPhotoUpload();
+  step = preFilled.length; // step = 3 (photos)
+  data = { name: DEMO[0].a, services: DEMO[1].a, city: DEMO[2].a };
+  document.getElementById('chat').scrollTop = 99999;
+}
+
+function addMsg(text, who, html=false) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `msg ${who}`;
+  if (html) div.innerHTML = text; else div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function showVibeCards(text) {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-self:flex-start;max-width:95%';
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'msg bot';
+  msgDiv.textContent = text;
+  wrap.appendChild(msgDiv);
+
+  const row = document.createElement('div');
+  row.className = 'vibe-cards';
+
+  VIBE_STYLES.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'vibe-card';
+    card.innerHTML = `
+      <div class="vibe-preview" style="background:${s.bg}">
+        <div class="dot" style="background:${s.dot}"></div>
+        <div class="line1" style="background:${s.line1};font-family:${s.font}"></div>
+        <div class="line2" style="background:${s.line2}"></div>
+      </div>
+      <div class="vibe-label" style="background:${s.bg}22;color:${s.text === '#fff' || s.bg.startsWith('#0') || s.bg === '#121212' || s.bg === '#1a' ? '#ccc' : '#555'}">${s.label}</div>
+    `;
+    card.onclick = () => {
+      row.querySelectorAll('.vibe-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      document.getElementById('inp').value = s.value;
+    };
+    row.appendChild(card);
+  });
+
+  wrap.appendChild(row);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addBotWithChips(text, chips) {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-self:flex-start;max-width:85%';
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'msg bot';
+  msgDiv.textContent = text;
+  wrap.appendChild(msgDiv);
+
+  if (chips && chips.length) {
+    const row = document.createElement('div');
+    row.className = 'chips';
+    chips.forEach(label => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = label;
+      chip.onclick = () => {
+        row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        document.getElementById('inp').value = label.replace(/\s*[^\w\s,а-яёА-ЯЁ].*/u, '').trim();
+      };
+      row.appendChild(chip);
+    });
+    wrap.appendChild(row);
+  }
+
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'typing'; div.id = 'typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+// Определяем id текущего шага по номеру
+const STEP_IDS = ['name','services','city','photos','vibe','extra'];
+
+async function send() {
+  const inp = document.getElementById('inp');
+  const answer = inp.value.trim();
+  if (!answer) return;
+  inp.value = '';
+  addMsg(answer, 'user');
+  showTyping();
+
+  const r = await fetch('/chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({step, answer, data})
+  });
+  const j = await r.json();
+  data = j.data;
+  step = j.step;
+
+  setTimeout(() => {
+    removeTyping();
+    if (j.done) {
+      addMsg("Готово! Генерирую твой сайт...", 'bot');
+      if (j.site_url) {
+        setTimeout(() => {
+          addMsg(`<a class="site-link" href="${j.site_url}" target="_blank">🔗 Открыть сайт →</a>`, 'bot', true);
+        }, 400);
+      }
+    } else {
+      // проверяем есть ли чипы для следующего шага
+      const nextId = STEP_IDS[step];
+      const chips = STEP_CHIPS[nextId];
+      if (nextId === 'photos') {
+        addMsg(j.message, 'bot');
+        showPhotoUpload();
+      } else if (nextId === 'vibe') {
+        showVibeCards(j.message);
+      } else if (chips) {
+        addBotWithChips(j.message, chips);
+      } else {
+        addMsg(j.message, 'bot');
+      }
+    }
+  }, 500);
+}
+
+init();
+</script>
+</body>
+</html>

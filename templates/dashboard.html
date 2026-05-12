@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lendings.kz — Мои сайты</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #111118;
+    --surface2:  #16161f;
+    --border:    #1e1e2e;
+    --accent:    #7c5cff;
+    --accent-dim:#5b3fd4;
+    --accent-glow: #7c5cff33;
+    --text:      #f0eeff;
+    --muted:     #6b6b8a;
+    --muted2:    #3d3d55;
+    --green:     #34d896;
+    --radius:    16px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior:smooth; }
+
+  body {
+    font-family: 'Sora', -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height:100vh; overflow-x:hidden;
+  }
+
+  /* Ambient */
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 70% 30% at 10% 5%, #7c5cff14 0%, transparent 60%),
+      radial-gradient(ellipse 40% 25% at 90% 80%, #5b3fd40c 0%, transparent 60%);
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    position:sticky; top:0; z-index:100;
+    background: #0a0a0fee;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom:1px solid var(--border);
+    padding:0 20px;
+    height:58px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .logo { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; flex-shrink:0; }
+  .logo span { color: var(--accent); }
+
+  .header-right {
+    display:flex; align-items:center; gap:10px;
+    min-width:0;
+  }
+  .user-phone {
+    font-size:.8rem; color: var(--muted);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:120px;
+  }
+  .token-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background: var(--accent-glow); border:1px solid #7c5cff44;
+    color: var(--accent); border-radius:20px;
+    padding:5px 10px; font-size:.76rem; font-weight:600;
+    white-space:nowrap; flex-shrink:0;
+  }
+  .token-badge svg { width:11px; height:11px; }
+
+  .logout-btn {
+    background:none; border:1px solid var(--border);
+    color: var(--muted); border-radius:9px;
+    padding:7px 12px; font-family:inherit; font-size:.78rem;
+    cursor:pointer; transition: all .2s; white-space:nowrap; flex-shrink:0;
+  }
+  .logout-btn:hover { border-color:#ff4f6a44; color:#ff4f6a; }
+
+  /* ─── CONTENT ─── */
+  .content {
+    position:relative; z-index:1;
+    max-width:680px; margin:0 auto;
+    padding:28px 20px 60px;
+  }
+
+  /* ─── HERO CARD ─── */
+  .hero-card {
+    background: linear-gradient(135deg, #1a1430 0%, #12111c 100%);
+    border:1px solid #7c5cff33;
+    border-radius: calc(var(--radius) + 4px);
+    padding:28px 24px;
+    margin-bottom:32px;
+    position:relative; overflow:hidden;
+    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both;
+  }
+  .hero-card::before {
+    content:''; position:absolute; top:-40px; right:-40px;
+    width:180px; height:180px; border-radius:50%;
+    background: radial-gradient(circle, #7c5cff22 0%, transparent 70%);
+    pointer-events:none;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .hero-label {
+    font-size:.75rem; font-weight:500; text-transform:uppercase;
+    letter-spacing:.08em; color: var(--muted); margin-bottom:8px;
+  }
+  .hero-title {
+    font-size:1.25rem; font-weight:700; letter-spacing:-.02em;
+    margin-bottom:4px; line-height:1.3;
+  }
+  .hero-sub {
+    font-size:.84rem; color: var(--muted); margin-bottom:22px; line-height:1.5;
+  }
+  .hero-sub strong { color: var(--accent); }
+
+  .btn-create {
+    display:inline-flex; align-items:center; gap:8px;
+    background: var(--accent); color:#fff;
+    border:none; border-radius:12px;
+    padding:14px 24px; font-family:inherit; font-size:.95rem; font-weight:600;
+    cursor:pointer; text-decoration:none; letter-spacing:-.01em;
+    transition: transform .15s, box-shadow .2s, opacity .15s;
+    box-shadow: 0 4px 24px #7c5cff44;
+  }
+  .btn-create:hover { opacity:.9; transform:translateY(-2px); box-shadow: 0 8px 32px #7c5cff55; }
+  .btn-create:active { transform:translateY(0); }
+  .btn-create svg { width:18px; height:18px; }
+
+  .token-info {
+    margin-top:20px; padding-top:20px;
+    border-top:1px solid var(--border);
+    font-size:.78rem; color: var(--muted); line-height:1.6;
+    display:flex; align-items:flex-start; gap:8px;
+  }
+  .token-info svg { width:14px; height:14px; flex-shrink:0; margin-top:2px; color: var(--accent); }
+
+  /* ─── SECTION TITLE ─── */
+  .section-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px;
+    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .1s both;
+  }
+  .section-title {
+    font-size:1rem; font-weight:600; letter-spacing:-.01em;
+  }
+  .section-count {
+    font-size:.78rem; color: var(--muted);
+    background: var(--surface2); border:1px solid var(--border);
+    border-radius:20px; padding:3px 10px;
+  }
+
+  /* ─── SITES GRID ─── */
+  .sites-grid {
+    display:flex; flex-direction:column; gap:12px;
+    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .15s both;
+  }
+
+  .site-card {
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding:20px;
+    transition: border-color .2s, transform .2s;
+    position:relative; overflow:hidden;
+  }
+  .site-card:hover {
+    border-color:#7c5cff44;
+    transform:translateY(-1px);
+  }
+  .site-card::before {
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background: var(--accent); border-radius:2px 0 0 2px;
+    opacity:0; transition: opacity .2s;
+  }
+  .site-card:hover::before { opacity:1; }
+
+  .site-card-top {
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:12px; margin-bottom:12px;
+  }
+  .site-title {
+    font-size:.98rem; font-weight:600; letter-spacing:-.01em;
+    line-height:1.3;
+  }
+  .site-slug {
+    font-size:.74rem; color: var(--muted);
+    margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:180px;
+  }
+
+  .token-cost {
+    display:inline-flex; align-items:center; gap:4px;
+    background:#7c5cff18; border:1px solid #7c5cff33;
+    color: var(--accent); border-radius:8px;
+    padding:4px 8px; font-size:.72rem; font-weight:600;
+    flex-shrink:0;
+  }
+
+  .site-meta {
+    font-size:.76rem; color: var(--muted);
+    margin-bottom:14px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .site-meta svg { width:12px; height:12px; }
+
+  .site-actions {
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .btn-open {
+    display:inline-flex; align-items:center; gap:5px;
+    background: var(--accent); color:#fff;
+    border:none; border-radius:9px;
+    padding:9px 16px; font-family:inherit; font-size:.82rem; font-weight:600;
+    cursor:pointer; text-decoration:none;
+    transition: opacity .15s, transform .15s;
+  }
+  .btn-open:hover { opacity:.9; transform:translateY(-1px); }
+  .btn-edit {
+    display:inline-flex; align-items:center; gap:5px;
+    background: var(--surface2); color: var(--muted);
+    border:1px solid var(--border); border-radius:9px;
+    padding:9px 16px; font-family:inherit; font-size:.82rem; font-weight:500;
+    cursor:pointer; text-decoration:none;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-edit:hover { border-color:#7c5cff44; color: var(--text); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align:center; padding:56px 24px;
+    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .2s both;
+  }
+  .empty-icon {
+    width:64px; height:64px; border-radius:20px;
+    background: var(--surface2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px; color: var(--muted);
+  }
+  .empty-icon svg { width:28px; height:28px; }
+  .empty-title {
+    font-size:1rem; font-weight:600; margin-bottom:8px;
+  }
+  .empty-sub {
+    font-size:.84rem; color: var(--muted); line-height:1.6; margin-bottom:24px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="logo">lendings<span>.kz</span></div>
+  <div class="header-right">
+    <span class="user-phone">{{ user.phone }}</span>
+    <div class="token-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+      {{ user.tokens }} токенов
+    </div>
+    <form method="POST" action="/auth/logout" style="margin:0">
+      <button type="submit" class="logout-btn">Выйти</button>
+    </form>
+  </div>
+</header>
+
+<!-- Content -->
+<main class="content">
+
+  <!-- Hero: Create new site -->
+  <div class="hero-card">
+    <div class="hero-label">Генерация сайта</div>
+    <div class="hero-title">Создать новый сайт</div>
+    <div class="hero-sub">
+      Ответьте на несколько вопросов — ИИ соберёт сайт за минуту.<br>
+      У вас <strong>{{ user.tokens }} токенов</strong>.
+    </div>
+    <a href="/create" class="btn-create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Создать сайт
+    </a>
+    <div class="token-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      1 генерация сайта ≈ 10 токенов. Токены пополняются в личном кабинете.
+    </div>
+  </div>
+
+  <!-- Sites list -->
+  {% if sites %}
+  <div class="section-head">
+    <div class="section-title">Мои сайты</div>
+    <div class="section-count">{{ sites|length }}</div>
+  </div>
+
+  <div class="sites-grid">
+    {% for site in sites %}
+    <div class="site-card">
+      <div class="site-card-top">
+        <div>
+          <div class="site-title">{{ site.title }}</div>
+          <div class="site-slug">lendings.kz/s/{{ site.slug }}</div>
+        </div>
+        <div class="token-cost">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+          {{ site.tokens_used }}
+        </div>
+      </div>
+      <div class="site-meta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        {{ site.created }}
+      </div>
+      <div class="site-actions">
+        <a href="/site/{{ site.slug }}" class="btn-open" target="_blank">
+          Открыть
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+        <a href="/create" class="btn-edit">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Редактировать
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="empty-state">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </div>
+    <div class="empty-title">Сайтов пока нет</div>
+    <div class="empty-sub">Создайте свой первый сайт за 5 минут —<br>ИИ сгенерирует его по вашим ответам.</div>
+    <a href="/create" class="btn-create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="18" height="18">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Создать первый сайт
+    </a>
+  </div>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

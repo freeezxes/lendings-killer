@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lendings.kz — Вход</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #111118;
+    --border:    #1e1e2e;
+    --border-focus: #7c5cff55;
+    --accent:    #7c5cff;
+    --accent-dim:#5b3fd4;
+    --accent-glow: #7c5cff33;
+    --text:      #f0eeff;
+    --muted:     #6b6b8a;
+    --error:     #ff4f6a;
+    --radius:    16px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    height:100%;
+    font-family: 'Sora', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* Ambient background blobs */
+  body::before {
+    content:'';
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, #7c5cff18 0%, transparent 70%),
+      radial-gradient(ellipse 50% 30% at 80% 90%, #5b3fd410 0%, transparent 70%);
+  }
+
+  .page {
+    position:relative; z-index:1;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px 20px;
+  }
+
+  /* Back link */
+  .back {
+    position:fixed; top:20px; left:20px;
+    display:inline-flex; align-items:center; gap:6px;
+    color: var(--muted); text-decoration:none; font-size:.82rem;
+    transition: color .2s;
+    z-index:10;
+  }
+  .back:hover { color: var(--text); }
+  .back svg { width:14px; height:14px; }
+
+  /* Logo */
+  .logo {
+    font-size:1.35rem; font-weight:700; letter-spacing:-.02em;
+    margin-bottom:32px; text-align:center;
+  }
+  .logo span { color: var(--accent); }
+
+  /* Card */
+  .card {
+    width:100%; max-width:420px;
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    padding:32px 28px;
+    box-shadow: 0 32px 80px #00000055, 0 0 0 1px #ffffff06 inset;
+    animation: slideUp .4s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(24px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* Tabs */
+  .tabs {
+    display:flex;
+    background:#0d0d14;
+    border-radius:12px;
+    padding:4px;
+    margin-bottom:28px;
+    gap:2px;
+  }
+  .tab {
+    flex:1; text-align:center; padding:9px 12px;
+    border-radius:9px; font-size:.88rem; font-weight:500;
+    cursor:pointer; color: var(--muted);
+    transition: all .2s; user-select:none; border:none; background:none;
+  }
+  .tab.active {
+    background: var(--accent);
+    color:#fff;
+    box-shadow: 0 2px 12px var(--accent-glow);
+  }
+
+  /* Error banner */
+  .error-banner {
+    display:flex; align-items:flex-start; gap:10px;
+    background:#ff4f6a15; border:1px solid #ff4f6a33;
+    color: var(--error);
+    padding:12px 14px; border-radius:10px;
+    font-size:.84rem; line-height:1.5;
+    margin-bottom:20px;
+    animation: fadeIn .25s ease both;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .error-banner svg { flex-shrink:0; width:16px; height:16px; margin-top:1px; }
+
+  /* Form */
+  .form-panel { display:none; }
+  .form-panel.active { display:flex; flex-direction:column; gap:16px; }
+
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label {
+    font-size:.78rem; font-weight:500; color: var(--muted);
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+  .field input {
+    background:#0d0d14; border:1px solid var(--border);
+    border-radius:12px; padding:13px 16px;
+    color: var(--text); font-family:inherit; font-size:.92rem;
+    outline:none; transition: border-color .2s, box-shadow .2s;
+    -webkit-appearance:none;
+  }
+  .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field input::placeholder { color: var(--muted); opacity:.6; }
+
+  /* Submit button */
+  .btn-submit {
+    width:100%; padding:14px;
+    background: var(--accent);
+    border:none; border-radius:12px;
+    color:#fff; font-family:inherit; font-size:.95rem; font-weight:600;
+    cursor:pointer; letter-spacing:-.01em;
+    transition: transform .15s, opacity .15s, box-shadow .2s;
+    box-shadow: 0 4px 20px var(--accent-glow);
+    margin-top:4px;
+  }
+  .btn-submit:hover { opacity:.9; transform:translateY(-1px); box-shadow: 0 6px 28px #7c5cff55; }
+  .btn-submit:active { transform:translateY(0); opacity:1; }
+
+  /* Footer hint */
+  .card-footer {
+    text-align:center; margin-top:20px;
+    font-size:.8rem; color: var(--muted);
+    line-height:1.6;
+  }
+
+  /* Token pill on register */
+  .token-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    background: var(--accent-glow); border:1px solid #7c5cff44;
+    color: var(--accent); border-radius:20px;
+    padding:4px 10px; font-size:.76rem; font-weight:500;
+    margin-top:4px;
+  }
+  .token-pill svg { width:12px; height:12px; }
+</style>
+</head>
+<body>
+
+<a href="/" class="back">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+  На главную
+</a>
+
+<div class="page">
+  <div class="logo">lendings<span>.kz</span></div>
+
+  <div class="card">
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" id="tab-login" onclick="switchTab('login')">Войти</button>
+      <button class="tab" role="tab" id="tab-register" onclick="switchTab('register')">Регистрация</button>
+    </div>
+
+    <!-- Error (Jinja2: shown only if error exists) -->
+    {% if error %}
+    <div class="error-banner" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Login form -->
+    <form class="form-panel active" id="panel-login" method="POST" action="/auth/login">
+      <div class="field">
+        <label for="login-phone">Телефон</label>
+        <input type="tel" id="login-phone" name="phone" placeholder="+7 777 000 00 00" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Пароль</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-submit">Войти</button>
+    </form>
+
+    <!-- Register form -->
+    <form class="form-panel" id="panel-register" method="POST" action="/auth/register">
+      <div class="field">
+        <label for="reg-name">Ваше имя</label>
+        <input type="text" id="reg-name" name="name" placeholder="Как вас зовут?" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="reg-phone">Телефон</label>
+        <input type="tel" id="reg-phone" name="phone" placeholder="+7 777 000 00 00" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="reg-password">Пароль</label>
+        <input type="password" id="reg-password" name="password" placeholder="Минимум 6 символов" autocomplete="new-password" required minlength="6">
+      </div>
+      <button type="submit" class="btn-submit">Зарегистрироваться</button>
+    </form>
+
+    <div class="card-footer">
+      {% if active_tab == 'register' or not active_tab %}
+      <span class="token-pill">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm2 11H10v-1h1v-4h-1v-1h3v5h1v1z"/></svg>
+        100 токенов бесплатно при регистрации
+      </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  }
+
+  // Auto-switch tab if error came from register action
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const fromRegister = params.get('tab') === 'register';
+    if (fromRegister) switchTab('register');
+  })();
+</script>
+</body>
+</html>

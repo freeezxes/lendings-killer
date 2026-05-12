@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+lendings.db
+costs.json
+generated_sites/
+static/uploads/
+.env
