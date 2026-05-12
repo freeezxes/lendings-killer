@@ -556,7 +556,12 @@ async def auth_login(
                                           {"error": "Неверный номер или пароль"}, status_code=401)
 
     sid = db.create_session(user["id"])
-    dest = "/dashboard" if user["tokens"] > 0 else "/payment?reason=no_credits"
+    if user.get("site_slots", 0) == 0:
+        dest = "/payment?reason=welcome"
+    elif user["tokens"] <= 0:
+        dest = "/payment?reason=no_credits"
+    else:
+        dest = "/dashboard"
     response = RedirectResponse(dest, status_code=302)
     response.set_cookie("sid", sid, httponly=True, samesite="lax", max_age=365 * 24 * 3600)
     return response
