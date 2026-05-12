@@ -99,7 +99,7 @@ def create_user(phone: str, password: str, name: str = "") -> dict | None:
         hashed = bcrypt.hash(password)
         with get_conn() as c:
             cur = c.execute(
-                "INSERT INTO users (phone, password, name) VALUES (?,?,?)",
+                "INSERT INTO users (phone, password, name, tokens) VALUES (?,?,?,0)",
                 (phone, hashed, name)
             )
             return get_user_by_id(cur.lastrowid)
