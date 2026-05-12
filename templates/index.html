@@ -411,9 +411,19 @@ function updateTokenBadge() {
 
 // ── Init ────────────────────────────────────────────────────────────────────
 (async function() {
+  {% if edit_site %}
+  // Edit mode: resume with existing site
+  currentSlug = '{{ edit_site.slug }}';
+  editMode = true;
+  const siteUrl = '/site/' + currentSlug;
+  addMsg('Сайт «{{ edit_site.title }}» загружен. Что хочешь изменить?', 'bot');
+  // Show done card so user sees the site link and edit input
+  showDone(siteUrl, 'Продолжаем редактирование');
+  {% else %}
   const r = await fetch('/start');
   const j = await r.json();
   addMsg(j.message, 'bot');
+  {% endif %}
   document.getElementById('inp').focus();
 })();
 </script>

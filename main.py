@@ -439,7 +439,15 @@ async def create_page(request: Request):
     user = _require_auth(request)
     if not user:
         return RedirectResponse("/auth", status_code=302)
-    return templates.TemplateResponse(request, "index.html", {"user": user})
+    # ?edit=slug — load existing site into edit mode
+    edit_slug = request.query_params.get("edit", "").strip()
+    edit_slug = re.sub(r"[^a-zA-Z0-9_-]", "", edit_slug)
+    edit_site = None
+    if edit_slug:
+        site = db.get_site_by_slug(edit_slug)
+        if site and site["user_id"] == user["id"]:
+            edit_site = {"slug": site["slug"], "title": site["title"]}
+    return templates.TemplateResponse(request, "index.html", {"user": user, "edit_site": edit_site})
 
 
 @app.get("/auth", response_class=HTMLResponse)
