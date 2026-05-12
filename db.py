@@ -268,7 +268,10 @@ def admin_user_detail(user_id: int) -> dict | None:
         if not user:
             return None
         sites = c.execute(
-            "SELECT id, slug, title, tokens_used, created FROM sites WHERE user_id=? ORDER BY created DESC",
+            """SELECT id, slug, title, tokens_used,
+                      chat_in, chat_out, gen_in, gen_out, cache_read, cost_usd,
+                      created
+               FROM sites WHERE user_id=? ORDER BY created DESC""",
             (user_id,)
         ).fetchall()
         token_log = c.execute(

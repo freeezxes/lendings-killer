@@ -315,13 +315,18 @@ async function openUser(uid) {
   const paidTotal = d.payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
   const genCount  = d.token_log.filter(l=>l.delta<0).length;
 
+  const fmtK = n => n ? (n/1000).toFixed(1)+'K' : '—';
   const sitesHtml = d.sites.length ? `
     <table class="mini-table">
-      <thead><tr><th>Сайт</th><th>Токены</th><th>Дата</th><th></th></tr></thead>
+      <thead><tr><th>Сайт</th><th>Плат.токены</th><th>Чат (in/out)</th><th>Генерация (in/out)</th><th>Кэш</th><th>Стоимость</th><th>Дата</th><th></th></tr></thead>
       <tbody>${d.sites.map(s=>`
         <tr>
-          <td class="ellipsis" style="max-width:200px" title="${esc(s.title)}">${esc(s.title||s.slug)}</td>
+          <td class="ellipsis" style="max-width:140px" title="${esc(s.title)}">${esc(s.title||s.slug)}</td>
           <td><span class="badge badge-purple">${s.tokens_used}</span></td>
+          <td class="mono" style="color:#4fa3ff">${fmtK(s.chat_in)} / ${fmtK(s.chat_out)}</td>
+          <td class="mono" style="color:#a084ff">${fmtK(s.gen_in)} / ${fmtK(s.gen_out)}</td>
+          <td class="mono" style="color:var(--green)">${fmtK(s.cache_read)}</td>
+          <td class="mono" style="color:var(--yellow)">${s.cost_usd ? '$'+Number(s.cost_usd).toFixed(4) : '—'}</td>
           <td class="mono">${esc((s.created||'').slice(0,10))}</td>
           <td><a href="/site/${esc(s.slug)}" target="_blank" class="open-link">↗</a></td>
         </tr>`).join('')}
@@ -330,11 +335,13 @@ async function openUser(uid) {
 
   const logHtml = d.token_log.length ? `
     <table class="mini-table">
-      <thead><tr><th>Δ</th><th>Причина</th><th>Дата</th></tr></thead>
+      <thead><tr><th>Δ</th><th>Причина</th><th>Claude in/out</th><th>Стоимость</th><th>Дата</th></tr></thead>
       <tbody>${d.token_log.slice(0,15).map(l=>`
         <tr>
           <td class="${l.delta>0?'delta-plus':'delta-minus'}">${l.delta>0?'+':''}${l.delta}</td>
           <td style="font-size:.78rem">${esc(l.reason||'—')}</td>
+          <td class="mono" style="color:#6b8aff;font-size:.72rem">${l.claude_in||l.claude_out ? fmtK(l.claude_in)+' / '+fmtK(l.claude_out) : '—'}</td>
+          <td class="mono" style="color:var(--yellow);font-size:.72rem">${l.cost_usd ? '$'+Number(l.cost_usd).toFixed(4) : '—'}</td>
           <td class="mono">${esc((l.ts||'').slice(0,10))}</td>
         </tr>`).join('')}
       </tbody>
