@@ -106,53 +106,101 @@
     z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
   .modal-overlay.show{display:flex;}
   .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;
-    width:100%;max-width:720px;margin:auto;animation:fadeUp .25s both;}
+    width:100%;max-width:680px;margin:auto;animation:fadeUp .25s both;}
   .modal-header{display:flex;align-items:center;justify-content:space-between;
-    padding:20px 24px;border-bottom:1px solid var(--border);}
-  .modal-title{font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+    padding:18px 22px;border-bottom:1px solid var(--border);}
+  .modal-title{font-size:.95rem;font-weight:700;letter-spacing:-.02em;}
   .modal-close{background:none;border:none;color:var(--muted);cursor:pointer;
-    width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-    transition:all .2s;font-size:1.1rem;}
+    width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    transition:all .2s;font-size:1rem;}
   .modal-close:hover{background:var(--surface2);color:var(--text);}
-  .modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
+  .modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:18px;}
 
+  /* User hero */
   .user-hero{display:flex;align-items:center;gap:14px;}
-  .user-avatar{width:48px;height:48px;border-radius:14px;background:var(--accent-glow);
+  .user-avatar{width:44px;height:44px;border-radius:13px;background:var(--accent-glow);
     border:2px solid #7c5cff33;display:flex;align-items:center;justify-content:center;
-    font-size:1.2rem;font-weight:700;color:var(--accent);flex-shrink:0;}
-  .user-name{font-size:1rem;font-weight:600;margin-bottom:2px;}
-  .user-meta{font-size:.78rem;color:var(--muted);font-family:var(--mono);}
-  .user-stats{display:flex;gap:10px;flex-wrap:wrap;}
-  .user-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-    padding:10px 14px;text-align:center;flex:1;min-width:80px;}
-  .user-stat-val{font-size:1.1rem;font-weight:700;font-family:var(--mono);letter-spacing:-.02em;}
-  .user-stat-lbl{font-size:.68rem;color:var(--muted);margin-top:2px;}
+    font-size:1.1rem;font-weight:700;color:var(--accent);flex-shrink:0;}
+  .user-name{font-size:.95rem;font-weight:600;margin-bottom:2px;}
+  .user-meta{font-size:.74rem;color:var(--muted);font-family:var(--mono);}
 
-  /* Add tokens form */
+  /* Stats row */
+  .user-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .user-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;text-align:center;}
+  .user-stat-val{font-size:1rem;font-weight:700;font-family:var(--mono);letter-spacing:-.02em;}
+  .user-stat-lbl{font-size:.64rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+
+  /* Add tokens */
   .add-tokens-form{display:flex;gap:8px;align-items:center;}
   .add-tokens-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
-    border-radius:9px;padding:9px 14px;font-family:var(--mono);font-size:.9rem;
-    width:110px;outline:none;transition:border-color .2s;}
+    border-radius:9px;padding:8px 12px;font-family:var(--mono);font-size:.88rem;
+    width:100px;outline:none;transition:border-color .2s;}
   .add-tokens-input:focus{border-color:var(--accent);}
   .add-tokens-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;
-    padding:9px 16px;font-family:inherit;font-size:.82rem;font-weight:600;
+    padding:8px 14px;font-family:inherit;font-size:.8rem;font-weight:600;
     cursor:pointer;transition:opacity .15s;white-space:nowrap;}
   .add-tokens-btn:hover{opacity:.88;}
-  .add-tokens-result{font-size:.8rem;color:var(--green);font-family:var(--mono);margin-left:4px;}
+  .add-tokens-result{font-size:.78rem;color:var(--green);font-family:var(--mono);}
 
   /* Sub-section */
-  .sub-section-title{font-size:.7rem;font-weight:600;text-transform:uppercase;
-    letter-spacing:.08em;color:var(--muted);margin-bottom:10px;}
-  .mini-table{width:100%;border-collapse:collapse;font-size:.8rem;}
-  .mini-table th{text-align:left;padding:7px 10px;font-size:.66rem;font-weight:600;
-    text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);
-    border-bottom:1px solid var(--border);}
-  .mini-table td{padding:8px 10px;border-bottom:1px solid #ffffff06;vertical-align:middle;}
-  .mini-table tr:last-child td{border-bottom:none;}
-  .mini-table .mono{font-family:var(--mono);font-size:.74rem;color:var(--muted);}
-  .delta-plus{color:var(--green);font-weight:600;font-family:var(--mono);}
-  .delta-minus{color:var(--red);font-weight:600;font-family:var(--mono);}
-  .empty-sub{font-size:.78rem;color:var(--muted);text-align:center;padding:16px;}
+  .sub-title{font-size:.68rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;}
+  .sub-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* Site cards */
+  .site-cards{display:flex;flex-direction:column;gap:8px;}
+  .site-card-m{background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;transition:border-color .2s;}
+  .site-card-m:hover{border-color:#7c5cff33;}
+  .site-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .site-card-title{font-size:.84rem;font-weight:600;line-height:1.3;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;}
+  .site-card-date{font-size:.7rem;color:var(--muted);font-family:var(--mono);flex-shrink:0;}
+  .site-card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  /* Token breakdown bars */
+  .tok-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .tok-row{background:#ffffff05;border-radius:7px;padding:6px 10px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .tok-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap;}
+  .tok-val{font-size:.76rem;font-weight:600;font-family:var(--mono);}
+  .tok-in{color:var(--blue);}
+  .tok-out{color:var(--accent);}
+  .tok-cache{color:var(--green);}
+  .tok-cost{color:var(--yellow);}
+  .tok-platform{color:#e8e4ff;}
+  .site-open-link{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;
+    color:var(--accent);text-decoration:none;transition:opacity .15s;}
+  .site-open-link:hover{opacity:.7;}
+
+  /* Log timeline */
+  .log-list{display:flex;flex-direction:column;gap:1px;}
+  .log-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+    background:var(--surface2);border-radius:0;}
+  .log-row:first-child{border-radius:9px 9px 0 0;}
+  .log-row:last-child{border-radius:0 0 9px 9px;}
+  .log-row:only-child{border-radius:9px;}
+  .log-delta{font-size:.84rem;font-weight:700;font-family:var(--mono);width:36px;flex-shrink:0;text-align:right;}
+  .log-plus{color:var(--green);} .log-minus{color:var(--red);}
+  .log-reason{font-size:.78rem;color:var(--text);flex:1;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .log-sub{font-size:.68rem;color:var(--muted);font-family:var(--mono);white-space:nowrap;}
+  .log-date{font-size:.68rem;color:var(--muted2);font-family:var(--mono);flex-shrink:0;}
+
+  /* Payments */
+  .pay-list{display:flex;flex-direction:column;gap:1px;}
+  .pay-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+    background:var(--surface2);}
+  .pay-row:first-child{border-radius:9px 9px 0 0;}
+  .pay-row:last-child{border-radius:0 0 9px 9px;}
+  .pay-row:only-child{border-radius:9px;}
+  .pay-amount{font-size:.88rem;font-weight:700;font-family:var(--mono);flex-shrink:0;}
+  .pay-info{flex:1;font-size:.74rem;color:var(--muted);}
+  .pay-date{font-size:.68rem;color:var(--muted2);font-family:var(--mono);flex-shrink:0;}
+
+  .empty-sub{font-size:.78rem;color:var(--muted);text-align:center;padding:20px;
+    background:var(--surface2);border-radius:9px;}
 </style>
 </head>
 <body>
@@ -315,50 +363,82 @@ async function openUser(uid) {
   const paidTotal = d.payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
   const genCount  = d.token_log.filter(l=>l.delta<0).length;
 
-  const fmtK = n => n ? (n/1000).toFixed(1)+'K' : '—';
-  const sitesHtml = d.sites.length ? `
-    <table class="mini-table">
-      <thead><tr><th>Сайт</th><th>Плат.токены</th><th>Чат (in/out)</th><th>Генерация (in/out)</th><th>Кэш</th><th>Стоимость</th><th>Дата</th><th></th></tr></thead>
-      <tbody>${d.sites.map(s=>`
-        <tr>
-          <td class="ellipsis" style="max-width:140px" title="${esc(s.title)}">${esc(s.title||s.slug)}</td>
-          <td><span class="badge badge-purple">${s.tokens_used}</span></td>
-          <td class="mono" style="color:#4fa3ff">${fmtK(s.chat_in)} / ${fmtK(s.chat_out)}</td>
-          <td class="mono" style="color:#a084ff">${fmtK(s.gen_in)} / ${fmtK(s.gen_out)}</td>
-          <td class="mono" style="color:var(--green)">${fmtK(s.cache_read)}</td>
-          <td class="mono" style="color:var(--yellow)">${s.cost_usd ? '$'+Number(s.cost_usd).toFixed(4) : '—'}</td>
-          <td class="mono">${esc((s.created||'').slice(0,10))}</td>
-          <td><a href="/site/${esc(s.slug)}" target="_blank" class="open-link">↗</a></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>` : '<div class="empty-sub">Сайтов нет</div>';
+  const fmtK  = n => n ? (n>=1000 ? (n/1000).toFixed(1)+'K' : String(n)) : '—';
+  const fmtReason = r => {
+    if (!r) return 'Начальные токены';
+    if (r.startsWith('site_generate:')) return 'Генерация сайта';
+    if (r.startsWith('kaspi_payment:')) return 'Пополнение Kaspi';
+    if (r === 'admin_grant') return 'Начислено админом';
+    return r;
+  };
 
-  const logHtml = d.token_log.length ? `
-    <table class="mini-table">
-      <thead><tr><th>Δ</th><th>Причина</th><th>Claude in/out</th><th>Стоимость</th><th>Дата</th></tr></thead>
-      <tbody>${d.token_log.slice(0,15).map(l=>`
-        <tr>
-          <td class="${l.delta>0?'delta-plus':'delta-minus'}">${l.delta>0?'+':''}${l.delta}</td>
-          <td style="font-size:.78rem">${esc(l.reason||'—')}</td>
-          <td class="mono" style="color:#6b8aff;font-size:.72rem">${l.claude_in||l.claude_out ? fmtK(l.claude_in)+' / '+fmtK(l.claude_out) : '—'}</td>
-          <td class="mono" style="color:var(--yellow);font-size:.72rem">${l.cost_usd ? '$'+Number(l.cost_usd).toFixed(4) : '—'}</td>
-          <td class="mono">${esc((l.ts||'').slice(0,10))}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>` : '<div class="empty-sub">Операций нет</div>';
+  // Site cards with token breakdown
+  const sitesHtml = d.sites.length
+    ? `<div class="site-cards">${d.sites.map(s => {
+        const hasMetrics = s.chat_in || s.gen_in;
+        return `
+        <div class="site-card-m">
+          <div class="site-card-top">
+            <div class="site-card-title" title="${esc(s.title)}">${esc(s.title||s.slug)}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              <span class="badge badge-purple">${s.tokens_used} tok</span>
+              <a href="/site/${esc(s.slug)}" target="_blank" class="site-open-link">
+                Открыть <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+              </a>
+            </div>
+          </div>
+          ${hasMetrics ? `
+          <div class="tok-grid">
+            <div class="tok-row">
+              <span class="tok-label">Чат</span>
+              <span><span class="tok-val tok-in">${fmtK(s.chat_in)}</span> <span style="color:var(--muted2);font-size:.62rem">IN</span>
+                    <span style="margin:0 3px;color:var(--muted2)">/</span>
+                    <span class="tok-val tok-out">${fmtK(s.chat_out)}</span> <span style="color:var(--muted2);font-size:.62rem">OUT</span></span>
+            </div>
+            <div class="tok-row">
+              <span class="tok-label">Генерация</span>
+              <span><span class="tok-val tok-in">${fmtK(s.gen_in)}</span> <span style="color:var(--muted2);font-size:.62rem">IN</span>
+                    <span style="margin:0 3px;color:var(--muted2)">/</span>
+                    <span class="tok-val tok-out">${fmtK(s.gen_out)}</span> <span style="color:var(--muted2);font-size:.62rem">OUT</span></span>
+            </div>
+            <div class="tok-row">
+              <span class="tok-label">Кэш (сэконом.)</span>
+              <span class="tok-val tok-cache">${fmtK(s.cache_read)}</span>
+            </div>
+            <div class="tok-row">
+              <span class="tok-label">Стоимость</span>
+              <span class="tok-val tok-cost">${s.cost_usd ? '$'+Number(s.cost_usd).toFixed(4) : '—'}</span>
+            </div>
+          </div>` : '<div style="font-size:.72rem;color:var(--muted2);padding:2px 0">Метрики недоступны (старый сайт)</div>'}
+          <div style="margin-top:8px;font-size:.68rem;color:var(--muted2);font-family:var(--mono)">${esc((s.created||'').slice(0,16).replace('T',' '))}</div>
+        </div>`}).join('')}
+      </div>`
+    : '<div class="empty-sub">Сайтов нет</div>';
 
-  const paymentsHtml = d.payments.length ? `
-    <table class="mini-table">
-      <thead><tr><th>Сумма</th><th>Токены</th><th>Статус</th><th>Дата</th></tr></thead>
-      <tbody>${d.payments.map(p=>`
-        <tr>
-          <td class="mono">${Number(p.amount).toLocaleString('ru')} ₸</td>
-          <td><span class="badge badge-purple">+${p.tokens}</span></td>
-          <td>${p.status==='paid'?'<span class="badge badge-green">paid</span>':p.status==='pending'?'<span class="badge badge-yellow">pending</span>':'<span class="badge badge-red">'+esc(p.status)+'</span>'}</td>
-          <td class="mono">${esc((p.created||'').slice(0,10))}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>` : '<div class="empty-sub">Платежей нет</div>';
+  // Token log as clean timeline
+  const logHtml = d.token_log.length
+    ? `<div class="log-list">${d.token_log.slice(0,15).map(l=>`
+        <div class="log-row">
+          <div class="log-delta ${l.delta>0?'log-plus':'log-minus'}">${l.delta>0?'+':''}${l.delta}</div>
+          <div style="flex:1;min-width:0">
+            <div class="log-reason">${esc(fmtReason(l.reason))}</div>
+            ${l.claude_in||l.claude_out ? `<div style="font-size:.66rem;color:var(--muted);font-family:var(--mono);margin-top:1px">${fmtK(l.claude_in)} in · ${fmtK(l.claude_out)} out${l.cost_usd?' · <span style="color:var(--yellow)">$'+Number(l.cost_usd).toFixed(4)+'</span>':''}</div>` : ''}
+          </div>
+          <div class="log-date">${esc((l.ts||'').slice(0,10))}</div>
+        </div>`).join('')}
+      </div>`
+    : '<div class="empty-sub">Операций нет</div>';
+
+  // Payments
+  const paymentsHtml = d.payments.length
+    ? `<div class="pay-list">${d.payments.map(p=>`
+        <div class="pay-row">
+          <div class="pay-amount" style="color:${p.status==='paid'?'var(--green)':'var(--muted)'}">${Number(p.amount).toLocaleString('ru')} ₸</div>
+          <div class="pay-info">+${p.tokens} токенов · <span style="color:${p.status==='paid'?'var(--green)':p.status==='pending'?'var(--yellow)':'var(--red)'}">${p.status}</span></div>
+          <div class="pay-date">${esc((p.created||'').slice(0,10))}</div>
+        </div>`).join('')}
+      </div>`
+    : '<div class="empty-sub">Платежей нет</div>';
 
   document.getElementById('modalBody').innerHTML = `
     <div class="user-hero">
@@ -370,14 +450,26 @@ async function openUser(uid) {
     </div>
 
     <div class="user-stats">
-      <div class="user-stat"><div class="user-stat-val" style="color:var(--accent)">${u.tokens}</div><div class="user-stat-lbl">токенов</div></div>
-      <div class="user-stat"><div class="user-stat-val" style="color:var(--green)">${d.sites.length}</div><div class="user-stat-lbl">сайтов</div></div>
-      <div class="user-stat"><div class="user-stat-val">${genCount}</div><div class="user-stat-lbl">генераций</div></div>
-      <div class="user-stat"><div class="user-stat-val" style="color:var(--yellow)">${paidTotal>0?Number(paidTotal).toLocaleString('ru')+' ₸':'—'}</div><div class="user-stat-lbl">оплатил</div></div>
+      <div class="user-stat">
+        <div class="user-stat-val" style="color:var(--accent)">${u.tokens}</div>
+        <div class="user-stat-lbl">токенов</div>
+      </div>
+      <div class="user-stat">
+        <div class="user-stat-val" style="color:var(--green)">${d.sites.length}</div>
+        <div class="user-stat-lbl">сайтов</div>
+      </div>
+      <div class="user-stat">
+        <div class="user-stat-val">${genCount}</div>
+        <div class="user-stat-lbl">генераций</div>
+      </div>
+      <div class="user-stat">
+        <div class="user-stat-val" style="color:var(--yellow)">${paidTotal>0?Number(paidTotal).toLocaleString('ru')+' ₸':'—'}</div>
+        <div class="user-stat-lbl">оплатил</div>
+      </div>
     </div>
 
     <div>
-      <div class="sub-section-title">Начислить токены</div>
+      <div class="sub-title">Начислить токены</div>
       <div class="add-tokens-form">
         <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
         <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
@@ -386,17 +478,17 @@ async function openUser(uid) {
     </div>
 
     <div>
-      <div class="sub-section-title">Сайты (${d.sites.length})</div>
+      <div class="sub-title">Сайты · ${d.sites.length}</div>
       ${sitesHtml}
     </div>
 
     <div>
-      <div class="sub-section-title">Платежи (${d.payments.length})</div>
+      <div class="sub-title">Платежи · ${d.payments.length}</div>
       ${paymentsHtml}
     </div>
 
     <div>
-      <div class="sub-section-title">История токенов</div>
+      <div class="sub-title">История токенов</div>
       ${logHtml}
     </div>
   `;
