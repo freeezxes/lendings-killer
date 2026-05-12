@@ -256,7 +256,29 @@ def _ai_generate(data: dict) -> dict:
     else:
         dialogue_block = ""
 
-    user_content = f"""Данные клиента:
+    edit_request = data.get("edit_request", "").strip()
+    prev_snippet = data.get("prev_html_snippet", "").strip()
+
+    if edit_request:
+        # Edit mode — regenerate with specific change request
+        user_content = f"""Данные клиента:
+- Имя/профессия: {data.get('name', '')}
+- Услуги и цены: {data.get('services', '')}
+- Город и контакт: {data.get('city', '')}
+{dialogue_block}
+{photos_block}
+
+=== СТИЛЬ И ДИЗАЙН ===
+{style_block}
+
+=== ЗАПРОС НА ИЗМЕНЕНИЕ ===
+Клиент просит: «{edit_request}»
+
+{"=== ФРАГМЕНТ ТЕКУЩЕГО САЙТА (для контекста) ===\n" + prev_snippet if prev_snippet else ""}
+
+Сгенерируй ПОЛНЫЙ обновлённый HTML сайт с учётом запроса на изменение. Сохрани всё остальное содержимое."""
+    else:
+        user_content = f"""Данные клиента:
 - Имя/профессия: {data.get('name', '')}
 - Услуги и цены: {data.get('services', '')}
 - Город и контакт: {data.get('city', '')}
@@ -717,6 +739,65 @@ async def chat(request: Request):
         "cost_usd":     round(cost, 6),
         "tokens_spent": our_tokens,
         "tokens_left":  user["tokens"] - our_tokens,
+    })
+
+
+# ── Site edit ─────────────────────────────────────────────────────────────────
+
+@app.post("/site/{slug}/edit")
+async def site_edit(slug: str, request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+
+    slug = re.sub(r"[^a-zA-Z0-9_-]", "", slug)
+    site = db.get_site_by_slug(slug)
+    if not site or site["user_id"] != user["id"]:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+
+    if user["tokens"] < 1:
+        return JSONResponse({"error": "Недостаточно токенов"}, status_code=402)
+
+    body = await request.json()
+    edit_request = body.get("message", "").strip()
+    if not edit_request:
+        return JSONResponse({"error": "Пустой запрос"}, status_code=400)
+
+    # Load original data and inject edit request
+    data = site.get("data") or {}
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    # Build edit context — pass original dialogue + edit instruction
+    prev_html = (GENERATED_DIR / f"{slug}.html").read_text(encoding="utf-8") if (GENERATED_DIR / f"{slug}.html").exists() else ""
+    data["extra"] = edit_request
+    data["edit_request"] = edit_request
+    data["prev_html_snippet"] = prev_html[:3000] if prev_html else ""  # first 3K for context
+
+    gen = _ai_generate(data)
+
+    gen_in  = gen["input_tokens"]
+    gen_out = gen["output_tokens"]
+    gen_cr  = gen["cache_read_tokens"]
+    gen_cc  = gen["cache_create_tokens"]
+    cost    = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
+    our_tokens = _tokens_to_ours(gen_in, gen_out)
+
+    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+    db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
+    db.deduct_tokens(
+        user_id=user["id"], amount=our_tokens,
+        reason=f"site_edit:{slug}",
+        site_id=site["id"],
+        claude_in=gen_in, claude_out=gen_out,
+        cache_read=gen_cr, cost_usd=cost,
+    )
+
+    return JSONResponse({
+        "ok": True,
+        "site_url": f"/site/{slug}",
+        "tokens_spent": our_tokens,
+        "tokens_left": user["tokens"] - our_tokens,
     })
 
 

@@ -170,6 +170,8 @@ let history = [];
 let photoUrls = [];
 let userTokens = {{ user.tokens }};
 let inputLocked = false;
+let editMode = false;   // after generation — chat becomes edit requests
+let currentSlug = null;
 // Accumulated chat token counters (sent back each turn for server-side tracking)
 let chatIn = 0, chatOut = 0, chatCr = 0;
 
@@ -203,17 +205,26 @@ function removeTyping() {
   if (t) t.remove();
 }
 
+let doneCardEl = null;
+
 function showDone(siteUrl, reply) {
   const chat = document.getElementById('chat');
-  const card = document.createElement('div');
-  card.className = 'done-card';
+  const slug = siteUrl.split('/').pop();
+
+  if (!doneCardEl) {
+    doneCardEl = document.createElement('div');
+    doneCardEl.className = 'done-card';
+    chat.appendChild(doneCardEl);
+  }
+
   const fullUrl = window.location.origin + siteUrl;
   navigator.clipboard?.writeText(fullUrl).catch(()=>{});
-  card.innerHTML = `
+
+  doneCardEl.innerHTML = `
     <div class="done-title">✅ ${reply}</div>
-    <div class="done-sub">Ссылка уже скопирована — отправляй клиентам.</div>
+    <div class="done-sub">Ссылка скопирована. Можешь попросить что-то изменить прямо здесь.</div>
     <div class="done-actions">
-      <a href="${siteUrl}" target="_blank" class="btn-open">
+      <a href="${siteUrl}" target="_blank" class="btn-open" id="siteOpenBtn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         Открыть сайт
       </a>
@@ -223,9 +234,19 @@ function showDone(siteUrl, reply) {
       </a>
     </div>
   `;
-  chat.appendChild(card);
   chat.scrollTop = chat.scrollHeight;
-  lockInput();
+
+  // Switch to edit mode
+  currentSlug = slug;
+  editMode = true;
+  const inp = document.getElementById('inp');
+  const btn = document.getElementById('sendBtn');
+  inp.disabled = false;
+  btn.disabled = false;
+  inp.placeholder = 'Что изменить? Например: поменяй цвет на тёмный, добавь Instagram…';
+  inp.focus();
+  document.getElementById('photoBtnLabel').style.pointerEvents = '';
+  document.getElementById('photoBtnLabel').style.opacity = '';
 }
 
 function showNoTokens() {
@@ -297,8 +318,7 @@ async function send() {
   inp.style.height = 'auto';
   addMsg(text, 'user');
 
-  // Show uploaded photos in chat if any
-  if (photoUrls.length > 0) {
+  if (photoUrls.length > 0 && !editMode) {
     const chat = document.getElementById('chat');
     const row = document.createElement('div');
     row.className = 'photos-row';
@@ -313,6 +333,38 @@ async function send() {
 
   showTyping();
 
+  // ── Edit mode: send edit request ──────────────────────────────────────────
+  if (editMode && currentSlug) {
+    try {
+      const r = await fetch(`/site/${currentSlug}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: text })
+      });
+      const j = await r.json();
+      removeTyping();
+
+      if (j.error) {
+        if (j.error.includes('токен')) { showNoTokens(); }
+        else { addMsg(j.error, 'bot'); }
+        return;
+      }
+
+      userTokens = j.tokens_left ?? userTokens;
+      updateTokenBadge();
+      addMsg('Готово! Сайт обновлён ✨', 'bot');
+      showDone(j.site_url, 'Сайт обновлён!');
+      // Force-refresh the open link
+      const openBtn = document.getElementById('siteOpenBtn');
+      if (openBtn) openBtn.href = j.site_url + '?v=' + Date.now();
+    } catch(e) {
+      removeTyping();
+      addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
+    }
+    return;
+  }
+
+  // ── Onboarding mode: regular chat ────────────────────────────────────────
   try {
     const r = await fetch('/chat', {
       method: 'POST',
@@ -332,7 +384,6 @@ async function send() {
     }
 
     history = j.history;
-    // Update accumulated chat token counters from server response
     if (!j.done) {
       chatIn  = j.chat_in  ?? chatIn;
       chatOut = j.chat_out ?? chatOut;
@@ -341,9 +392,7 @@ async function send() {
 
     if (j.done) {
       userTokens = j.tokens_left ?? userTokens;
-      document.getElementById('tokenBadge').innerHTML = `
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-        ${userTokens} токенов`;
+      updateTokenBadge();
       showDone(j.site_url, j.message);
     } else {
       addMsg(j.message, 'bot');
@@ -352,6 +401,12 @@ async function send() {
     removeTyping();
     addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
   }
+}
+
+function updateTokenBadge() {
+  document.getElementById('tokenBadge').innerHTML = `
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+    ${userTokens} токенов`;
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
