@@ -696,9 +696,9 @@ async def payment_status(order_id: str, request: Request):
 async def payment_webhook(request: Request):
     body_bytes = await request.body()
 
-    # Verify HMAC signature from kaspi-pos
-    sig = request.headers.get("X-Webhook-Signature", "")
-    expected = hmac.new(KASPI_WH_SECRET.encode(), body_bytes, hashlib.sha256).hexdigest()
+    # Verify HMAC signature from kaspi-pos (header: X-Apipay-Signature: sha256=<hex>)
+    sig = request.headers.get("X-Apipay-Signature", "")
+    expected = "sha256=" + hmac.new(KASPI_WH_SECRET.encode(), body_bytes, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, expected):
         return JSONResponse({"error": "Invalid signature"}, status_code=401)
 
