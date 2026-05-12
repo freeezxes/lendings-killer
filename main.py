@@ -320,8 +320,8 @@ def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
 
 
 def _tokens_to_ours(inp: int, out: int) -> int:
-    """100K claude tokens = 1 our token."""
-    return max(1, round((inp + out) / 100_000))
+    """1K claude tokens = 1 our credit."""
+    return max(1, round((inp + out) / 1_000))
 
 
 # ── Cost tracking ─────────────────────────────────────────────────────────────
