@@ -338,6 +338,23 @@ def _save_cost(entry: dict):
     COSTS_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2))
 
 
+def _ai_edit_chat(history: list) -> dict:
+    """Single turn of edit dialogue — clarifies request before generating."""
+    resp = ai_client.messages.create(
+        model=BEDROCK_MODEL,
+        max_tokens=256,
+        system=[{"type": "text", "text": EDIT_CHAT_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        messages=history,
+    )
+    raw = resp.content[0].text.strip()
+    raw = re.sub(r'^```[a-z]*\n?', '', raw)
+    raw = re.sub(r'\n?```$', '', raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {"reply": raw, "ready": False, "edit_summary": None}
+
+
 def _ai_chat(history: list) -> dict:
     """Run one turn of the onboarding dialogue. Returns parsed JSON + usage."""
     resp = ai_client.messages.create(
@@ -412,6 +429,30 @@ CHAT_SYSTEM = """Ты — дружелюбный консультант серв
 }
 
 Когда все 4 поля собраны — ставь "ready": true и в reply напиши что-то вроде «Отлично! Всё есть — сейчас сделаю сайт ✨»"""
+
+EDIT_CHAT_SYSTEM = """Ты — помощник по редактированию сайта-визитки. Клиент хочет что-то изменить на своём сайте.
+
+Твоя задача — понять запрос и при необходимости уточнить детали перед тем как отдать его в работу.
+
+Правила:
+- Если запрос ЧЁТКИЙ и конкретный (поменяй цвет на синий, добавь Instagram @name, измени цену на 5000) — сразу подтверди и ставь ready:true
+- Если запрос РАЗМЫТЫЙ (сделай красивее, улучши, переделай) — задай 1 уточняющий вопрос: что именно? как должно выглядеть?
+- Если несколько изменений — подтверди каждое коротко и ставь ready:true
+- Не задавай больше 1 вопроса за раз
+- Пиши коротко, на «ты», без лишних слов
+
+Примеры:
+- «поменяй адрес на Алматы» → ready:true, «Понял, меняю адрес на Алматы ✓»
+- «сделай более официально» → ready:false, «Что именно сделать официальнее — шрифт, цвета, тексты?»
+- «добавь скидку 20% на маникюр» → ready:true, «Добавляю скидку 20% на маникюр ✓»
+- «переделай сайт» → ready:false, «В каком направлении переделать? Например: другие цвета, другой стиль, новые секции?»
+
+ВАЖНО: отвечай ТОЛЬКО валидным JSON:
+{
+  "reply": "твой ответ",
+  "ready": true или false,
+  "edit_summary": "краткое описание что именно менять (для передачи в генератор) или null если ready:false"
+}"""
 
 
 # ── Helper: require auth ──────────────────────────────────────────────────────
@@ -752,6 +793,7 @@ async def chat(request: Request):
 
 @app.post("/site/{slug}/edit")
 async def site_edit(slug: str, request: Request):
+    """Edit chat + generation. First clarifies request, then generates when ready."""
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
@@ -761,34 +803,48 @@ async def site_edit(slug: str, request: Request):
     if not site or site["user_id"] != user["id"]:
         return JSONResponse({"error": "Сайт не найден"}, status_code=404)
 
+    body           = await request.json()
+    message        = body.get("message", "").strip()
+    edit_history   = body.get("edit_history", [])   # separate edit dialogue history
+    client_history = body.get("history", [])        # original creation history
+
+    if not message:
+        return JSONResponse({"error": "Пустой запрос"}, status_code=400)
+
+    # Build edit dialogue history
+    edit_history = edit_history + [{"role": "user", "content": message}]
+
+    # Ask edit-chat AI: clarify or approve?
+    result      = _ai_edit_chat(edit_history)
+    reply       = result.get("reply", "Понял!")
+    ready       = result.get("ready", False)
+    edit_summary = result.get("edit_summary") or message
+
+    edit_history = edit_history + [{"role": "assistant", "content": reply}]
+
+    # Not ready yet — ask clarifying question
+    if not ready:
+        return JSONResponse({
+            "done":         False,
+            "message":      reply,
+            "edit_history": edit_history,
+        })
+
+    # Ready — generate
     if user["tokens"] < 1:
         return JSONResponse({"error": "Недостаточно токенов"}, status_code=402)
 
-    body = await request.json()
-    edit_request = body.get("message", "").strip()
-    client_history = body.get("history", [])  # full chat history from client
-    if not edit_request:
-        return JSONResponse({"error": "Пустой запрос"}, status_code=400)
-
-    # Load original site data
     data = site.get("data") or {}
     if isinstance(data, str):
         data = json.loads(data)
 
-    # Merge: use client history if provided, else fall back to stored history
-    stored_history = data.get("chat_history", [])
+    stored_history  = data.get("chat_history", [])
     combined_history = client_history if client_history else stored_history
 
-    # Append edit request to history so ИИ sees the full conversation
-    combined_history = combined_history + [
-        {"role": "user",      "content": f"[РЕДАКТИРОВАНИЕ] {edit_request}"},
-        {"role": "assistant", "content": "Понял, вношу изменения."},
-    ]
-
     prev_html = (GENERATED_DIR / f"{slug}.html").read_text(encoding="utf-8") if (GENERATED_DIR / f"{slug}.html").exists() else ""
-    data["edit_request"]  = edit_request
-    data["chat_history"]  = combined_history
-    data["prev_html_full"] = prev_html  # full HTML so model patches, not regenerates
+    data["edit_request"]   = edit_summary
+    data["chat_history"]   = combined_history
+    data["prev_html_full"] = prev_html
 
     gen = _ai_generate(data)
 
@@ -796,7 +852,6 @@ async def site_edit(slug: str, request: Request):
     gen_out = gen["output_tokens"]
     gen_cr  = gen["cache_read_tokens"]
     gen_cc  = gen["cache_create_tokens"]
-
     cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
     our_tokens = _tokens_to_ours(gen_in, gen_out)
 
@@ -809,14 +864,16 @@ async def site_edit(slug: str, request: Request):
         user_id=user["id"], amount=our_tokens,
         reason=f"site_edit:{slug}",
         site_id=site["id"],
-        claude_in=gen_in, claude_out=gen_out,  # store real numbers for analytics
+        claude_in=gen_in, claude_out=gen_out,
         cache_read=gen_cr, cost_usd=cost,
     )
 
     return JSONResponse({
+        "done":         True,
         "ok":           True,
+        "message":      reply,
         "site_url":     f"/site/{slug}",
-        "history":      combined_history,
+        "edit_history": edit_history,
         "tokens_spent": our_tokens,
         "tokens_left":  user["tokens"] - our_tokens,
     })

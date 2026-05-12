@@ -172,6 +172,7 @@ let userTokens = {{ user.tokens }};
 let inputLocked = false;
 let editMode = false;   // after generation — chat becomes edit requests
 let currentSlug = null;
+let editHistory = [];   // separate dialogue history for edit clarification
 // Accumulated chat token counters (sent back each turn for server-side tracking)
 let chatIn = 0, chatOut = 0, chatCr = 0;
 
@@ -333,13 +334,13 @@ async function send() {
 
   showTyping();
 
-  // ── Edit mode: send edit request ──────────────────────────────────────────
+  // ── Edit mode: dialogue-first then generate ───────────────────────────────
   if (editMode && currentSlug) {
     try {
       const r = await fetch(`/site/${currentSlug}/edit`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: text, history })
+        body: JSON.stringify({ message: text, history, edit_history: editHistory })
       });
       const j = await r.json();
       removeTyping();
@@ -350,15 +351,22 @@ async function send() {
         return;
       }
 
-      // Update local history with server's combined history
+      // Update edit dialogue history
+      if (j.edit_history) editHistory = j.edit_history;
+
+      if (!j.done) {
+        // Clarifying question — just show reply, wait for next message
+        addMsg(j.message, 'bot');
+        return;
+      }
+
+      // Generation complete
       if (j.history) history = j.history;
       userTokens = j.tokens_left ?? userTokens;
       updateTokenBadge();
       addMsg('Готово! Сайт обновлён ✨', 'bot');
+      editHistory = []; // reset edit dialogue for next edit
       showDone(j.site_url, 'Сайт обновлён!');
-      // Force-refresh the open link
-      const openBtn = document.getElementById('siteOpenBtn');
-      if (openBtn) openBtn.href = j.site_url + '?v=' + Date.now();
     } catch(e) {
       removeTyping();
       addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
