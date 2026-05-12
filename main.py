@@ -43,9 +43,9 @@ KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474
 
 # catalog item ids → token amounts
 PAYMENT_PACKAGES = [
-    {"catalog_item_id": "17785735222608682", "tokens": 100,  "price": 990,  "label": "100 токенов — 990 ₸"},
-    {"catalog_item_id": "17785735222608784", "tokens": 300,  "price": 2490, "label": "300 токенов — 2 490 ₸"},
-    {"catalog_item_id": "17785735222608267", "tokens": 50,   "price": 1990, "label": "Старт (1 сайт) — 1 990 ₸"},
+    {"catalog_item_id": "17785910161327212", "tokens": 300,  "price": 490,  "label": "300 кредитов — 490 ₸",  "desc": "~15 сайтов"},
+    {"catalog_item_id": "17785910161320747", "tokens": 500,  "price": 990,  "label": "500 кредитов — 990 ₸",  "desc": "~25 сайтов", "popular": True},
+    {"catalog_item_id": "17785910161320806", "tokens": 1500, "price": 2490, "label": "1500 кредитов — 2 490 ₸", "desc": "~80 сайтов"},
 ]
 
 # ── System prompt — cached as stable prefix ───────────────────────────────────

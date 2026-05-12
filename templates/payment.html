@@ -141,7 +141,7 @@
 
   <div class="balance-pill">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-    Баланс: {{ user.tokens }} токенов
+    Баланс: {{ user.tokens }} кредитов
   </div>
 
   <div class="packages">
@@ -149,21 +149,10 @@
     <div class="pkg-card" onclick="selectPkg(this, '{{ pkg.catalog_item_id }}')" data-id="{{ pkg.catalog_item_id }}">
       <div class="pkg-left">
         <div class="pkg-name">
-          {% if pkg.tokens == 300 %}
-            300 токенов <span class="pkg-badge">Выгодно</span>
-          {% elif pkg.tokens == 50 %}
-            Пакет Старт
-          {% else %}
-            100 токенов
-          {% endif %}
+          {{ pkg.tokens }} кредитов
+          {% if pkg.popular %}<span class="pkg-badge">Популярный</span>{% endif %}
         </div>
-        <div class="pkg-desc">
-          {% if pkg.tokens == 50 %}
-            ~1 сайт — попробовать сервис
-          {% else %}
-            {{ pkg.tokens }} генераций сайта
-          {% endif %}
-        </div>
+        <div class="pkg-desc">{{ pkg.desc }}</div>
       </div>
       <div class="pkg-price">{{ "{:,}".format(pkg.price).replace(",", " ") }} ₸</div>
     </div>
@@ -273,7 +262,7 @@ function startPolling() {
       const d = await r.json();
       if (d.status === 'paid') {
         clearInterval(pollingInterval);
-        showStatus('success', '✅', 'Оплачено!', `+${d.tokens} токенов зачислено на ваш баланс.`);
+        showStatus('success', '✅', 'Оплачено!', `+${d.tokens} кредитов зачислено на баланс.`);
         setTimeout(() => window.location.href = '/dashboard', 2500);
       } else if (d.status === 'payment.failed' || d.status === 'payment.expired') {
         clearInterval(pollingInterval);
