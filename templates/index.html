@@ -118,6 +118,7 @@
   }
   .photo-btn:hover{border-color:var(--accent);color:var(--accent);}
   .photo-btn.has-photos{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+  @keyframes photoPulse{0%,100%{box-shadow:0 0 0 0 var(--accent-glow)}50%{box-shadow:0 0 0 6px var(--accent-glow)}}
 
   .send-btn{
     background:var(--accent);border:none;border-radius:50%;
@@ -308,6 +309,21 @@ function updatePhotoBtnStyle() {
   btn.classList.toggle('has-photos', photoUrls.length > 0);
 }
 
+function showPhotoPrompt() {
+  // Pulse the photo button to draw attention
+  const btn = document.getElementById('photoBtnLabel');
+  btn.style.borderColor = 'var(--accent)';
+  btn.style.color = 'var(--accent)';
+  btn.style.animation = 'photoPulse 1s ease-in-out 3';
+  setTimeout(() => {
+    btn.style.animation = '';
+    if (photoUrls.length === 0) {
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
+  }, 3100);
+}
+
 // ── Send ────────────────────────────────────────────────────────────────────
 async function send() {
   if (inputLocked) return;
@@ -340,7 +356,12 @@ async function send() {
       const r = await fetch(`/site/${currentSlug}/edit`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: text, history, edit_history: editHistory })
+        body: JSON.stringify({
+          message: text,
+          history,
+          edit_history: editHistory,
+          photo_urls: photoUrls,
+        })
       });
       const j = await r.json();
       removeTyping();
@@ -351,21 +372,26 @@ async function send() {
         return;
       }
 
-      // Update edit dialogue history
       if (j.edit_history) editHistory = j.edit_history;
 
       if (!j.done) {
-        // Clarifying question — just show reply, wait for next message
         addMsg(j.message, 'bot');
+        // If needs photos — show upload button prominently
+        if (j.needs_photos) {
+          showPhotoPrompt();
+        }
         return;
       }
 
-      // Generation complete
+      // Generation complete — clear photos, reset edit history
+      photoUrls = [];
+      document.getElementById('inputPhotos').innerHTML = '';
+      updatePhotoBtnStyle();
       if (j.history) history = j.history;
       userTokens = j.tokens_left ?? userTokens;
       updateTokenBadge();
       addMsg('Готово! Сайт обновлён ✨', 'bot');
-      editHistory = []; // reset edit dialogue for next edit
+      editHistory = [];
       showDone(j.site_url, 'Сайт обновлён!');
     } catch(e) {
       removeTyping();

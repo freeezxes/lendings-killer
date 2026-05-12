@@ -338,21 +338,27 @@ def _save_cost(entry: dict):
     COSTS_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2))
 
 
-def _ai_edit_chat(history: list) -> dict:
+def _ai_edit_chat(history: list, site_context: str = "") -> dict:
     """Single turn of edit dialogue — clarifies request before generating."""
+    system_text = EDIT_CHAT_SYSTEM
+    if site_context:
+        system_text += f"\n\n=== ТЕКУЩИЙ КОНТЕНТ САЙТА ===\n{site_context}"
     resp = ai_client.messages.create(
         model=BEDROCK_MODEL,
         max_tokens=256,
-        system=[{"type": "text", "text": EDIT_CHAT_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
         messages=history,
     )
     raw = resp.content[0].text.strip()
     raw = re.sub(r'^```[a-z]*\n?', '', raw)
     raw = re.sub(r'\n?```$', '', raw)
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
     except json.JSONDecodeError:
-        return {"reply": raw, "ready": False, "edit_summary": None}
+        result = {"reply": raw, "ready": False, "edit_summary": None}
+    if "needs_photos" not in result:
+        result["needs_photos"] = False
+    return result
 
 
 def _ai_chat(history: list) -> dict:
@@ -430,22 +436,21 @@ CHAT_SYSTEM = """Ты — дружелюбный консультант серв
 
 Когда все 4 поля собраны — ставь "ready": true и в reply напиши что-то вроде «Отлично! Всё есть — сейчас сделаю сайт ✨»"""
 
-EDIT_CHAT_SYSTEM = """Ты — помощник по редактированию сайта-визитки. Клиент хочет что-то изменить на своём сайте.
-
-Твоя задача — понять запрос и при необходимости уточнить детали перед тем как отдать его в работу.
+EDIT_CHAT_SYSTEM = """Ты — помощник по редактированию готового сайта-визитки. Тебе известен текущий контент сайта — используй эти знания при ответах.
 
 Правила:
-- Если запрос ЧЁТКИЙ и конкретный (поменяй цвет на синий, добавь Instagram @name, измени цену на 5000) — сразу подтверди и ставь ready:true
-- Если запрос РАЗМЫТЫЙ (сделай красивее, улучши, переделай) — задай 1 уточняющий вопрос: что именно? как должно выглядеть?
-- Если несколько изменений — подтверди каждое коротко и ставь ready:true
-- Не задавай больше 1 вопроса за раз
-- Пиши коротко, на «ты», без лишних слов
+- Если запрос ЧЁТКИЙ — подтверди кратко и ставь ready:true
+- Если запрос РАЗМЫТЫЙ — задай 1 конкретный уточняющий вопрос
+- Если клиент хочет добавить ФОТО — ставь needs_photos:true, попроси загрузить через кнопку 📎 внизу
+- Не задавай больше 1 вопроса за раз, пиши коротко, на «ты»
+- Ты ЗНАЕШЬ что сейчас на сайте — не спрашивай то что уже есть в контексте
 
 Примеры:
-- «поменяй адрес на Алматы» → ready:true, «Понял, меняю адрес на Алматы ✓»
-- «сделай более официально» → ready:false, «Что именно сделать официальнее — шрифт, цвета, тексты?»
-- «добавь скидку 20% на маникюр» → ready:true, «Добавляю скидку 20% на маникюр ✓»
-- «переделай сайт» → ready:false, «В каком направлении переделать? Например: другие цвета, другой стиль, новые секции?»
+- «поменяй цвет на тёмный» → ready:true
+- «добавь фото работ» → needs_photos:true, «Загрузи фото через кнопку 📎 ниже — добавлю в галерею»
+- «сделай красивее» → ready:false, «Что именно: цвета, шрифты, структура?»
+- «добавь раздел с отзывами» → ready:true
+- «переделай полностью» → ready:false, «В каком направлении — другой стиль, другие цвета, другая структура?»
 
 ВАЖНО: отвечай ТОЛЬКО валидным JSON:
 {
@@ -805,24 +810,47 @@ async def site_edit(slug: str, request: Request):
 
     body           = await request.json()
     message        = body.get("message", "").strip()
-    edit_history   = body.get("edit_history", [])   # separate edit dialogue history
-    client_history = body.get("history", [])        # original creation history
+    edit_history   = body.get("edit_history", [])
+    client_history = body.get("history", [])
+    new_photo_urls = body.get("photo_urls", [])
 
     if not message:
         return JSONResponse({"error": "Пустой запрос"}, status_code=400)
 
-    # Build edit dialogue history
+    # Load site data to build context for edit chat
+    data = site.get("data") or {}
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    # Build plain-text context from site data so AI knows what's on the site
+    site_context = "\n".join(filter(None, [
+        f"Название/профессия: {data.get('name', '')}",
+        f"Услуги: {data.get('services', '')}",
+        f"Контакт: {data.get('city', '')}",
+        f"Стиль: {data.get('vibe', '')}",
+        f"Фото на сайте: {'есть (' + str(len(data.get('photo_urls', []))) + ' шт.)' if data.get('photo_urls') else 'нет'}",
+    ]))
+
     edit_history = edit_history + [{"role": "user", "content": message}]
 
-    # Ask edit-chat AI: clarify or approve?
-    result      = _ai_edit_chat(edit_history)
-    reply       = result.get("reply", "Понял!")
-    ready       = result.get("ready", False)
+    result       = _ai_edit_chat(edit_history, site_context)
+    reply        = result.get("reply", "Понял!")
+    ready        = result.get("ready", False)
+    needs_photos = result.get("needs_photos", False)
     edit_summary = result.get("edit_summary") or message
 
     edit_history = edit_history + [{"role": "assistant", "content": reply}]
 
-    # Not ready yet — ask clarifying question
+    # Needs photos — tell client to upload, don't generate yet
+    if needs_photos and not new_photo_urls:
+        return JSONResponse({
+            "done":         False,
+            "needs_photos": True,
+            "message":      reply,
+            "edit_history": edit_history,
+        })
+
+    # Not ready yet — clarifying question
     if not ready:
         return JSONResponse({
             "done":         False,
@@ -838,8 +866,13 @@ async def site_edit(slug: str, request: Request):
     if isinstance(data, str):
         data = json.loads(data)
 
-    stored_history  = data.get("chat_history", [])
+    stored_history   = data.get("chat_history", [])
     combined_history = client_history if client_history else stored_history
+
+    # Merge new photos into existing
+    if new_photo_urls:
+        existing_photos = data.get("photo_urls", [])
+        data["photo_urls"] = existing_photos + new_photo_urls
 
     prev_html = (GENERATED_DIR / f"{slug}.html").read_text(encoding="utf-8") if (GENERATED_DIR / f"{slug}.html").exists() else ""
     data["edit_request"]   = edit_summary
