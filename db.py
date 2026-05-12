@@ -26,7 +26,7 @@ def init_db():
             phone     TEXT UNIQUE NOT NULL,
             password  TEXT NOT NULL,
             name      TEXT,
-            tokens    INTEGER DEFAULT 30,
+            tokens    INTEGER DEFAULT 100,
             created   TEXT DEFAULT (datetime('now'))
         );
 
