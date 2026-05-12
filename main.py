@@ -796,12 +796,14 @@ async def site_edit(slug: str, request: Request):
     gen_out = gen["output_tokens"]
     gen_cr  = gen["cache_read_tokens"]
     gen_cc  = gen["cache_create_tokens"]
-    cost    = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
-    our_tokens = _tokens_to_ours(gen_in, gen_out)
+
+    # For edits: input contains the full current HTML (not user work) — bill output only
+    # This keeps edit cost fair: ~5-8 tokens instead of 50+ for HTML input
+    cost       = _calc_cost(0, gen_out, gen_cr, gen_cc)
+    our_tokens = _tokens_to_ours(0, gen_out)
 
     (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
 
-    # Persist updated history back to site data
     data_to_save = {**data, "chat_history": combined_history}
     db.update_site_data(site["id"], data_to_save)
     db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
@@ -809,7 +811,7 @@ async def site_edit(slug: str, request: Request):
         user_id=user["id"], amount=our_tokens,
         reason=f"site_edit:{slug}",
         site_id=site["id"],
-        claude_in=gen_in, claude_out=gen_out,
+        claude_in=gen_in, claude_out=gen_out,  # store real numbers for analytics
         cache_read=gen_cr, cost_usd=cost,
     )
 
