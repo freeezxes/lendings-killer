@@ -31,15 +31,21 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS sites (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    INTEGER NOT NULL REFERENCES users(id),
-            slug       TEXT UNIQUE NOT NULL,
-            title      TEXT,
-            data       TEXT,
-            html_path  TEXT,
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id),
+            slug        TEXT UNIQUE NOT NULL,
+            title       TEXT,
+            data        TEXT,
+            html_path   TEXT,
             tokens_used INTEGER DEFAULT 0,
-            created    TEXT DEFAULT (datetime('now')),
-            updated    TEXT DEFAULT (datetime('now'))
+            chat_in     INTEGER DEFAULT 0,
+            chat_out    INTEGER DEFAULT 0,
+            gen_in      INTEGER DEFAULT 0,
+            gen_out     INTEGER DEFAULT 0,
+            cache_read  INTEGER DEFAULT 0,
+            cost_usd    REAL DEFAULT 0,
+            created     TEXT DEFAULT (datetime('now')),
+            updated     TEXT DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS token_log (
@@ -73,6 +79,19 @@ def init_db():
             expires  TEXT NOT NULL
         );
         """)
+    # Migrate existing sites table — add new columns if missing
+    with get_conn() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(sites)").fetchall()}
+        for col, defn in [
+            ("chat_in",   "INTEGER DEFAULT 0"),
+            ("chat_out",  "INTEGER DEFAULT 0"),
+            ("gen_in",    "INTEGER DEFAULT 0"),
+            ("gen_out",   "INTEGER DEFAULT 0"),
+            ("cache_read","INTEGER DEFAULT 0"),
+            ("cost_usd",  "REAL DEFAULT 0"),
+        ]:
+            if col not in cols:
+                c.execute(f"ALTER TABLE sites ADD COLUMN {col} {defn}")
 
 # ── Users ──────────────────────────────────────────────────────────────────
 def create_user(phone: str, password: str, name: str = "") -> dict | None:
@@ -123,11 +142,18 @@ def add_tokens(user_id: int, amount: int, reason: str):
                   (user_id, amount, reason))
 
 # ── Sites ──────────────────────────────────────────────────────────────────
-def create_site(user_id: int, slug: str, title: str, data: dict, html_path: str, tokens_used: int) -> dict:
+def create_site(user_id: int, slug: str, title: str, data: dict, html_path: str,
+                tokens_used: int, chat_in: int = 0, chat_out: int = 0,
+                gen_in: int = 0, gen_out: int = 0,
+                cache_read: int = 0, cost_usd: float = 0.0) -> dict:
     with get_conn() as c:
         cur = c.execute(
-            "INSERT INTO sites (user_id,slug,title,data,html_path,tokens_used) VALUES (?,?,?,?,?,?)",
-            (user_id, slug, title, json.dumps(data, ensure_ascii=False), html_path, tokens_used)
+            """INSERT INTO sites
+               (user_id,slug,title,data,html_path,tokens_used,
+                chat_in,chat_out,gen_in,gen_out,cache_read,cost_usd)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (user_id, slug, title, json.dumps(data, ensure_ascii=False), html_path, tokens_used,
+             chat_in, chat_out, gen_in, gen_out, cache_read, cost_usd)
         )
         return get_site_by_id(cur.lastrowid)
 

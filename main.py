@@ -324,7 +324,7 @@ def _save_cost(entry: dict):
 
 
 def _ai_chat(history: list) -> dict:
-    """Run one turn of the onboarding dialogue. Returns parsed JSON from the model."""
+    """Run one turn of the onboarding dialogue. Returns parsed JSON + usage."""
     resp = ai_client.messages.create(
         model=BEDROCK_MODEL,
         max_tokens=512,
@@ -336,14 +336,19 @@ def _ai_chat(history: list) -> dict:
         messages=history,
     )
     raw = resp.content[0].text.strip()
-    # Strip accidental markdown fences
     raw = re.sub(r'^```[a-z]*\n?', '', raw)
     raw = re.sub(r'\n?```$', '', raw)
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
     except json.JSONDecodeError:
-        # Fallback: extract reply text and mark not ready
-        return {"reply": raw, "ready": False, "collected": {}}
+        result = {"reply": raw, "ready": False, "collected": {}}
+    # Attach usage so caller can accumulate
+    result["_usage"] = {
+        "inp": resp.usage.input_tokens,
+        "out": resp.usage.output_tokens,
+        "cr":  getattr(resp.usage, "cache_read_input_tokens", 0) or 0,
+    }
+    return result
 
 
 # ── Auth middleware ───────────────────────────────────────────────────────────
@@ -591,58 +596,72 @@ async def chat(request: Request):
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
 
-    body       = await request.json()
-    message    = body.get("message", "").strip()
-    history    = body.get("history", [])   # list of {role, content}
-    photo_urls = body.get("photo_urls", [])
+    body           = await request.json()
+    message        = body.get("message", "").strip()
+    history        = body.get("history", [])
+    photo_urls     = body.get("photo_urls", [])
+    # Accumulated chat tokens from previous turns (client sends back)
+    acc_chat_in    = int(body.get("chat_in", 0))
+    acc_chat_out   = int(body.get("chat_out", 0))
+    acc_chat_cr    = int(body.get("chat_cr", 0))
 
     if not message:
         return JSONResponse({"error": "Пустое сообщение"}, status_code=400)
 
-    # Append user message to history
     history.append({"role": "user", "content": message})
 
-    # Ask AI what to do next
-    result = _ai_chat(history)
+    result     = _ai_chat(history)
     reply      = result.get("reply", "Продолжай, я слушаю")
     ready      = result.get("ready", False)
     collected  = result.get("collected", {})
+    usage      = result.get("_usage", {})
 
-    # Append assistant reply to history
+    # Accumulate chat tokens
+    acc_chat_in  += usage.get("inp", 0)
+    acc_chat_out += usage.get("out", 0)
+    acc_chat_cr  += usage.get("cr",  0)
+
     history.append({"role": "assistant", "content": reply})
 
     if not ready:
         return JSONResponse({
-            "message": reply,
-            "history": history,
-            "done":    False,
+            "message":  reply,
+            "history":  history,
+            "done":     False,
+            "chat_in":  acc_chat_in,
+            "chat_out": acc_chat_out,
+            "chat_cr":  acc_chat_cr,
         })
 
     # ── Ready to generate ──────────────────────────────────────────────────
     if user["tokens"] < 1:
         return JSONResponse({"error": "Недостаточно токенов для генерации сайта"}, status_code=402)
 
-    # Build data dict from collected fields + photos
     vibe = collected.get("vibe") or ""
     data = {
-        "name":       collected.get("name") or "Бизнес",
-        "services":   collected.get("services") or "",
-        "city":       collected.get("city") or "",
-        "vibe":       vibe,
-        "extra":      "",
-        "photo_urls": photo_urls,
-        "ref_url":    vibe if _is_url(vibe) else "",
-        "chat_history": history,   # pass full dialogue as extra context
+        "name":         collected.get("name") or "Бизнес",
+        "services":     collected.get("services") or "",
+        "city":         collected.get("city") or "",
+        "vibe":         vibe,
+        "extra":        "",
+        "photo_urls":   photo_urls,
+        "ref_url":      vibe if _is_url(vibe) else "",
+        "chat_history": history,
     }
 
     gen = _ai_generate(data)
 
-    inp = gen["input_tokens"]
-    out = gen["output_tokens"]
-    cr  = gen["cache_read_tokens"]
-    cc  = gen["cache_create_tokens"]
-    cost = _calc_cost(inp, out, cr, cc)
-    our_tokens = _tokens_to_ours(inp, out)
+    gen_in  = gen["input_tokens"]
+    gen_out = gen["output_tokens"]
+    gen_cr  = gen["cache_read_tokens"]
+    gen_cc  = gen["cache_create_tokens"]
+
+    # Total cost = chat turns + generation
+    total_in  = acc_chat_in  + gen_in
+    total_out = acc_chat_out + gen_out
+    total_cr  = acc_chat_cr  + gen_cr
+    cost = _calc_cost(total_in, total_out, total_cr, gen_cc)
+    our_tokens = _tokens_to_ours(total_in, total_out)
 
     name = data["name"]
     clean_name = re.sub(r'^я\s+', '', name.lower().strip())
@@ -660,6 +679,12 @@ async def chat(request: Request):
         data=data,
         html_path=str(GENERATED_DIR / f"{slug}.html"),
         tokens_used=our_tokens,
+        chat_in=acc_chat_in,
+        chat_out=acc_chat_out,
+        gen_in=gen_in,
+        gen_out=gen_out,
+        cache_read=total_cr,
+        cost_usd=cost,
     )
 
     db.deduct_tokens(
@@ -667,9 +692,9 @@ async def chat(request: Request):
         amount=our_tokens,
         reason=f"site_generate:{slug}",
         site_id=site["id"] if site else None,
-        claude_in=inp,
-        claude_out=out,
-        cache_read=cr,
+        claude_in=total_in,
+        claude_out=total_out,
+        cache_read=total_cr,
         cost_usd=cost,
     )
 
@@ -677,8 +702,9 @@ async def chat(request: Request):
         "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
         "client": name, "slug": slug, "user_id": user["id"],
         "style": data["ref_url"] or vibe or "ai-chat",
-        "input_tokens": inp, "output_tokens": out,
-        "cache_read_tokens": cr, "cache_create_tokens": cc,
+        "chat_in": acc_chat_in, "chat_out": acc_chat_out,
+        "gen_in": gen_in, "gen_out": gen_out,
+        "cache_read_tokens": total_cr, "cache_create_tokens": gen_cc,
         "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
         "model": BEDROCK_MODEL,
     })

@@ -170,6 +170,8 @@ let history = [];
 let photoUrls = [];
 let userTokens = {{ user.tokens }};
 let inputLocked = false;
+// Accumulated chat token counters (sent back each turn for server-side tracking)
+let chatIn = 0, chatOut = 0, chatCr = 0;
 
 function autoResize(el) {
   el.style.height = 'auto';
@@ -315,7 +317,10 @@ async function send() {
     const r = await fetch('/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: text, history, photo_urls: photoUrls})
+      body: JSON.stringify({
+        message: text, history, photo_urls: photoUrls,
+        chat_in: chatIn, chat_out: chatOut, chat_cr: chatCr
+      })
     });
     const j = await r.json();
     removeTyping();
@@ -327,6 +332,12 @@ async function send() {
     }
 
     history = j.history;
+    // Update accumulated chat token counters from server response
+    if (!j.done) {
+      chatIn  = j.chat_in  ?? chatIn;
+      chatOut = j.chat_out ?? chatOut;
+      chatCr  = j.chat_cr  ?? chatCr;
+    }
 
     if (j.done) {
       userTokens = j.tokens_left ?? userTokens;
