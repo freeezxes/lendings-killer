@@ -34,7 +34,7 @@ TEMPLATES_DIR = Path("templates")
 GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
-ADMIN_PHONE = "77777777777"
+ADMIN_PHONE = "77064177628"
 
 # ── Kaspi Pay via kaspi-pos on astana-gb server ───────────────────────────────
 KASPI_POS_URL    = "http://92.38.49.113:4001"
@@ -451,6 +451,39 @@ async def admin_api_stats(request: Request):
     if not user or user.get("phone") != ADMIN_PHONE:
         return JSONResponse({"error": "forbidden"}, status_code=403)
     return JSONResponse(db.admin_stats())
+
+
+@app.get("/admin/api/users")
+async def admin_api_users(request: Request):
+    user = _require_auth(request)
+    if not user or user.get("phone") != ADMIN_PHONE:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    return JSONResponse(db.admin_users())
+
+
+@app.get("/admin/api/user/{uid}")
+async def admin_api_user(uid: int, request: Request):
+    user = _require_auth(request)
+    if not user or user.get("phone") != ADMIN_PHONE:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    detail = db.admin_user_detail(uid)
+    if not detail:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(detail)
+
+
+@app.post("/admin/api/user/{uid}/add-tokens")
+async def admin_add_tokens(uid: int, request: Request):
+    admin = _require_auth(request)
+    if not admin or admin.get("phone") != ADMIN_PHONE:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    amount = int(body.get("amount", 0))
+    if amount <= 0:
+        return JSONResponse({"error": "amount must be > 0"}, status_code=400)
+    db.add_tokens(uid, amount, "admin_grant")
+    updated = db.get_user_by_id(uid)
+    return JSONResponse({"ok": True, "tokens": updated["tokens"]})
 
 
 # ── Upload photo ──────────────────────────────────────────────────────────────

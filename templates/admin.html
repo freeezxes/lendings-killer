@@ -3,421 +3,421 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lendings.kz — Admin</title>
+<title>Admin — lendings.kz</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
   :root {
-    --bg:        #080810;
-    --surface:   #0f0f18;
-    --surface2:  #14141e;
-    --border:    #1c1c2c;
-    --accent:    #7c5cff;
-    --accent-glow: #7c5cff28;
-    --text:      #e8e4ff;
-    --muted:     #5e5e7a;
-    --muted2:    #3a3a55;
-    --green:     #34d896;
-    --yellow:    #f5c842;
-    --blue:      #4fa3ff;
-    --red:       #ff5f7e;
-    --mono:      'JetBrains Mono', monospace;
-    --radius:    14px;
+    --bg:#080810; --surface:#0f0f18; --surface2:#14141e; --border:#1c1c2c;
+    --accent:#7c5cff; --accent-glow:#7c5cff28;
+    --text:#e8e4ff; --muted:#5e5e7a; --muted2:#3a3a55;
+    --green:#34d896; --yellow:#f5c842; --blue:#4fa3ff; --red:#ff5f7e;
+    --mono:'JetBrains Mono',monospace; --radius:14px;
   }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Sora',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 50% 25% at 15% 0%,#7c5cff12 0%,transparent 55%),
+               radial-gradient(ellipse 35% 20% at 85% 100%,#4fa3ff08 0%,transparent 55%);}
 
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
+  /* Header */
+  .header{position:sticky;top:0;z-index:100;background:#080810ee;backdrop-filter:blur(24px);
+    border-bottom:1px solid var(--border);padding:0 20px;height:56px;
+    display:flex;align-items:center;justify-content:space-between;}
+  .header-left{display:flex;align-items:center;gap:12px;}
+  .logo{font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+  .logo span{color:var(--accent);}
+  .admin-badge{background:#ff5f7e18;border:1px solid #ff5f7e33;color:var(--red);
+    border-radius:6px;padding:3px 8px;font-size:.68rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono);}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+    animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+  .live-label{font-size:.74rem;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:6px;}
 
-  body {
-    font-family: 'Sora', -apple-system, sans-serif;
-    background: var(--bg); color: var(--text);
-    min-height:100vh; overflow-x:hidden;
-  }
+  /* Content */
+  .content{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
-  /* Scan-line texture overlay for that "ops dashboard" feel */
-  body::after {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 2px, #00000008 2px, #00000008 4px
-    );
-  }
+  /* Stats grid */
+  .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:24px;}
+  @media(min-width:640px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(min-width:900px){.stats-grid{grid-template-columns:repeat(6,1fr);}}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 14px;position:relative;overflow:hidden;animation:fadeUp .4s both;}
+  .stat-card:nth-child(1){animation-delay:.04s} .stat-card:nth-child(2){animation-delay:.08s}
+  .stat-card:nth-child(3){animation-delay:.12s} .stat-card:nth-child(4){animation-delay:.16s}
+  .stat-card:nth-child(5){animation-delay:.20s} .stat-card:nth-child(6){animation-delay:.24s}
+  .stat-label{font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--muted);margin-bottom:8px;}
+  .stat-value{font-size:1.55rem;font-weight:700;letter-spacing:-.03em;line-height:1;
+    font-family:var(--mono);transition:all .3s;}
+  .stat-value.accent{color:var(--accent)} .stat-value.green{color:var(--green)}
+  .stat-value.yellow{color:var(--yellow)} .stat-value.blue{color:var(--blue)}
+  .stat-value.red{color:var(--red)} .stat-value.white{color:var(--text)}
+  .stat-sub{font-size:.68rem;color:var(--muted);margin-top:4px;font-family:var(--mono);}
 
-  body::before {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background:
-      radial-gradient(ellipse 50% 25% at 15% 0%, #7c5cff12 0%, transparent 55%),
-      radial-gradient(ellipse 35% 20% at 85% 100%, #4fa3ff08 0%, transparent 55%);
-  }
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:18px;animation:fadeUp .4s .2s both;}
+  .tab-btn{background:none;border:1px solid var(--border);color:var(--muted);
+    border-radius:9px;padding:7px 16px;font-family:inherit;font-size:.82rem;
+    cursor:pointer;transition:all .2s;}
+  .tab-btn:hover{color:var(--text);border-color:var(--muted2);}
+  .tab-btn.active{background:var(--accent-glow);border-color:#7c5cff44;color:var(--accent);}
 
-  /* ─── HEADER ─── */
-  .header {
-    position:sticky; top:0; z-index:100;
-    background: #080810ee;
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-bottom:1px solid var(--border);
-    padding:0 20px;
-    height:56px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .header-left { display:flex; align-items:center; gap:14px; }
-  .logo { font-size:1rem; font-weight:700; letter-spacing:-.02em; }
-  .logo span { color: var(--accent); }
-  .admin-badge {
-    background:#ff5f7e18; border:1px solid #ff5f7e33;
-    color: var(--red); border-radius:6px;
-    padding:3px 8px; font-size:.68rem; font-weight:600;
-    text-transform:uppercase; letter-spacing:.08em;
-    font-family: var(--mono);
-  }
-  .refresh-indicator {
-    display:flex; align-items:center; gap:6px;
-    font-size:.74rem; color: var(--muted);
-    font-family: var(--mono);
-  }
-  .refresh-dot {
-    width:7px; height:7px; border-radius:50%;
-    background: var(--green);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50% { opacity:.4; transform:scale(.7); }
-  }
+  /* Panel */
+  .panel{display:none;} .panel.active{display:block;}
 
-  /* ─── LAYOUT ─── */
-  .content {
-    position:relative; z-index:1;
-    max-width:1000px; margin:0 auto;
-    padding:24px 20px 60px;
-  }
+  /* Table */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;animation:fadeUp .4s .25s both;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  thead th{background:var(--surface2);padding:10px 14px;text-align:left;
+    font-size:.67rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;font-family:var(--mono);}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:#ffffff05;}
+  tbody td{padding:11px 14px;vertical-align:middle;white-space:nowrap;}
+  td.mono{font-family:var(--mono);font-size:.78rem;color:var(--muted);}
+  td.ellipsis{max-width:180px;overflow:hidden;text-overflow:ellipsis;}
 
-  /* ─── STATS GRID ─── */
-  .stats-grid {
-    display:grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap:12px; margin-bottom:28px;
-  }
-  @media(min-width:600px) {
-    .stats-grid { grid-template-columns: repeat(4, 1fr); }
-  }
+  .badge{display:inline-block;border-radius:6px;padding:2px 7px;font-size:.7rem;
+    font-weight:600;font-family:var(--mono);}
+  .badge-purple{background:var(--accent-glow);border:1px solid #7c5cff33;color:var(--accent);}
+  .badge-green{background:#34d89620;border:1px solid #34d89633;color:var(--green);}
+  .badge-yellow{background:#f5c84220;border:1px solid #f5c84233;color:var(--yellow);}
+  .badge-red{background:#ff5f7e18;border:1px solid #ff5f7e33;color:var(--red);}
 
-  .stat-card {
-    background: var(--surface);
-    border:1px solid var(--border);
-    border-radius: var(--radius);
-    padding:18px 16px;
-    position:relative; overflow:hidden;
-    transition: border-color .2s;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both;
-  }
-  .stat-card:nth-child(1) { animation-delay:.05s; }
-  .stat-card:nth-child(2) { animation-delay:.1s; }
-  .stat-card:nth-child(3) { animation-delay:.15s; }
-  .stat-card:nth-child(4) { animation-delay:.2s; }
-  .stat-card:hover { border-color: var(--muted2); }
+  .open-link{display:inline-flex;align-items:center;gap:4px;color:var(--accent);
+    text-decoration:none;font-size:.76rem;transition:opacity .15s;}
+  .open-link:hover{opacity:.7;}
 
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(16px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
+  /* Loading/empty */
+  .state-row td{text-align:center;padding:40px;color:var(--muted);font-size:.84rem;}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+    margin-right:8px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  .stat-label {
-    font-size:.72rem; font-weight:500; text-transform:uppercase;
-    letter-spacing:.07em; color: var(--muted); margin-bottom:10px;
-  }
-  .stat-value {
-    font-size:1.8rem; font-weight:700; letter-spacing:-.03em;
-    line-height:1; font-family: var(--mono);
-    transition: all .4s cubic-bezier(.22,1,.36,1);
-  }
-  .stat-value.accent { color: var(--accent); }
-  .stat-value.green  { color: var(--green); }
-  .stat-value.yellow { color: var(--yellow); }
-  .stat-value.blue   { color: var(--blue); }
-  .stat-sub {
-    font-size:.72rem; color: var(--muted); margin-top:5px;
-    font-family: var(--mono);
-  }
+  /* ── USER DETAIL MODAL ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:#00000099;
+    z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    width:100%;max-width:720px;margin:auto;animation:fadeUp .25s both;}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;
+    padding:20px 24px;border-bottom:1px solid var(--border);}
+  .modal-title{font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+  .modal-close{background:none;border:none;color:var(--muted);cursor:pointer;
+    width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    transition:all .2s;font-size:1.1rem;}
+  .modal-close:hover{background:var(--surface2);color:var(--text);}
+  .modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
 
-  /* Decorative corner glow */
-  .stat-card::after {
-    content:''; position:absolute; bottom:-20px; right:-20px;
-    width:60px; height:60px; border-radius:50%;
-    background: radial-gradient(circle, currentColor 0%, transparent 70%);
-    opacity:.06; pointer-events:none;
-  }
-  .stat-card:nth-child(1)::after { color: var(--accent); }
-  .stat-card:nth-child(2)::after { color: var(--green); }
-  .stat-card:nth-child(3)::after { color: var(--yellow); }
-  .stat-card:nth-child(4)::after { color: var(--blue); }
+  .user-hero{display:flex;align-items:center;gap:14px;}
+  .user-avatar{width:48px;height:48px;border-radius:14px;background:var(--accent-glow);
+    border:2px solid #7c5cff33;display:flex;align-items:center;justify-content:center;
+    font-size:1.2rem;font-weight:700;color:var(--accent);flex-shrink:0;}
+  .user-name{font-size:1rem;font-weight:600;margin-bottom:2px;}
+  .user-meta{font-size:.78rem;color:var(--muted);font-family:var(--mono);}
+  .user-stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .user-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;text-align:center;flex:1;min-width:80px;}
+  .user-stat-val{font-size:1.1rem;font-weight:700;font-family:var(--mono);letter-spacing:-.02em;}
+  .user-stat-lbl{font-size:.68rem;color:var(--muted);margin-top:2px;}
 
-  /* ─── SECTION TITLE ─── */
-  .section-head {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:14px;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .25s both;
-  }
-  .section-title {
-    font-size:.9rem; font-weight:600; letter-spacing:-.01em;
-  }
-  .section-meta {
-    font-size:.74rem; color: var(--muted);
-    font-family: var(--mono);
-  }
+  /* Add tokens form */
+  .add-tokens-form{display:flex;gap:8px;align-items:center;}
+  .add-tokens-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:9px 14px;font-family:var(--mono);font-size:.9rem;
+    width:110px;outline:none;transition:border-color .2s;}
+  .add-tokens-input:focus{border-color:var(--accent);}
+  .add-tokens-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;
+    padding:9px 16px;font-family:inherit;font-size:.82rem;font-weight:600;
+    cursor:pointer;transition:opacity .15s;white-space:nowrap;}
+  .add-tokens-btn:hover{opacity:.88;}
+  .add-tokens-result{font-size:.8rem;color:var(--green);font-family:var(--mono);margin-left:4px;}
 
-  /* ─── TABLE ─── */
-  .table-wrap {
-    background: var(--surface);
-    border:1px solid var(--border);
-    border-radius: var(--radius);
-    overflow:hidden;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) .3s both;
-  }
-  .table-scroll { overflow-x:auto; }
-
-  table {
-    width:100%; border-collapse:collapse;
-    font-size:.82rem;
-  }
-  thead th {
-    background: var(--surface2);
-    padding:11px 14px; text-align:left;
-    font-size:.68rem; font-weight:600; text-transform:uppercase;
-    letter-spacing:.07em; color: var(--muted);
-    border-bottom:1px solid var(--border);
-    white-space:nowrap;
-    font-family: var(--mono);
-  }
-  tbody tr {
-    border-bottom:1px solid var(--border);
-    transition: background .15s;
-  }
-  tbody tr:last-child { border-bottom:none; }
-  tbody tr:hover { background: #ffffff04; }
-  tbody td {
-    padding:12px 14px; vertical-align:middle;
-    color: var(--text); white-space:nowrap;
-  }
-  td.muted { color: var(--muted); font-family: var(--mono); font-size:.78rem; }
-  td.title-cell { max-width:160px; overflow:hidden; text-overflow:ellipsis; }
-  td.phone-cell { font-family: var(--mono); font-size:.78rem; color: var(--muted); }
-
-  .token-badge-sm {
-    display:inline-block;
-    background: var(--accent-glow); border:1px solid #7c5cff33;
-    color: var(--accent); border-radius:6px;
-    padding:2px 7px; font-size:.72rem; font-weight:600;
-    font-family: var(--mono);
-  }
-  .open-link {
-    display:inline-flex; align-items:center; gap:4px;
-    color: var(--accent); text-decoration:none; font-size:.78rem;
-    transition: opacity .15s;
-  }
-  .open-link:hover { opacity:.75; }
-  .open-link svg { width:11px; height:11px; }
-
-  /* ─── LOADING / ERROR STATES ─── */
-  .loading-row td {
-    text-align:center; padding:48px 14px;
-    color: var(--muted); font-size:.84rem;
-  }
-  .spinner {
-    display:inline-block; width:20px; height:20px;
-    border:2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius:50%;
-    animation: spin .7s linear infinite;
-    margin-right:8px; vertical-align:middle;
-  }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
-  .error-row td {
-    text-align:center; padding:32px;
-    color: var(--red); font-size:.84rem;
-  }
-
-  /* ─── EMPTY ─── */
-  .empty-row td {
-    text-align:center; padding:48px;
-    color: var(--muted); font-size:.84rem;
-  }
+  /* Sub-section */
+  .sub-section-title{font-size:.7rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);margin-bottom:10px;}
+  .mini-table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  .mini-table th{text-align:left;padding:7px 10px;font-size:.66rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);
+    border-bottom:1px solid var(--border);}
+  .mini-table td{padding:8px 10px;border-bottom:1px solid #ffffff06;vertical-align:middle;}
+  .mini-table tr:last-child td{border-bottom:none;}
+  .mini-table .mono{font-family:var(--mono);font-size:.74rem;color:var(--muted);}
+  .delta-plus{color:var(--green);font-weight:600;font-family:var(--mono);}
+  .delta-minus{color:var(--red);font-weight:600;font-family:var(--mono);}
+  .empty-sub{font-size:.78rem;color:var(--muted);text-align:center;padding:16px;}
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <header class="header">
   <div class="header-left">
     <div class="logo">lendings<span>.kz</span></div>
     <span class="admin-badge">Admin</span>
   </div>
-  <div class="refresh-indicator">
-    <div class="refresh-dot"></div>
-    <span id="refresh-label">обновляется…</span>
+  <div class="live-label">
+    <div class="live-dot"></div>
+    <span id="liveTs">—</span>
   </div>
 </header>
 
-<!-- Content -->
 <main class="content">
 
-  <!-- Stats cards -->
-  <div class="stats-grid" id="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Пользователи</div>
-      <div class="stat-value accent" id="stat-users">—</div>
-      <div class="stat-sub">всего</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Сайты</div>
-      <div class="stat-value green" id="stat-sites">—</div>
-      <div class="stat-sub">сгенерировано</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Стоимость</div>
-      <div class="stat-value yellow" id="stat-cost">—</div>
-      <div class="stat-sub">USD (Claude)</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Токены</div>
-      <div class="stat-value blue" id="stat-tokens">—</div>
-      <div class="stat-sub">итого использовано</div>
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Юзеры</div><div class="stat-value accent" id="s-users">—</div><div class="stat-sub">всего</div></div>
+    <div class="stat-card"><div class="stat-label">Сайты</div><div class="stat-value green" id="s-sites">—</div><div class="stat-sub">сгенерировано</div></div>
+    <div class="stat-card"><div class="stat-label">Платежи</div><div class="stat-value yellow" id="s-paid-count">—</div><div class="stat-sub">успешных</div></div>
+    <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value white" id="s-paid-sum">—</div><div class="stat-sub">₸ оплачено</div></div>
+    <div class="stat-card"><div class="stat-label">AI стоимость</div><div class="stat-value red" id="s-cost">—</div><div class="stat-sub">USD Claude</div></div>
+    <div class="stat-card"><div class="stat-label">AI токены</div><div class="stat-value blue" id="s-tokens">—</div><div class="stat-sub">использовано</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('users')">Пользователи</button>
+    <button class="tab-btn" onclick="switchTab('sites')">Последние сайты</button>
+  </div>
+
+  <!-- Users panel -->
+  <div class="panel active" id="panel-users">
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Телефон</th><th>Имя</th><th>Токены</th>
+            <th>Сайты</th><th>Оплатил</th><th>Дата рег.</th>
+          </tr></thead>
+          <tbody id="users-tbody"><tr class="state-row"><td colspan="7"><span class="spinner"></span>Загрузка…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- Recent sites table -->
-  <div class="section-head">
-    <div class="section-title">Последние сайты</div>
-    <div class="section-meta" id="last-updated">—</div>
-  </div>
-
-  <div class="table-wrap">
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Телефон</th>
-            <th>Имя</th>
-            <th>Сайт</th>
-            <th>Токены</th>
-            <th>Дата</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="sites-tbody">
-          <tr class="loading-row">
-            <td colspan="6"><span class="spinner"></span>Загрузка данных…</td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- Sites panel -->
+  <div class="panel" id="panel-sites">
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Телефон</th><th>Имя</th><th>Сайт</th><th>Токены</th><th>Дата</th><th></th>
+          </tr></thead>
+          <tbody id="sites-tbody"><tr class="state-row"><td colspan="6"><span class="spinner"></span>Загрузка…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
 </main>
 
+<!-- User detail modal -->
+<div class="modal-overlay" id="userModal" onclick="closeModalOutside(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Пользователь</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div style="text-align:center;padding:40px;color:var(--muted)"><span class="spinner"></span>Загрузка…</div>
+    </div>
+  </div>
+</div>
+
 <script>
-  const REFRESH_INTERVAL = 30000; // 30 seconds
-  let refreshTimer = null;
+const esc = s => { const d = document.createElement('div'); d.textContent = s??''; return d.innerHTML; };
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n??0);
 
-  function formatTokens(n) {
-    if (n === null || n === undefined) return '—';
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return String(n);
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== String(v)) el.textContent = v;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['users','sites'][i] === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── Stats ──
+async function loadStats() {
+  const r = await fetch('/admin/api/stats', {cache:'no-store'});
+  const d = await r.json();
+  setVal('s-users', d.users ?? '—');
+  setVal('s-sites', d.sites ?? '—');
+  setVal('s-paid-count', d.paid_count ?? 0);
+  setVal('s-paid-sum', (d.paid_sum ?? 0).toLocaleString('ru') + ' ₸');
+  setVal('s-cost', d.total_cost != null ? '$' + Number(d.total_cost).toFixed(4) : '—');
+  setVal('s-tokens', fmt(d.total_tokens));
+
+  // recent sites
+  const tbody = document.getElementById('sites-tbody');
+  if (!d.recent_sites?.length) {
+    tbody.innerHTML = '<tr class="state-row"><td colspan="6">Сайтов пока нет</td></tr>';
+  } else {
+    tbody.innerHTML = d.recent_sites.map(s => `
+      <tr onclick="openUser(${s.user_id})">
+        <td class="mono">${esc(s.phone)}</td>
+        <td>${esc(s.name||'—')}</td>
+        <td class="ellipsis" title="${esc(s.title)}">${esc(s.title||'—')}</td>
+        <td><span class="badge badge-purple">${esc(String(s.tokens_used??0))}</span></td>
+        <td class="mono">${esc((s.created||'').slice(0,10))}</td>
+        <td><a href="/site/${esc(s.slug)}" target="_blank" class="open-link" onclick="e=>e.stopPropagation()">
+          Открыть <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a></td>
+      </tr>`).join('');
   }
 
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str || '';
-    return d.innerHTML;
+  // ts
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('liveTs').textContent = `обновлено ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+// ── Users ──
+async function loadUsers() {
+  const r = await fetch('/admin/api/users', {cache:'no-store'});
+  const users = await r.json();
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr class="state-row"><td colspan="7">Юзеров нет</td></tr>';
+    return;
   }
+  tbody.innerHTML = users.map((u,i) => `
+    <tr onclick="openUser(${u.id})">
+      <td class="mono" style="color:var(--muted2)">${i+1}</td>
+      <td class="mono">${esc(u.phone)}</td>
+      <td>${esc(u.name||'—')}</td>
+      <td><span class="badge badge-purple">${u.tokens}</span></td>
+      <td><span class="badge badge-green">${u.sites_count}</span></td>
+      <td>${u.paid_total > 0 ? `<span class="badge badge-yellow">${Number(u.paid_total).toLocaleString('ru')} ₸</span>` : '<span style="color:var(--muted2)">—</span>'}</td>
+      <td class="mono">${esc((u.created||'').slice(0,10))}</td>
+    </tr>`).join('');
+}
 
-  function setStatValue(id, value, formatter) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const formatted = formatter ? formatter(value) : (value ?? '—');
-    if (el.textContent !== String(formatted)) {
-      el.style.transform = 'translateY(-4px)';
-      el.style.opacity = '0.5';
-      setTimeout(() => {
-        el.textContent = formatted;
-        el.style.transform = '';
-        el.style.opacity = '';
-      }, 150);
-    }
+// ── User detail modal ──
+async function openUser(uid) {
+  document.getElementById('userModal').classList.add('show');
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><span class="spinner"></span>Загрузка…</div>';
+
+  const r = await fetch(`/admin/api/user/${uid}`, {cache:'no-store'});
+  const d = await r.json();
+  const u = d.user;
+
+  document.getElementById('modalTitle').textContent = u.name || u.phone;
+
+  const paidTotal = d.payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  const genCount  = d.token_log.filter(l=>l.delta<0).length;
+
+  const sitesHtml = d.sites.length ? `
+    <table class="mini-table">
+      <thead><tr><th>Сайт</th><th>Токены</th><th>Дата</th><th></th></tr></thead>
+      <tbody>${d.sites.map(s=>`
+        <tr>
+          <td class="ellipsis" style="max-width:200px" title="${esc(s.title)}">${esc(s.title||s.slug)}</td>
+          <td><span class="badge badge-purple">${s.tokens_used}</span></td>
+          <td class="mono">${esc((s.created||'').slice(0,10))}</td>
+          <td><a href="/site/${esc(s.slug)}" target="_blank" class="open-link">↗</a></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty-sub">Сайтов нет</div>';
+
+  const logHtml = d.token_log.length ? `
+    <table class="mini-table">
+      <thead><tr><th>Δ</th><th>Причина</th><th>Дата</th></tr></thead>
+      <tbody>${d.token_log.slice(0,15).map(l=>`
+        <tr>
+          <td class="${l.delta>0?'delta-plus':'delta-minus'}">${l.delta>0?'+':''}${l.delta}</td>
+          <td style="font-size:.78rem">${esc(l.reason||'—')}</td>
+          <td class="mono">${esc((l.ts||'').slice(0,10))}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty-sub">Операций нет</div>';
+
+  const paymentsHtml = d.payments.length ? `
+    <table class="mini-table">
+      <thead><tr><th>Сумма</th><th>Токены</th><th>Статус</th><th>Дата</th></tr></thead>
+      <tbody>${d.payments.map(p=>`
+        <tr>
+          <td class="mono">${Number(p.amount).toLocaleString('ru')} ₸</td>
+          <td><span class="badge badge-purple">+${p.tokens}</span></td>
+          <td>${p.status==='paid'?'<span class="badge badge-green">paid</span>':p.status==='pending'?'<span class="badge badge-yellow">pending</span>':'<span class="badge badge-red">'+esc(p.status)+'</span>'}</td>
+          <td class="mono">${esc((p.created||'').slice(0,10))}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty-sub">Платежей нет</div>';
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="user-hero">
+      <div class="user-avatar">${esc((u.name||u.phone).slice(0,1).toUpperCase())}</div>
+      <div>
+        <div class="user-name">${esc(u.name||'Без имени')}</div>
+        <div class="user-meta">${esc(u.phone)} · ID ${u.id} · с ${esc((u.created||'').slice(0,10))}</div>
+      </div>
+    </div>
+
+    <div class="user-stats">
+      <div class="user-stat"><div class="user-stat-val" style="color:var(--accent)">${u.tokens}</div><div class="user-stat-lbl">токенов</div></div>
+      <div class="user-stat"><div class="user-stat-val" style="color:var(--green)">${d.sites.length}</div><div class="user-stat-lbl">сайтов</div></div>
+      <div class="user-stat"><div class="user-stat-val">${genCount}</div><div class="user-stat-lbl">генераций</div></div>
+      <div class="user-stat"><div class="user-stat-val" style="color:var(--yellow)">${paidTotal>0?Number(paidTotal).toLocaleString('ru')+' ₸':'—'}</div><div class="user-stat-lbl">оплатил</div></div>
+    </div>
+
+    <div>
+      <div class="sub-section-title">Начислить токены</div>
+      <div class="add-tokens-form">
+        <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
+        <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
+        <span class="add-tokens-result" id="addResult"></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sub-section-title">Сайты (${d.sites.length})</div>
+      ${sitesHtml}
+    </div>
+
+    <div>
+      <div class="sub-section-title">Платежи (${d.payments.length})</div>
+      ${paymentsHtml}
+    </div>
+
+    <div>
+      <div class="sub-section-title">История токенов</div>
+      ${logHtml}
+    </div>
+  `;
+}
+
+async function addTokens(uid) {
+  const amt = parseInt(document.getElementById('addAmt').value);
+  if (!amt || amt < 1) return;
+  const r = await fetch(`/admin/api/user/${uid}/add-tokens`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({amount: amt})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('addResult').textContent = `✓ баланс: ${d.tokens}`;
+    loadUsers(); loadStats();
   }
+}
 
-  function renderSites(sites) {
-    const tbody = document.getElementById('sites-tbody');
-    if (!sites || sites.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Сайтов пока нет</td></tr>';
-      return;
-    }
+function closeModal() { document.getElementById('userModal').classList.remove('show'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('userModal')) closeModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    tbody.innerHTML = sites.map(s => `
-      <tr>
-        <td class="phone-cell">${escapeHtml(s.phone)}</td>
-        <td>${escapeHtml(s.name || '—')}</td>
-        <td class="title-cell" title="${escapeHtml(s.title)}">${escapeHtml(s.title || '—')}</td>
-        <td><span class="token-badge-sm">${escapeHtml(String(s.tokens_used ?? 0))}</span></td>
-        <td class="muted">${escapeHtml(s.created || '—')}</td>
-        <td>
-          <a href="/site/${escapeHtml(s.slug)}" target="_blank" class="open-link">
-            Открыть
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
-            </svg>
-          </a>
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  function updateTimestamp() {
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const ts = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    const el = document.getElementById('last-updated');
-    if (el) el.textContent = `обновлено в ${ts}`;
-    const lbl = document.getElementById('refresh-label');
-    if (lbl) lbl.textContent = `обновлено ${ts}`;
-  }
-
-  async function fetchStats() {
-    try {
-      const res = await fetch('/admin/api/stats', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      // Stats cards
-      setStatValue('stat-users',  data.users);
-      setStatValue('stat-sites',  data.sites);
-      setStatValue('stat-cost',   data.total_cost != null ? '$' + Number(data.total_cost).toFixed(4) : '—');
-      setStatValue('stat-tokens', null, () => formatTokens(data.total_tokens));
-
-      // Table
-      renderSites(data.recent_sites);
-      updateTimestamp();
-
-    } catch (err) {
-      const tbody = document.getElementById('sites-tbody');
-      if (tbody) {
-        tbody.innerHTML = `<tr class="error-row"><td colspan="6">Ошибка загрузки: ${escapeHtml(err.message)}</td></tr>`;
-      }
-      const lbl = document.getElementById('refresh-label');
-      if (lbl) lbl.textContent = 'ошибка соединения';
-    }
-  }
-
-  function startAutoRefresh() {
-    fetchStats();
-    refreshTimer = setInterval(fetchStats, REFRESH_INTERVAL);
-  }
-
-  // Start on page load
-  document.addEventListener('DOMContentLoaded', startAutoRefresh);
+// Init
+(async function() {
+  await Promise.all([loadStats(), loadUsers()]);
+  setInterval(() => { loadStats(); loadUsers(); }, 30000);
+})();
 </script>
-
 </body>
 </html>

@@ -204,19 +204,60 @@ def delete_session(sid: str):
 # ── Admin stats ────────────────────────────────────────────────────────────
 def admin_stats() -> dict:
     with get_conn() as c:
-        users     = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        sites     = c.execute("SELECT COUNT(*) FROM sites").fetchone()[0]
-        total_cost= c.execute("SELECT COALESCE(SUM(cost_usd),0) FROM token_log").fetchone()[0]
-        total_tok = c.execute("SELECT COALESCE(SUM(claude_in+claude_out),0) FROM token_log").fetchone()[0]
-        recent    = c.execute("""
-            SELECT u.phone, u.name, s.title, s.slug, s.tokens_used, s.created
+        users      = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        sites      = c.execute("SELECT COUNT(*) FROM sites").fetchone()[0]
+        total_cost = c.execute("SELECT COALESCE(SUM(cost_usd),0) FROM token_log").fetchone()[0]
+        total_tok  = c.execute("SELECT COALESCE(SUM(claude_in+claude_out),0) FROM token_log").fetchone()[0]
+        paid_count = c.execute("SELECT COUNT(*) FROM payments WHERE status='paid'").fetchone()[0]
+        paid_sum   = c.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE status='paid'").fetchone()[0]
+        recent     = c.execute("""
+            SELECT u.id as user_id, u.phone, u.name, s.title, s.slug, s.tokens_used, s.created
             FROM sites s JOIN users u ON u.id=s.user_id
             ORDER BY s.created DESC LIMIT 20
         """).fetchall()
         return {
             "users": users, "sites": sites,
             "total_cost": total_cost, "total_tokens": total_tok,
-            "recent_sites": [dict(r) for r in recent]
+            "paid_count": paid_count, "paid_sum": paid_sum,
+            "recent_sites": [dict(r) for r in recent],
+        }
+
+def admin_users() -> list:
+    with get_conn() as c:
+        rows = c.execute("""
+            SELECT u.id, u.phone, u.name, u.tokens, u.created,
+                   COUNT(DISTINCT s.id) as sites_count,
+                   COALESCE(SUM(CASE WHEN p.status='paid' THEN p.amount ELSE 0 END), 0) as paid_total
+            FROM users u
+            LEFT JOIN sites s ON s.user_id = u.id
+            LEFT JOIN payments p ON p.user_id = u.id
+            GROUP BY u.id
+            ORDER BY u.created DESC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+def admin_user_detail(user_id: int) -> dict | None:
+    with get_conn() as c:
+        user = c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user:
+            return None
+        sites = c.execute(
+            "SELECT id, slug, title, tokens_used, created FROM sites WHERE user_id=? ORDER BY created DESC",
+            (user_id,)
+        ).fetchall()
+        token_log = c.execute(
+            "SELECT delta, reason, cost_usd, claude_in, claude_out, ts FROM token_log WHERE user_id=? ORDER BY ts DESC LIMIT 50",
+            (user_id,)
+        ).fetchall()
+        payments = c.execute(
+            "SELECT order_id, invoice_id, amount, tokens, status, created FROM payments WHERE user_id=? ORDER BY created DESC",
+            (user_id,)
+        ).fetchall()
+        return {
+            "user": dict(user),
+            "sites": [dict(r) for r in sites],
+            "token_log": [dict(r) for r in token_log],
+            "payments": [dict(r) for r in payments],
         }
 
 # ── Payments ──────────────────────────────────────────────────────────────
