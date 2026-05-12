@@ -281,6 +281,7 @@
 <script>
 const esc = s => { const d = document.createElement('div'); d.textContent = s??''; return d.innerHTML; };
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n??0);
+const identity = u => u?.phone || u?.email || '—';
 
 function setVal(id, v) {
   const el = document.getElementById(id);
@@ -311,7 +312,7 @@ async function loadStats() {
   } else {
     tbody.innerHTML = d.recent_sites.map(s => `
       <tr onclick="openUser(${s.user_id})">
-        <td class="mono">${esc(s.phone)}</td>
+        <td class="mono">${esc(s.phone || s.email || '—')}</td>
         <td>${esc(s.name||'—')}</td>
         <td class="ellipsis" title="${esc(s.title)}">${esc(s.title||'—')}</td>
         <td><span class="badge badge-purple">${esc(String(s.tokens_used??0))}</span></td>
@@ -340,7 +341,7 @@ async function loadUsers() {
   tbody.innerHTML = users.map((u,i) => `
     <tr onclick="openUser(${u.id})">
       <td class="mono" style="color:var(--muted2)">${i+1}</td>
-      <td class="mono">${esc(u.phone)}</td>
+      <td class="mono">${esc(identity(u))}</td>
       <td>${esc(u.name||'—')}</td>
       <td><span class="badge badge-purple">${u.tokens}</span></td>
       <td><span class="badge badge-green">${u.sites_count}</span></td>
@@ -358,7 +359,7 @@ async function openUser(uid) {
   const d = await r.json();
   const u = d.user;
 
-  document.getElementById('modalTitle').textContent = u.name || u.phone;
+  document.getElementById('modalTitle').textContent = u.name || identity(u);
 
   const paidTotal = d.payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
   const genCount  = d.token_log.filter(l=>l.delta<0).length;
@@ -442,10 +443,10 @@ async function openUser(uid) {
 
   document.getElementById('modalBody').innerHTML = `
     <div class="user-hero">
-      <div class="user-avatar">${esc((u.name||u.phone).slice(0,1).toUpperCase())}</div>
+      <div class="user-avatar">${esc((u.name || identity(u)).slice(0,1).toUpperCase())}</div>
       <div>
         <div class="user-name">${esc(u.name||'Без имени')}</div>
-        <div class="user-meta">${esc(u.phone)} · ID ${u.id} · с ${esc((u.created||'').slice(0,10))}</div>
+        <div class="user-meta">${esc(identity(u))} · ID ${u.id} · с ${esc((u.created||'').slice(0,10))}</div>
       </div>
     </div>
 

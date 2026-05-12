@@ -153,6 +153,52 @@
   .btn-submit:hover { opacity:.9; transform:translateY(-1px); box-shadow: 0 6px 28px #7c5cff55; }
   .btn-submit:active { transform:translateY(0); opacity:1; }
 
+  /* OAuth */
+  .oauth-section {
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .oauth-divider {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    color:var(--muted);
+    font-size:.74rem;
+  }
+  .oauth-divider::before,
+  .oauth-divider::after {
+    content:'';
+    flex:1;
+    height:1px;
+    background:var(--border);
+  }
+  .google-btn {
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:13px 14px;
+    background:#f8f8fb;
+    border:1px solid #ffffff22;
+    border-radius:12px;
+    color:#161620;
+    font-family:inherit;
+    font-size:.92rem;
+    font-weight:600;
+    text-decoration:none;
+    transition:transform .15s, box-shadow .2s, background .2s;
+  }
+  .google-btn:hover {
+    background:#fff;
+    transform:translateY(-1px);
+    box-shadow:0 8px 28px #00000044;
+  }
+  .google-btn:active { transform:translateY(0); }
+  .google-btn svg { width:18px; height:18px; flex-shrink:0; }
+
   /* Footer hint */
   .card-footer {
     text-align:center; margin-top:20px;
@@ -230,6 +276,21 @@
       <button type="submit" class="btn-submit">Зарегистрироваться</button>
     </form>
 
+    {% if google_configured %}
+    <div class="oauth-section">
+      <div class="oauth-divider">или</div>
+      <a class="google-btn" href="/auth/google">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+          <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+          <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+          <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+        </svg>
+        Continue with Google
+      </a>
+    </div>
+    {% endif %}
+
     <div class="card-footer">
       {% if active_tab == 'register' or not active_tab %}
       <span class="token-pill">
@@ -252,7 +313,8 @@
   // Auto-switch tab if error came from register action
   (function() {
     const params = new URLSearchParams(window.location.search);
-    const fromRegister = params.get('tab') === 'register';
+    const initialTab = "{{ active_tab or '' }}";
+    const fromRegister = params.get('tab') === 'register' || initialTab === 'register';
     if (fromRegister) switchTab('register');
   })();
 </script>

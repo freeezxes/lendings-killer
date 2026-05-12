@@ -1,4 +1,4 @@
-import sqlite3, json, bcrypt as _bcrypt
+import sqlite3, json, re, bcrypt as _bcrypt
 from pathlib import Path
 from datetime import datetime
 
@@ -23,8 +23,12 @@ def init_db():
         c.executescript("""
         CREATE TABLE IF NOT EXISTS users (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone       TEXT UNIQUE NOT NULL,
-            password    TEXT NOT NULL,
+            phone       TEXT UNIQUE,
+            password    TEXT,
+            email       TEXT UNIQUE,
+            google_id   TEXT UNIQUE,
+            auth_provider TEXT DEFAULT 'local',
+            avatar_url  TEXT,
             name        TEXT,
             tokens      INTEGER DEFAULT 0,
             site_slots  INTEGER DEFAULT 0,
@@ -99,6 +103,80 @@ def init_db():
         ]:
             if col not in cols:
                 c.execute(f"ALTER TABLE sites ADD COLUMN {col} {defn}")
+    migrate_add_oauth_columns()
+
+def _make_user_columns_nullable(columns: list[str]):
+    """Relax legacy NOT NULL constraints without rebuilding or copying tables."""
+    with get_conn() as c:
+        info = {r[1]: r for r in c.execute("PRAGMA table_info(users)").fetchall()}
+        targets = [col for col in columns if col in info and info[col][3]]
+        if not targets:
+            return
+
+        row = c.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='users'"
+        ).fetchone()
+        if not row or not row["sql"]:
+            raise RuntimeError("Cannot inspect users table schema for OAuth migration")
+
+        new_sql = row["sql"]
+        for col in targets:
+            new_sql = re.sub(
+                rf"(\b{re.escape(col)}\b\s+[^,\n)]+?)\s+NOT\s+NULL",
+                r"\1",
+                new_sql,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+
+        if new_sql == row["sql"]:
+            raise RuntimeError("Cannot relax users table NOT NULL constraint safely")
+
+        try:
+            c.execute("PRAGMA writable_schema=ON")
+            c.execute(
+                "UPDATE sqlite_master SET sql=? WHERE type='table' AND name='users'",
+                (new_sql,),
+            )
+            schema_version = c.execute("PRAGMA schema_version").fetchone()[0]
+            c.execute(f"PRAGMA schema_version = {int(schema_version) + 1}")
+        finally:
+            c.execute("PRAGMA writable_schema=OFF")
+
+    with get_conn() as c:
+        integrity = c.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            raise RuntimeError(f"SQLite integrity check failed after OAuth migration: {integrity}")
+
+def migrate_add_oauth_columns():
+    """Add Google OAuth columns and indexes without touching existing rows."""
+    with get_conn() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()}
+        for col, defn in [
+            ("email", "TEXT"),
+            ("google_id", "TEXT"),
+            ("auth_provider", "TEXT DEFAULT 'local'"),
+            ("avatar_url", "TEXT"),
+        ]:
+            if col not in cols:
+                c.execute(f"ALTER TABLE users ADD COLUMN {col} {defn}")
+
+        # SQLite cannot add UNIQUE columns with ALTER TABLE, so use partial
+        # unique indexes that still allow multiple NULL values.
+        c.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique "
+            "ON users(email) WHERE email IS NOT NULL"
+        )
+        c.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id_unique "
+            "ON users(google_id) WHERE google_id IS NOT NULL"
+        )
+        c.execute(
+            "UPDATE users SET auth_provider='local' "
+            "WHERE auth_provider IS NULL OR auth_provider=''"
+        )
+
+    _make_user_columns_nullable(["password", "phone"])
 
 # ── Users ──────────────────────────────────────────────────────────────────
 def create_user(phone: str, password: str, name: str = "") -> dict | None:
@@ -109,13 +187,33 @@ def create_user(phone: str, password: str, name: str = "") -> dict | None:
                 "INSERT INTO users (phone, password, name, tokens) VALUES (?,?,?,0)",
                 (phone, hashed, name)
             )
-            return get_user_by_id(cur.lastrowid)
+            row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+            return dict(row) if row else None
     except sqlite3.IntegrityError:
         return None
+
+def normalize_email(email: str | None) -> str:
+    return (email or "").strip().lower()
 
 def get_user_by_phone(phone: str) -> dict | None:
     with get_conn() as c:
         row = c.execute("SELECT * FROM users WHERE phone=?", (phone,)).fetchone()
+        return dict(row) if row else None
+
+def get_user_by_email(email: str) -> dict | None:
+    email = normalize_email(email)
+    if not email:
+        return None
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        return dict(row) if row else None
+
+def get_user_by_google_id(google_id: str) -> dict | None:
+    google_id = (google_id or "").strip()
+    if not google_id:
+        return None
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM users WHERE google_id=?", (google_id,)).fetchone()
         return dict(row) if row else None
 
 def get_user_by_id(uid: int) -> dict | None:
@@ -125,9 +223,71 @@ def get_user_by_id(uid: int) -> dict | None:
 
 def verify_password(phone: str, password: str) -> dict | None:
     user = get_user_by_phone(phone)
-    if user and bcrypt.verify(password, user["password"]):
+    if user and user.get("password") and bcrypt.verify(password, user["password"]):
         return user
     return None
+
+def create_google_user(email: str, google_id: str, name: str = "", avatar_url: str = "") -> dict | None:
+    email = normalize_email(email)
+    google_id = (google_id or "").strip()
+    if not email or not google_id:
+        return None
+
+    display_name = (name or "").strip() or email.split("@", 1)[0]
+    try:
+        with get_conn() as c:
+            cur = c.execute(
+                """INSERT INTO users
+                   (phone, password, email, google_id, auth_provider, avatar_url, name, tokens)
+                   VALUES (NULL, NULL, ?, ?, 'google', ?, ?, 0)""",
+                (email, google_id, avatar_url or "", display_name),
+            )
+            row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+            return dict(row) if row else None
+    except sqlite3.IntegrityError:
+        return None
+
+def link_google_to_existing_user(user_id: int, email: str, google_id: str, avatar_url: str = "") -> dict | None:
+    email = normalize_email(email)
+    google_id = (google_id or "").strip()
+    if not user_id or not email or not google_id:
+        return None
+
+    try:
+        with get_conn() as c:
+            user = c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+            if not user:
+                return None
+
+            conflict = c.execute(
+                "SELECT id FROM users WHERE google_id=? AND id<>?",
+                (google_id, user_id),
+            ).fetchone()
+            if conflict:
+                return None
+
+            conflict = c.execute(
+                "SELECT id FROM users WHERE email=? AND id<>?",
+                (email, user_id),
+            ).fetchone()
+            if conflict:
+                return None
+
+            current_provider = user["auth_provider"] or "local"
+            if user["password"]:
+                auth_provider = "hybrid" if current_provider == "local" else current_provider
+            else:
+                auth_provider = "google"
+
+            c.execute(
+                """UPDATE users
+                   SET email=?, google_id=?, avatar_url=?, auth_provider=?
+                   WHERE id=?""",
+                (email, google_id, avatar_url or user["avatar_url"] or "", auth_provider, user_id),
+            )
+        return get_user_by_id(user_id)
+    except sqlite3.IntegrityError:
+        return None
 
 def deduct_tokens(user_id: int, amount: int, reason: str, site_id=None,
                   claude_in=0, claude_out=0, cache_read=0, cost_usd=0.0) -> bool:
@@ -257,7 +417,7 @@ def admin_stats() -> dict:
         paid_count = c.execute("SELECT COUNT(*) FROM payments WHERE status='paid'").fetchone()[0]
         paid_sum   = c.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE status='paid'").fetchone()[0]
         recent     = c.execute("""
-            SELECT u.id as user_id, u.phone, u.name, s.title, s.slug, s.tokens_used, s.created
+            SELECT u.id as user_id, u.phone, u.email, u.name, s.title, s.slug, s.tokens_used, s.created
             FROM sites s JOIN users u ON u.id=s.user_id
             ORDER BY s.created DESC LIMIT 20
         """).fetchall()
@@ -271,7 +431,7 @@ def admin_stats() -> dict:
 def admin_users() -> list:
     with get_conn() as c:
         rows = c.execute("""
-            SELECT u.id, u.phone, u.name, u.tokens, u.created,
+            SELECT u.id, u.phone, u.email, u.auth_provider, u.name, u.tokens, u.created,
                    COUNT(DISTINCT s.id) as sites_count,
                    COALESCE(SUM(CASE WHEN p.status='paid' THEN p.amount ELSE 0 END), 0) as paid_total
             FROM users u

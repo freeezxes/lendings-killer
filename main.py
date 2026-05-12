@@ -3,11 +3,23 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
-import os, re, uuid, json, time, base64, hashlib, hmac
+import os, re, uuid, json, time, base64, hashlib, hmac, logging, secrets
 from pathlib import Path
+from urllib.parse import urlencode
 import anthropic
 import httpx
 import db
+
+try:
+    from google.auth.transport.requests import Request as GoogleAuthRequest
+    from google.oauth2 import id_token as google_id_token
+    GOOGLE_AUTH_AVAILABLE = True
+except ImportError:
+    GoogleAuthRequest = None
+    google_id_token = None
+    GOOGLE_AUTH_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 # ── Transliteration ──────────────────────────────────────────────────────────
 _CYR_MAP = {
@@ -35,6 +47,12 @@ GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PHONE = "77064177628"
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
+OAUTH_STATE_COOKIE = "oauth_state"
+OAUTH_STATE_COOKIE_PATH = "/auth/google"
 
 # ── Kaspi Pay via kaspi-pos on astana-gb server ───────────────────────────────
 KASPI_POS_URL    = "http://92.38.49.113:4001"
@@ -408,6 +426,171 @@ def _require_paid(user: dict | None) -> RedirectResponse | None:
     return None
 
 
+# ── Google OAuth helpers ──────────────────────────────────────────────────────
+class OAuthInvalidCode(Exception):
+    pass
+
+
+class OAuthServiceError(Exception):
+    pass
+
+
+class OAuthNoEmail(Exception):
+    pass
+
+
+class OAuthEmailNotVerified(Exception):
+    pass
+
+
+AUTH_ERROR_MESSAGES = {
+    "invalid_state": "Сессия Google входа устарела. Попробуйте ещё раз.",
+    "oauth_failed": "Не удалось войти через Google. Попробуйте ещё раз.",
+    "google_no_email": "Google не вернул email для этого аккаунта.",
+    "email_not_verified": "Email в Google аккаунте не подтверждён.",
+    "oauth_service_error": "Google OAuth временно недоступен. Попробуйте позже.",
+    "google_not_configured": "Вход через Google пока не настроен.",
+    "account_conflict": "Этот Google аккаунт конфликтует с существующим пользователем.",
+    "invalid_code": "Google вернул неверный или просроченный код входа.",
+    "user_cancelled": "Вход через Google отменён.",
+}
+
+
+def _google_settings() -> dict:
+    return {
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID", "").strip(),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", "").strip(),
+        "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI", "").strip(),
+    }
+
+
+def _google_oauth_configured() -> bool:
+    settings = _google_settings()
+    return bool(
+        GOOGLE_AUTH_AVAILABLE
+        and settings["client_id"]
+        and settings["client_secret"]
+        and settings["redirect_uri"]
+    )
+
+
+def _cookie_secure(request: Request) -> bool:
+    proto = request.headers.get("x-forwarded-proto", "")
+    app_env = os.environ.get("APP_ENV", os.environ.get("ENV", "")).lower()
+    redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+    return (
+        request.url.scheme == "https"
+        or proto == "https"
+        or app_env in {"prod", "production"}
+        or redirect_uri.startswith("https://")
+    )
+
+
+def _auth_context(request: Request, error: str | None = None, active_tab: str | None = None) -> dict:
+    code = error or request.query_params.get("error", "")
+    return {
+        "error": AUTH_ERROR_MESSAGES.get(code, code) if code else None,
+        "active_tab": active_tab or request.query_params.get("tab", ""),
+        "google_configured": _google_oauth_configured(),
+    }
+
+
+def _auth_error_redirect(code: str) -> RedirectResponse:
+    response = RedirectResponse(f"/auth?error={code}", status_code=302)
+    response.delete_cookie(OAUTH_STATE_COOKIE, path=OAUTH_STATE_COOKIE_PATH)
+    return response
+
+
+def _set_session_cookie(response: RedirectResponse, request: Request, sid: str):
+    response.set_cookie(
+        "sid",
+        sid,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        max_age=365 * 24 * 3600,
+    )
+
+
+def _oauth_destination(user: dict, is_new_user: bool) -> str:
+    if is_new_user:
+        return "/payment?reason=welcome"
+    return "/dashboard" if int(user.get("tokens") or 0) > 0 else "/payment?reason=no_credits"
+
+
+async def _exchange_google_code(code: str) -> str:
+    settings = _google_settings()
+    payload = {
+        "code": code,
+        "client_id": settings["client_id"],
+        "client_secret": settings["client_secret"],
+        "redirect_uri": settings["redirect_uri"],
+        "grant_type": "authorization_code",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.post(
+            GOOGLE_TOKEN_URL,
+            data=payload,
+            headers={"Accept": "application/json"},
+        )
+
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        raise OAuthServiceError("Invalid Google token response") from exc
+
+    if resp.status_code >= 500:
+        raise OAuthServiceError("Google token endpoint failed")
+    if resp.status_code >= 400:
+        if data.get("error") in {"invalid_grant", "invalid_request"}:
+            raise OAuthInvalidCode("Google rejected OAuth code")
+        raise OAuthServiceError("Google token endpoint rejected request")
+
+    token = data.get("id_token")
+    if not token:
+        raise OAuthServiceError("Google token response did not include id_token")
+    return token
+
+
+def _verify_google_profile(id_token_value: str) -> dict:
+    settings = _google_settings()
+    if not GOOGLE_AUTH_AVAILABLE:
+        raise OAuthServiceError("google-auth is not installed")
+
+    try:
+        payload = google_id_token.verify_oauth2_token(
+            id_token_value,
+            GoogleAuthRequest(),
+            settings["client_id"],
+        )
+    except ValueError as exc:
+        raise OAuthInvalidCode("Google ID token verification failed") from exc
+
+    if payload.get("aud") != settings["client_id"]:
+        raise OAuthInvalidCode("Google ID token audience mismatch")
+    if payload.get("iss") not in GOOGLE_ISSUERS:
+        raise OAuthInvalidCode("Google ID token issuer mismatch")
+
+    email = db.normalize_email(payload.get("email"))
+    if not email:
+        raise OAuthNoEmail("Google profile has no email")
+
+    email_verified = payload.get("email_verified")
+    if email_verified not in (True, "true", "True", "1", 1):
+        raise OAuthEmailNotVerified("Google email is not verified")
+
+    google_id = (payload.get("sub") or "").strip()
+    if not google_id:
+        raise OAuthInvalidCode("Google profile has no subject")
+
+    return {
+        "email": email,
+        "google_id": google_id,
+        "name": (payload.get("name") or "").strip(),
+        "avatar_url": (payload.get("picture") or "").strip(),
+    }
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI()
 app.add_middleware(SessionMiddleware)
@@ -515,7 +698,123 @@ async def create_page(request: Request):
 async def auth_page(request: Request):
     if request.state.user:
         return RedirectResponse("/create", status_code=302)
-    return templates.TemplateResponse(request, "auth.html")
+    return templates.TemplateResponse(request, "auth.html", _auth_context(request))
+
+
+@app.get("/auth/google")
+async def auth_google(request: Request):
+    if not _google_oauth_configured():
+        logger.warning("Google OAuth requested but configuration is incomplete")
+        return _auth_error_redirect("google_not_configured")
+
+    settings = _google_settings()
+    state = secrets.token_urlsafe(32)
+    params = {
+        "client_id": settings["client_id"],
+        "redirect_uri": settings["redirect_uri"],
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "include_granted_scopes": "true",
+    }
+    response = RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}", status_code=302)
+    response.set_cookie(
+        OAUTH_STATE_COOKIE,
+        state,
+        max_age=10 * 60,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        path=OAUTH_STATE_COOKIE_PATH,
+    )
+    return response
+
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
+    google_error = request.query_params.get("error")
+    if google_error:
+        logger.info("Google OAuth callback returned error=%s", google_error)
+        return _auth_error_redirect("user_cancelled" if google_error == "access_denied" else "oauth_failed")
+
+    expected_state = request.cookies.get(OAUTH_STATE_COOKIE)
+    received_state = request.query_params.get("state", "")
+    if not expected_state or not received_state or not secrets.compare_digest(expected_state, received_state):
+        logger.warning("Google OAuth state validation failed")
+        return _auth_error_redirect("invalid_state")
+
+    if not _google_oauth_configured():
+        logger.warning("Google OAuth callback received but configuration is incomplete")
+        return _auth_error_redirect("google_not_configured")
+
+    code = request.query_params.get("code", "")
+    if not code:
+        logger.warning("Google OAuth callback missing authorization code")
+        return _auth_error_redirect("invalid_code")
+
+    try:
+        id_token_value = await _exchange_google_code(code)
+        profile = _verify_google_profile(id_token_value)
+    except OAuthInvalidCode:
+        logger.exception("Google OAuth failed during code or ID token validation")
+        return _auth_error_redirect("invalid_code")
+    except OAuthNoEmail:
+        logger.warning("Google OAuth rejected because no email was returned")
+        return _auth_error_redirect("google_no_email")
+    except OAuthEmailNotVerified:
+        logger.warning("Google OAuth rejected because email was not verified")
+        return _auth_error_redirect("email_not_verified")
+    except OAuthServiceError:
+        logger.exception("Google OAuth service error")
+        return _auth_error_redirect("oauth_service_error")
+    except Exception:
+        logger.exception("Unexpected Google OAuth callback failure")
+        return _auth_error_redirect("oauth_failed")
+
+    try:
+        user_by_google = db.get_user_by_google_id(profile["google_id"])
+        user_by_email = db.get_user_by_email(profile["email"])
+
+        if user_by_google and user_by_email and user_by_google["id"] != user_by_email["id"]:
+            logger.warning("Google OAuth account conflict: google_id and email map to different users")
+            return _auth_error_redirect("account_conflict")
+
+        is_new_user = False
+        if user_by_google:
+            user = db.link_google_to_existing_user(
+                user_by_google["id"],
+                profile["email"],
+                profile["google_id"],
+                profile["avatar_url"],
+            )
+        elif user_by_email:
+            user = db.link_google_to_existing_user(
+                user_by_email["id"],
+                profile["email"],
+                profile["google_id"],
+                profile["avatar_url"],
+            )
+        else:
+            user = db.create_google_user(
+                profile["email"],
+                profile["google_id"],
+                profile["name"],
+                profile["avatar_url"],
+            )
+            is_new_user = True
+
+        if not user:
+            logger.warning("Google OAuth account linking or creation failed")
+            return _auth_error_redirect("account_conflict")
+
+        sid = db.create_session(user["id"])
+        response = RedirectResponse(_oauth_destination(user, is_new_user), status_code=302)
+        _set_session_cookie(response, request, sid)
+        response.delete_cookie(OAUTH_STATE_COOKIE, path=OAUTH_STATE_COOKIE_PATH)
+        return response
+    except Exception:
+        logger.exception("Unexpected Google OAuth account persistence failure")
+        return _auth_error_redirect("oauth_failed")
 
 
 @app.post("/auth/register")
@@ -529,17 +828,17 @@ async def auth_register(
     phone = re.sub(r'[^\d]', '', phone)
     if not phone:
         return templates.TemplateResponse(request, "auth.html",
-                                          {"error": "Неверный номер телефона"}, status_code=400)
+                                          _auth_context(request, "Неверный номер телефона", "register"), status_code=400)
 
     user = db.create_user(phone, password, name.strip())
     if user is None:
         return templates.TemplateResponse(request, "auth.html",
-                                          {"error": "Этот номер уже зарегистрирован"}, status_code=400)
+                                          _auth_context(request, "Этот номер уже зарегистрирован", "register"), status_code=400)
 
     sid = db.create_session(user["id"])
     # New user has 0 credits — send to payment first
     response = RedirectResponse("/payment?reason=welcome", status_code=302)
-    response.set_cookie("sid", sid, httponly=True, samesite="lax", max_age=365 * 24 * 3600)
+    _set_session_cookie(response, request, sid)
     return response
 
 
@@ -553,7 +852,7 @@ async def auth_login(
     user = db.verify_password(phone, password)
     if not user:
         return templates.TemplateResponse(request, "auth.html",
-                                          {"error": "Неверный номер или пароль"}, status_code=401)
+                                          _auth_context(request, "Неверный номер или пароль", "login"), status_code=401)
 
     sid = db.create_session(user["id"])
     if user.get("site_slots", 0) == 0:
@@ -563,7 +862,7 @@ async def auth_login(
     else:
         dest = "/dashboard"
     response = RedirectResponse(dest, status_code=302)
-    response.set_cookie("sid", sid, httponly=True, samesite="lax", max_age=365 * 24 * 3600)
+    _set_session_cookie(response, request, sid)
     return response
 
 
