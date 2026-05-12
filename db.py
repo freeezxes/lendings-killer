@@ -188,6 +188,11 @@ def update_site_html(site_id: int, html_path: str, tokens_used: int):
         c.execute("UPDATE sites SET html_path=?,tokens_used=?,updated=datetime('now') WHERE id=?",
                   (html_path, tokens_used, site_id))
 
+def update_site_data(site_id: int, data: dict):
+    with get_conn() as c:
+        c.execute("UPDATE sites SET data=?,updated=datetime('now') WHERE id=?",
+                  (json.dumps(data, ensure_ascii=False), site_id))
+
 def delete_site(site_id: int, user_id: int) -> bool:
     with get_conn() as c:
         cur = c.execute("DELETE FROM sites WHERE id=? AND user_id=?", (site_id, user_id))

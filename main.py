@@ -446,7 +446,12 @@ async def create_page(request: Request):
     if edit_slug:
         site = db.get_site_by_slug(edit_slug)
         if site and site["user_id"] == user["id"]:
-            edit_site = {"slug": site["slug"], "title": site["title"]}
+            site_data = site.get("data") or {}
+            edit_site = {
+                "slug":    site["slug"],
+                "title":   site["title"],
+                "history": json.dumps(site_data.get("chat_history", []), ensure_ascii=False),
+            }
     return templates.TemplateResponse(request, "index.html", {"user": user, "edit_site": edit_site})
 
 
@@ -768,19 +773,29 @@ async def site_edit(slug: str, request: Request):
 
     body = await request.json()
     edit_request = body.get("message", "").strip()
+    client_history = body.get("history", [])  # full chat history from client
     if not edit_request:
         return JSONResponse({"error": "Пустой запрос"}, status_code=400)
 
-    # Load original data and inject edit request
+    # Load original site data
     data = site.get("data") or {}
     if isinstance(data, str):
         data = json.loads(data)
 
-    # Build edit context — pass original dialogue + edit instruction
+    # Merge: use client history if provided, else fall back to stored history
+    stored_history = data.get("chat_history", [])
+    combined_history = client_history if client_history else stored_history
+
+    # Append edit request to history so ИИ sees the full conversation
+    combined_history = combined_history + [
+        {"role": "user",      "content": f"[РЕДАКТИРОВАНИЕ] {edit_request}"},
+        {"role": "assistant", "content": "Понял, вношу изменения."},
+    ]
+
     prev_html = (GENERATED_DIR / f"{slug}.html").read_text(encoding="utf-8") if (GENERATED_DIR / f"{slug}.html").exists() else ""
-    data["extra"] = edit_request
-    data["edit_request"] = edit_request
-    data["prev_html_snippet"] = prev_html[:3000] if prev_html else ""  # first 3K for context
+    data["edit_request"]      = edit_request
+    data["chat_history"]      = combined_history
+    data["prev_html_snippet"] = prev_html[:3000] if prev_html else ""
 
     gen = _ai_generate(data)
 
@@ -792,6 +807,10 @@ async def site_edit(slug: str, request: Request):
     our_tokens = _tokens_to_ours(gen_in, gen_out)
 
     (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+
+    # Persist updated history back to site data
+    data_to_save = {**data, "chat_history": combined_history}
+    db.update_site_data(site["id"], data_to_save)
     db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
     db.deduct_tokens(
         user_id=user["id"], amount=our_tokens,
@@ -802,10 +821,11 @@ async def site_edit(slug: str, request: Request):
     )
 
     return JSONResponse({
-        "ok": True,
-        "site_url": f"/site/{slug}",
+        "ok":           True,
+        "site_url":     f"/site/{slug}",
+        "history":      combined_history,
         "tokens_spent": our_tokens,
-        "tokens_left": user["tokens"] - our_tokens,
+        "tokens_left":  user["tokens"] - our_tokens,
     })
 
 

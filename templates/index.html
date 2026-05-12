@@ -339,7 +339,7 @@ async function send() {
       const r = await fetch(`/site/${currentSlug}/edit`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, history })
       });
       const j = await r.json();
       removeTyping();
@@ -350,6 +350,8 @@ async function send() {
         return;
       }
 
+      // Update local history with server's combined history
+      if (j.history) history = j.history;
       userTokens = j.tokens_left ?? userTokens;
       updateTokenBadge();
       addMsg('Готово! Сайт обновлён ✨', 'bot');
@@ -412,12 +414,20 @@ function updateTokenBadge() {
 // ── Init ────────────────────────────────────────────────────────────────────
 (async function() {
   {% if edit_site %}
-  // Edit mode: resume with existing site
+  // Edit mode: restore full history and slug
   currentSlug = '{{ edit_site.slug }}';
   editMode = true;
+  history = {{ edit_site.history | safe }};
   const siteUrl = '/site/' + currentSlug;
-  addMsg('Сайт «{{ edit_site.title }}» загружен. Что хочешь изменить?', 'bot');
-  // Show done card so user sees the site link and edit input
+  // Show restored history in chat
+  for (const msg of history) {
+    if (msg.role === 'user' && !msg.content.startsWith('[РЕДАКТИРОВАНИЕ]')) addMsg(msg.content, 'user');
+    else if (msg.role === 'assistant' && msg.content !== 'Понял, вношу изменения.') addMsg(msg.content, 'bot');
+  }
+  if (history.length === 0) {
+    addMsg('Сайт «{{ edit_site.title }}» загружен.', 'bot');
+  }
+  addMsg('Что хочешь изменить? Напиши — и я обновлю сайт.', 'bot');
   showDone(siteUrl, 'Продолжаем редактирование');
   {% else %}
   const r = await fetch('/start');
