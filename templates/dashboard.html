@@ -219,7 +219,7 @@
   <div class="header-right">
     <div class="token-badge">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-      {{ user.tokens }} токенов
+      {{ user.tokens }} кредитов
     </div>
     <a href="/profile" class="header-btn">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -251,14 +251,14 @@
   <div class="hero-card">
     <div class="hero-label">Новый сайт</div>
     <div class="hero-title">Создать сайт-визитку</div>
-    <div class="hero-sub">ИИ соберёт сайт за минуту по твоим ответам.<br>Баланс: <strong>{{ user.tokens }} токенов</strong></div>
+    <div class="hero-sub">ИИ соберёт сайт за минуту по твоим ответам.<br>Кредиты: <strong>{{ user.tokens }}</strong> · Слоты: <strong>{{ user.site_slots }}</strong></div>
     <a href="/create" class="btn-create">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Создать сайт
     </a>
     <div class="hero-meta">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      1 сайт ≈ 17 кредитов · <a href="/payment">Пополнить баланс →</a>
+      <a href="/payment?reason=no_slots">Купить ещё сайт →</a> · <a href="/payment?reason=no_credits">Докупить кредиты →</a>
     </div>
   </div>
 

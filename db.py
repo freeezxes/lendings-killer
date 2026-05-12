@@ -22,12 +22,13 @@ def init_db():
     with get_conn() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS users (
-            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone     TEXT UNIQUE NOT NULL,
-            password  TEXT NOT NULL,
-            name      TEXT,
-            tokens    INTEGER DEFAULT 0,
-            created   TEXT DEFAULT (datetime('now'))
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT UNIQUE NOT NULL,
+            password    TEXT NOT NULL,
+            name        TEXT,
+            tokens      INTEGER DEFAULT 0,
+            site_slots  INTEGER DEFAULT 0,
+            created     TEXT DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS sites (
@@ -79,6 +80,12 @@ def init_db():
             expires  TEXT NOT NULL
         );
         """)
+    # Migrate users table — add site_slots if missing
+    with get_conn() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()}
+        if "site_slots" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN site_slots INTEGER DEFAULT 0")
+
     # Migrate existing sites table — add new columns if missing
     with get_conn() as c:
         cols = {r[1] for r in c.execute("PRAGMA table_info(sites)").fetchall()}
@@ -140,6 +147,14 @@ def add_tokens(user_id: int, amount: int, reason: str):
         c.execute("UPDATE users SET tokens=tokens+? WHERE id=?", (amount, user_id))
         c.execute("INSERT INTO token_log (user_id,delta,reason) VALUES (?,?,?)",
                   (user_id, amount, reason))
+
+def add_site_slot(user_id: int, credits: int, reason: str):
+    """Give user +1 site slot and add credits."""
+    with get_conn() as c:
+        c.execute("UPDATE users SET site_slots=site_slots+1, tokens=tokens+? WHERE id=?",
+                  (credits, user_id))
+        c.execute("INSERT INTO token_log (user_id,delta,reason) VALUES (?,?,?)",
+                  (user_id, credits, reason))
 
 # ── Sites ──────────────────────────────────────────────────────────────────
 def create_site(user_id: int, slug: str, title: str, data: dict, html_path: str,
@@ -295,11 +310,16 @@ def admin_user_detail(user_id: int) -> dict | None:
         }
 
 # ── Payments ──────────────────────────────────────────────────────────────
-def create_payment(user_id: int, order_id: str, invoice_id: str, amount: int, tokens: int, status: str = "pending") -> dict:
+def create_payment(user_id: int, order_id: str, invoice_id: str, amount: int, tokens: int,
+                   status: str = "pending", catalog_item_id: str = "") -> dict:
     with get_conn() as c:
+        # add catalog_item_id column if missing
+        cols = {r[1] for r in c.execute("PRAGMA table_info(payments)").fetchall()}
+        if "catalog_item_id" not in cols:
+            c.execute("ALTER TABLE payments ADD COLUMN catalog_item_id TEXT DEFAULT ''")
         cur = c.execute(
-            "INSERT INTO payments (user_id, order_id, invoice_id, amount, tokens, status) VALUES (?,?,?,?,?,?)",
-            (user_id, order_id, invoice_id, amount, tokens, status)
+            "INSERT INTO payments (user_id, order_id, invoice_id, amount, tokens, status, catalog_item_id) VALUES (?,?,?,?,?,?,?)",
+            (user_id, order_id, invoice_id, amount, tokens, status, catalog_item_id)
         )
         row = c.execute("SELECT * FROM payments WHERE id=?", (cur.lastrowid,)).fetchone()
         return dict(row)

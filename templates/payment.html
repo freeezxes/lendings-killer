@@ -3,292 +3,278 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Пополнить токены — lendings.kz</title>
+<title>Оплата — lendings.kz</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
   :root {
-    --bg: #0a0a0f; --surface: #111118; --surface2: #16161f;
-    --border: #1e1e2e; --accent: #7c5cff; --accent-dim: #5b3fd4;
-    --accent-glow: #7c5cff33; --text: #f0eeff; --muted: #6b6b8a;
-    --green: #34d896; --red: #ff4f6a; --radius: 16px;
+    --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--border:#1e1e2e;
+    --accent:#7c5cff;--accent-glow:#7c5cff33;--text:#f0eeff;--muted:#6b6b8a;
+    --green:#34d896;--red:#ff4f6a;--radius:16px;
   }
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Sora',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 60% 30% at 15% 10%,#7c5cff14 0%,transparent 60%);}
 
-  body::before {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background: radial-gradient(ellipse 60% 30% at 15% 10%, #7c5cff14 0%, transparent 60%);
-  }
+  .header{position:sticky;top:0;z-index:100;background:#0a0a0fee;backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);padding:0 20px;height:58px;
+    display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;}
+  .logo span{color:var(--accent);}
+  .back-btn{color:var(--muted);text-decoration:none;font-size:.82rem;
+    display:flex;align-items:center;gap:5px;transition:color .2s;}
+  .back-btn:hover{color:var(--text);}
 
-  .header {
-    position:sticky; top:0; z-index:100;
-    background:#0a0a0fee; backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--border);
-    padding:0 20px; height:58px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .logo { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
-  .logo span { color:var(--accent); }
-  .back-btn {
-    color:var(--muted); text-decoration:none; font-size:.85rem;
-    display:flex; align-items:center; gap:6px;
-    transition:color .2s;
-  }
-  .back-btn:hover { color:var(--text); }
+  .content{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:28px 20px 60px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
-  .content { position:relative; z-index:1; max-width:480px; margin:0 auto; padding:32px 20px 60px; }
+  /* Banner */
+  .banner{border-radius:14px;padding:18px 20px;margin-bottom:24px;text-align:center;}
+  .banner.welcome{background:linear-gradient(135deg,#1a1430,#12111c);border:1px solid #7c5cff44;}
+  .banner.no_slots{background:#7c5cff12;border:1px solid #7c5cff33;}
+  .banner.no_credits{background:#ff4f6a10;border:1px solid #ff4f6a33;}
+  .banner-icon{font-size:1.6rem;margin-bottom:8px;}
+  .banner-title{font-size:.95rem;font-weight:700;margin-bottom:5px;}
+  .banner-sub{font-size:.82rem;color:var(--muted);line-height:1.6;}
 
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(16px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
+  /* Section */
+  .section{margin-bottom:28px;animation:fadeUp .4s both;}
+  .section-title{font-size:.72rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
-  .page-title { font-size:1.4rem; font-weight:700; letter-spacing:-.02em; margin-bottom:6px; }
-  .page-sub { font-size:.88rem; color:var(--muted); margin-bottom:28px; line-height:1.5; }
-  .balance-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--accent-glow); border:1px solid #7c5cff44;
-    color:var(--accent); border-radius:20px; padding:5px 12px;
-    font-size:.8rem; font-weight:600; margin-bottom:28px;
-  }
+  /* Slot card — big primary action */
+  .slot-card{background:linear-gradient(135deg,#1a1430,#12111c);
+    border:2px solid #7c5cff55;border-radius:calc(var(--radius)+4px);
+    padding:22px 20px;cursor:pointer;transition:border-color .2s,transform .15s;
+    position:relative;overflow:hidden;}
+  .slot-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .slot-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+  .slot-card::before{content:'';position:absolute;top:-30px;right:-30px;
+    width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle,#7c5cff22,transparent 70%);pointer-events:none;}
+  .slot-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+  .slot-name{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;}
+  .slot-price{font-size:1.3rem;font-weight:700;color:var(--accent);flex-shrink:0;}
+  .slot-features{display:flex;flex-direction:column;gap:5px;}
+  .slot-feat{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:7px;}
+  .slot-feat::before{content:'✓';color:var(--green);font-weight:700;font-size:.8rem;flex-shrink:0;}
 
-  .packages { display:flex; flex-direction:column; gap:12px; margin-bottom:28px; animation: fadeUp .4s both; }
+  /* Credit cards */
+  .credit-cards{display:flex;flex-direction:column;gap:10px;}
+  .credit-card{background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px 18px;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    transition:border-color .2s,transform .15s;}
+  .credit-card:hover{border-color:#7c5cff44;transform:translateY(-1px);}
+  .credit-card.selected{border-color:var(--accent);background:#1a1430;}
+  .credit-name{font-size:.92rem;font-weight:600;}
+  .credit-desc{font-size:.76rem;color:var(--muted);margin-top:2px;}
+  .credit-price{font-size:1rem;font-weight:700;color:var(--accent);flex-shrink:0;}
 
-  .pkg-card {
-    background:var(--surface); border:2px solid var(--border);
-    border-radius:var(--radius); padding:18px 20px;
-    cursor:pointer; transition:border-color .2s, background .2s, transform .15s;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-  }
-  .pkg-card:hover { border-color:#7c5cff55; transform:translateY(-1px); }
-  .pkg-card.selected { border-color:var(--accent); background:#1a1430; }
+  /* Phone */
+  .phone-section{margin-bottom:20px;}
+  .field-label{font-size:.8rem;color:var(--muted);margin-bottom:8px;font-weight:500;}
+  .phone-input{width:100%;background:var(--surface);border:1px solid var(--border);
+    color:var(--text);border-radius:12px;padding:13px 16px;
+    font-family:inherit;font-size:1rem;font-weight:500;outline:none;transition:border-color .2s;}
+  .phone-input:focus{border-color:var(--accent);}
+  .phone-hint{font-size:.74rem;color:var(--muted);margin-top:6px;}
 
-  .pkg-left { display:flex; flex-direction:column; gap:3px; }
-  .pkg-name { font-size:.98rem; font-weight:600; letter-spacing:-.01em; }
-  .pkg-desc { font-size:.78rem; color:var(--muted); }
-  .pkg-price {
-    font-size:1.1rem; font-weight:700; color:var(--accent);
-    white-space:nowrap; flex-shrink:0;
-  }
-  .pkg-badge {
-    font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
-    background:#34d89620; color:var(--green); border:1px solid #34d89640;
-    border-radius:6px; padding:2px 7px; margin-left:8px;
-  }
-
-  .phone-section { margin-bottom:24px; animation: fadeUp .4s .1s both; }
-  .field-label { font-size:.82rem; color:var(--muted); margin-bottom:8px; font-weight:500; }
-  .phone-input {
-    width:100%; background:var(--surface); border:1px solid var(--border);
-    color:var(--text); border-radius:12px; padding:14px 16px;
-    font-family:inherit; font-size:1rem; font-weight:500;
-    outline:none; transition:border-color .2s;
-  }
-  .phone-input:focus { border-color:var(--accent); }
-  .phone-hint { font-size:.76rem; color:var(--muted); margin-top:6px; }
-
-  .pay-btn {
-    width:100%; padding:16px; border:none; border-radius:14px;
-    background:var(--accent); color:#fff;
-    font-family:inherit; font-size:1rem; font-weight:700; letter-spacing:-.01em;
-    cursor:pointer; transition:opacity .2s, transform .15s, box-shadow .2s;
-    box-shadow: 0 4px 24px #7c5cff44;
-    animation: fadeUp .4s .2s both;
-  }
-  .pay-btn:hover:not(:disabled) { opacity:.9; transform:translateY(-2px); box-shadow:0 8px 32px #7c5cff55; }
-  .pay-btn:disabled { opacity:.5; cursor:not-allowed; }
+  /* Pay button */
+  .pay-btn{width:100%;padding:16px;border:none;border-radius:14px;
+    background:var(--accent);color:#fff;
+    font-family:inherit;font-size:1rem;font-weight:700;
+    cursor:pointer;transition:opacity .2s,transform .15s,box-shadow .2s;
+    box-shadow:0 4px 24px #7c5cff44;}
+  .pay-btn:hover:not(:disabled){opacity:.9;transform:translateY(-2px);box-shadow:0 8px 32px #7c5cff55;}
+  .pay-btn:disabled{opacity:.4;cursor:not-allowed;}
 
   /* Status */
-  .status-box {
-    display:none; margin-top:24px; padding:20px;
-    border-radius:var(--radius); border:1px solid var(--border);
-    background:var(--surface); text-align:center;
-  }
-  .status-box.visible { display:block; }
-  .status-icon { font-size:2rem; margin-bottom:10px; }
-  .status-title { font-size:1rem; font-weight:600; margin-bottom:4px; }
-  .status-sub { font-size:.84rem; color:var(--muted); line-height:1.5; }
+  .status-box{display:none;margin-top:20px;padding:20px;border-radius:var(--radius);
+    border:1px solid var(--border);background:var(--surface);text-align:center;}
+  .status-box.visible{display:block;}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);
+    border-top-color:var(--accent);border-radius:50%;
+    animation:spin .7s linear infinite;margin:0 auto 10px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .status-title{font-size:.95rem;font-weight:600;margin-bottom:4px;}
+  .status-sub{font-size:.82rem;color:var(--muted);line-height:1.5;}
 
-  .spinner {
-    width:32px; height:32px; border:3px solid var(--border);
-    border-top-color:var(--accent); border-radius:50%;
-    animation:spin .7s linear infinite; margin:0 auto 12px;
-  }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
-  .info-block {
-    margin-top:28px; padding:16px 18px;
-    background:var(--surface2); border:1px solid var(--border); border-radius:12px;
-    font-size:.8rem; color:var(--muted); line-height:1.7;
-    animation: fadeUp .4s .3s both;
-  }
-  .info-block strong { color:var(--text); }
+  /* Balance */
+  .balance-row{display:flex;align-items:center;gap:8px;
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:.82rem;}
+  .balance-row span{color:var(--muted);}
+  .balance-row strong{color:var(--accent);}
 </style>
 </head>
 <body>
 
 <header class="header">
   <div class="logo">lendings<span>.kz</span></div>
+  {% if user.site_slots > 0 %}
   <a href="/dashboard" class="back-btn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
     Назад
   </a>
+  {% endif %}
 </header>
 
 <main class="content">
+
   {% if reason == 'welcome' %}
-  <div style="background:linear-gradient(135deg,#1a1430,#12111c);border:1px solid #7c5cff44;border-radius:16px;padding:20px 22px;margin-bottom:24px;text-align:center;">
-    <div style="font-size:1.5rem;margin-bottom:8px;">👋</div>
-    <div style="font-size:1rem;font-weight:700;margin-bottom:6px;">Добро пожаловать!</div>
-    <div style="font-size:.84rem;color:var(--muted);line-height:1.6;">Пополните баланс и создайте свой первый сайт-визитку за 5 минут.</div>
+  <div class="banner welcome">
+    <div class="banner-icon">🚀</div>
+    <div class="banner-title">Добро пожаловать в lendings.kz!</div>
+    <div class="banner-sub">Купите первый сайт и начните привлекать клиентов уже сегодня.</div>
+  </div>
+  {% elif reason == 'no_slots' %}
+  <div class="banner no_slots">
+    <div class="banner-icon">➕</div>
+    <div class="banner-title">Нужен ещё один сайт?</div>
+    <div class="banner-sub">Каждый новый сайт — отдельный план.</div>
   </div>
   {% elif reason == 'no_credits' %}
-  <div style="background:#ff4f6a10;border:1px solid #ff4f6a33;border-radius:16px;padding:18px 22px;margin-bottom:24px;text-align:center;">
-    <div style="font-size:.9rem;font-weight:600;color:#ff4f6a;margin-bottom:4px;">Кредиты закончились</div>
-    <div style="font-size:.82rem;color:var(--muted);">Пополните баланс чтобы продолжить.</div>
+  <div class="banner no_credits">
+    <div class="banner-icon">⚡</div>
+    <div class="banner-title">Кредиты закончились</div>
+    <div class="banner-sub">Докупите кредиты чтобы продолжить редактировать сайт.</div>
   </div>
   {% endif %}
-  <h1 class="page-title">Пополнить кредиты</h1>
-  <p class="page-sub">Выберите пакет и оплатите через Kaspi — кредиты поступят автоматически.</p>
 
-  <div class="balance-pill">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-    Баланс: {{ user.tokens }} кредитов
+  {% if user.tokens > 0 or user.site_slots > 0 %}
+  <div class="balance-row">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
+    <span>Баланс:</span> <strong>{{ user.tokens }} кредитов</strong>
+    <span style="color:var(--muted2)">·</span>
+    <span>Слоты:</span> <strong style="color:var(--green)">{{ user.site_slots }}</strong>
   </div>
+  {% endif %}
 
-  <div class="packages">
-    {% for pkg in packages %}
-    <div class="pkg-card" onclick="selectPkg(this, '{{ pkg.catalog_item_id }}')" data-id="{{ pkg.catalog_item_id }}">
-      <div class="pkg-left">
-        <div class="pkg-name">
-          {{ pkg.tokens }} кредитов
-          {% if pkg.popular %}<span class="pkg-badge">Популярный</span>{% endif %}
-        </div>
-        <div class="pkg-desc">{{ pkg.desc }}</div>
+  <!-- Slot purchase -->
+  {% if reason != 'no_credits' %}
+  <div class="section">
+    <div class="section-title">Новый сайт</div>
+    <div class="slot-card" id="slotCard" onclick="selectItem(this, '{{ slot_pkg.catalog_item_id }}', 'slot')">
+      <div class="slot-top">
+        <div class="slot-name">{{ slot_pkg.tokens }} кредитов + слот</div>
+        <div class="slot-price">{{ "{:,}".format(slot_pkg.price).replace(",", " ") }} ₸</div>
       </div>
-      <div class="pkg-price">{{ "{:,}".format(pkg.price).replace(",", " ") }} ₸</div>
+      <div class="slot-features">
+        <div class="slot-feat">Слот для 1 сайта</div>
+        <div class="slot-feat">{{ slot_pkg.tokens }} кредитов на правки</div>
+        <div class="slot-feat">Поддержка сайта — 1 000 ₸/мес</div>
+      </div>
     </div>
-    {% endfor %}
   </div>
+  {% endif %}
 
+  <!-- Credits purchase -->
+  {% if user.site_slots > 0 or reason == 'no_credits' %}
+  <div class="section">
+    <div class="section-title">Докупить кредиты</div>
+    <div class="credit-cards">
+      {% for pkg in credit_pkgs %}
+      <div class="credit-card" onclick="selectItem(this, '{{ pkg.catalog_item_id }}', 'credits')">
+        <div>
+          <div class="credit-name">{{ pkg.tokens }} кредитов</div>
+        </div>
+        <div class="credit-price">{{ "{:,}".format(pkg.price).replace(",", " ") }} ₸</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Phone -->
   <div class="phone-section">
     <div class="field-label">Номер телефона Kaspi</div>
-    <input type="tel" id="phoneInput" class="phone-input" placeholder="+7 700 000 00 00" />
-    <div class="phone-hint">Kaspi пришлёт уведомление на этот номер</div>
+    <input type="tel" id="phoneInput" class="phone-input" placeholder="+7 700 000 00 00"/>
+    <div class="phone-hint">Kaspi пришлёт запрос на оплату на этот номер</div>
   </div>
 
-  <button class="pay-btn" id="payBtn" onclick="submitPayment()" disabled>
-    Оплатить через Kaspi
-  </button>
+  <button class="pay-btn" id="payBtn" onclick="submitPayment()" disabled>Оплатить через Kaspi</button>
 
-  <div class="status-box" id="statusBox">
-    <div id="statusContent"></div>
-  </div>
+  <div class="status-box" id="statusBox"><div id="statusContent"></div></div>
 
-  <div class="info-block">
-    <strong>Как это работает:</strong><br>
-    1. Выберите пакет и введите номер телефона<br>
-    2. Нажмите «Оплатить» — Kaspi пришлёт запрос на оплату<br>
-    3. Откройте приложение Kaspi и подтвердите платёж<br>
-    4. Токены поступят на баланс автоматически
-  </div>
 </main>
 
 <script>
 let selectedId = null;
-let pollingInterval = null;
-let currentOrderId = null;
+let selectedType = null;
 
-function selectPkg(el, id) {
-  document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
+function selectItem(el, id, type) {
+  document.querySelectorAll('.slot-card, .credit-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selectedId = id;
+  selectedType = type;
   updateBtn();
 }
 
 document.getElementById('phoneInput').addEventListener('input', updateBtn);
 
 function updateBtn() {
-  const phone = document.getElementById('phoneInput').value.replace(/\D/g, '');
-  const btn = document.getElementById('payBtn');
-  btn.disabled = !(selectedId && phone.length >= 10);
+  const phone = document.getElementById('phoneInput').value.replace(/\D/g,'');
+  document.getElementById('payBtn').disabled = !(selectedId && phone.length >= 10);
 }
 
 async function submitPayment() {
   const phone = document.getElementById('phoneInput').value;
   const btn = document.getElementById('payBtn');
   btn.disabled = true;
-  btn.textContent = 'Отправляем запрос...';
+  btn.textContent = 'Отправляем запрос…';
 
   try {
-    const resp = await fetch('/payment/create', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ catalog_item_id: selectedId, phone })
+    const r = await fetch('/payment/create', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({catalog_item_id: selectedId, phone})
     });
-    const data = await resp.json();
-
-    if (!data.ok) {
-      showStatus('error', '❌', 'Ошибка', data.error || 'Попробуйте ещё раз');
-      btn.disabled = false;
-      btn.textContent = 'Оплатить через Kaspi';
-      return;
-    }
-
-    currentOrderId = data.order_id;
+    const data = await r.json();
+    if (!data.ok) { showStatus('error','❌','Ошибка', data.error||'Попробуйте ещё раз'); resetBtn(); return; }
     showStatus('pending', null, 'Ожидаем оплату', data.message);
-    startPolling();
-    btn.textContent = 'Ожидаем подтверждение...';
-  } catch (e) {
-    showStatus('error', '❌', 'Ошибка соединения', 'Попробуйте ещё раз');
-    btn.disabled = false;
-    btn.textContent = 'Оплатить через Kaspi';
+    startPolling(data.order_id);
+    btn.textContent = 'Ожидаем подтверждение…';
+  } catch(e) {
+    showStatus('error','❌','Ошибка соединения','Попробуйте ещё раз');
+    resetBtn();
   }
 }
 
 function showStatus(type, icon, title, sub) {
   const box = document.getElementById('statusBox');
-  const content = document.getElementById('statusContent');
+  const c = document.getElementById('statusContent');
   box.classList.add('visible');
-
-  if (type === 'pending') {
-    content.innerHTML = `<div class="spinner"></div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
-  } else {
-    content.innerHTML = `<div class="status-icon">${icon}</div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
-  }
-}
-
-function startPolling() {
-  if (pollingInterval) clearInterval(pollingInterval);
-  let attempts = 0;
-  pollingInterval = setInterval(async () => {
-    attempts++;
-    if (attempts > 60) { // 5 минут
-      clearInterval(pollingInterval);
-      showStatus('error', '⏰', 'Время истекло', 'Платёж не получен. Попробуйте ещё раз.');
-      resetBtn();
-      return;
-    }
-    try {
-      const r = await fetch(`/payment/status/${currentOrderId}`);
-      const d = await r.json();
-      if (d.status === 'paid') {
-        clearInterval(pollingInterval);
-        showStatus('success', '✅', 'Оплачено!', `+${d.tokens} кредитов зачислено. Переходим...`);
-        setTimeout(() => window.location.href = '/create', 2500);
-      } else if (d.status === 'payment.failed' || d.status === 'payment.expired') {
-        clearInterval(pollingInterval);
-        showStatus('error', '❌', 'Платёж отклонён', 'Попробуйте ещё раз или выберите другой пакет.');
-        resetBtn();
-      }
-    } catch {}
-  }, 5000);
+  if (type==='pending') c.innerHTML = `<div class="spinner"></div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
+  else c.innerHTML = `<div style="font-size:2rem;margin-bottom:8px">${icon}</div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
 }
 
 function resetBtn() {
   const btn = document.getElementById('payBtn');
   btn.disabled = false;
   btn.textContent = 'Оплатить через Kaspi';
+}
+
+let pollingInterval = null;
+function startPolling(orderId) {
+  let attempts = 0;
+  pollingInterval = setInterval(async () => {
+    if (++attempts > 60) { clearInterval(pollingInterval); showStatus('error','⏰','Время истекло','Попробуйте ещё раз'); resetBtn(); return; }
+    try {
+      const r = await fetch(`/payment/status/${orderId}`);
+      const d = await r.json();
+      if (d.status === 'paid') {
+        clearInterval(pollingInterval);
+        showStatus('success','✅','Оплачено!', selectedType==='slot' ? 'Слот активирован! Создавайте сайт.' : `+${d.tokens} кредитов зачислено.`);
+        setTimeout(() => window.location.href = selectedType==='slot' ? '/create' : '/dashboard', 2500);
+      } else if (d.status==='payment.failed'||d.status==='payment.expired') {
+        clearInterval(pollingInterval);
+        showStatus('error','❌','Платёж отклонён','Попробуйте ещё раз.');
+        resetBtn();
+      }
+    } catch {}
+  }, 5000);
 }
 </script>
 </body>

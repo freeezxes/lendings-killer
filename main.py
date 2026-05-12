@@ -42,10 +42,12 @@ KASPI_API_KEY    = "lendings-kaspi-key"
 KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474edf0"
 
 # catalog item ids → token amounts
+# type: "slot" = buy a site slot (5000₸ → +1 slot +1000 credits)
+#        "credits" = buy extra credits only
 PAYMENT_PACKAGES = [
-    {"catalog_item_id": "17785910161327212", "tokens": 300,  "price": 490,  "label": "300 кредитов — 490 ₸",  "desc": ""},
-    {"catalog_item_id": "17785910161320747", "tokens": 500,  "price": 990,  "label": "500 кредитов — 990 ₸",  "desc": "", "popular": True},
-    {"catalog_item_id": "17785910161320806", "tokens": 1500, "price": 2490, "label": "1500 кредитов — 2 490 ₸", "desc": ""},
+    {"catalog_item_id": "17785986704184106", "type": "slot",    "slots": 1, "tokens": 1000, "price": 5000, "label": "1 сайт — 5 000 ₸",       "desc": "Слот + 1 000 кредитов на правки"},
+    {"catalog_item_id": "17785986704186047", "type": "credits", "slots": 0, "tokens": 500,  "price": 990,  "label": "500 кредитов — 990 ₸",    "desc": "Только кредиты на правки"},
+    {"catalog_item_id": "17785986704193557", "type": "credits", "slots": 0, "tokens": 1500, "price": 2490, "label": "1 500 кредитов — 2 490 ₸", "desc": "Только кредиты на правки"},
 ]
 
 # ── System prompt — cached as stable prefix ───────────────────────────────────
@@ -398,11 +400,11 @@ class SessionMiddleware(BaseHTTPMiddleware):
 
 
 def _require_paid(user: dict | None) -> RedirectResponse | None:
-    """Returns redirect if user has no credits, None if OK to proceed."""
+    """Returns redirect if user has no site slots purchased."""
     if not user:
         return RedirectResponse("/auth", status_code=302)
-    if user["tokens"] <= 0:
-        return RedirectResponse("/payment?reason=no_credits", status_code=302)
+    if not user.get("site_slots", 0):
+        return RedirectResponse("/payment?reason=welcome", status_code=302)
     return None
 
 
@@ -487,6 +489,12 @@ async def create_page(request: Request):
     user = _require_auth(request)
     if blocked := _require_paid(user):
         return blocked
+    # Check slot availability (only for new site, not edit)
+    edit_slug_check = request.query_params.get("edit", "").strip()
+    if not edit_slug_check:
+        sites = db.get_user_sites(user["id"])
+        if len(sites) >= user.get("site_slots", 0):
+            return RedirectResponse("/payment?reason=no_slots", status_code=302)
     # ?edit=slug — load existing site into edit mode
     edit_slug = request.query_params.get("edit", "").strip()
     edit_slug = re.sub(r"[^a-zA-Z0-9_-]", "", edit_slug)
@@ -971,10 +979,15 @@ async def payment_page(request: Request):
     if not user:
         return RedirectResponse("/auth", status_code=302)
     reason = request.query_params.get("reason", "")
+    sites  = db.get_user_sites(user["id"])
+    slot_pkg    = next(p for p in PAYMENT_PACKAGES if p["type"] == "slot")
+    credit_pkgs = [p for p in PAYMENT_PACKAGES if p["type"] == "credits"]
     return templates.TemplateResponse(request, "payment.html", {
-        "user": user,
-        "reason": reason,
-        "packages": PAYMENT_PACKAGES,
+        "user":        user,
+        "reason":      reason,
+        "sites_count": len(sites),
+        "slot_pkg":    slot_pkg,
+        "credit_pkgs": credit_pkgs,
     })
 
 
@@ -1025,6 +1038,7 @@ async def payment_create(request: Request):
         amount=pkg["price"],
         tokens=pkg["tokens"],
         status="pending",
+        catalog_item_id=catalog_item_id,
     )
 
     return JSONResponse({
@@ -1073,7 +1087,11 @@ async def payment_webhook(request: Request):
     ev_type = event.get("event")
     if ev_type == "payment.success":
         db.complete_payment(payment["id"])
-        db.add_tokens(payment["user_id"], payment["tokens"], f"kaspi_payment:{order_id}")
+        pkg = next((p for p in PAYMENT_PACKAGES if p["catalog_item_id"] == payment.get("catalog_item_id")), None)
+        if pkg and pkg.get("type") == "slot":
+            db.add_site_slot(payment["user_id"], payment["tokens"], f"slot_purchase:{order_id}")
+        else:
+            db.add_tokens(payment["user_id"], payment["tokens"], f"credits_purchase:{order_id}")
     elif ev_type in ("payment.failed", "payment.expired"):
         db.fail_payment(payment["id"], ev_type)
 
