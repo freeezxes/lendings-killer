@@ -320,8 +320,8 @@ def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
 
 
 def _tokens_to_ours(inp: int, out: int) -> int:
-    """1K claude tokens = 1 our token."""
-    return max(1, round((inp + out) / 1000))
+    """100K claude tokens = 1 our token."""
+    return max(1, round((inp + out) / 100_000))
 
 
 # ── Cost tracking ─────────────────────────────────────────────────────────────
@@ -797,10 +797,8 @@ async def site_edit(slug: str, request: Request):
     gen_cr  = gen["cache_read_tokens"]
     gen_cc  = gen["cache_create_tokens"]
 
-    # For edits: input contains the full current HTML (not user work) — bill output only
-    # This keeps edit cost fair: ~5-8 tokens instead of 50+ for HTML input
-    cost       = _calc_cost(0, gen_out, gen_cr, gen_cc)
-    our_tokens = _tokens_to_ours(0, gen_out)
+    cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
+    our_tokens = _tokens_to_ours(gen_in, gen_out)
 
     (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
 
