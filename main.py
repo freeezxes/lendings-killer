@@ -397,6 +397,15 @@ class SessionMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+def _require_paid(user: dict | None) -> RedirectResponse | None:
+    """Returns redirect if user has no credits, None if OK to proceed."""
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    if user["tokens"] <= 0:
+        return RedirectResponse("/payment?reason=no_credits", status_code=302)
+    return None
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI()
 app.add_middleware(SessionMiddleware)
@@ -476,8 +485,8 @@ async def landing(request: Request):
 @app.get("/create", response_class=HTMLResponse)
 async def create_page(request: Request):
     user = _require_auth(request)
-    if not user:
-        return RedirectResponse("/auth", status_code=302)
+    if blocked := _require_paid(user):
+        return blocked
     # ?edit=slug — load existing site into edit mode
     edit_slug = request.query_params.get("edit", "").strip()
     edit_slug = re.sub(r"[^a-zA-Z0-9_-]", "", edit_slug)
@@ -520,7 +529,8 @@ async def auth_register(
                                           {"error": "Этот номер уже зарегистрирован"}, status_code=400)
 
     sid = db.create_session(user["id"])
-    response = RedirectResponse("/create", status_code=302)
+    # New user has 0 credits — send to payment first
+    response = RedirectResponse("/payment?reason=welcome", status_code=302)
     response.set_cookie("sid", sid, httponly=True, samesite="lax", max_age=365 * 24 * 3600)
     return response
 
@@ -538,7 +548,8 @@ async def auth_login(
                                           {"error": "Неверный номер или пароль"}, status_code=401)
 
     sid = db.create_session(user["id"])
-    response = RedirectResponse("/create", status_code=302)
+    dest = "/dashboard" if user["tokens"] > 0 else "/payment?reason=no_credits"
+    response = RedirectResponse(dest, status_code=302)
     response.set_cookie("sid", sid, httponly=True, samesite="lax", max_age=365 * 24 * 3600)
     return response
 
@@ -556,8 +567,8 @@ async def auth_logout(request: Request):
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     user = _require_auth(request)
-    if not user:
-        return RedirectResponse("/auth", status_code=302)
+    if blocked := _require_paid(user):
+        return blocked
     sites = db.get_user_sites(user["id"])
     return templates.TemplateResponse(request, "dashboard.html", {"user": user, "sites": sites})
 
@@ -959,8 +970,10 @@ async def payment_page(request: Request):
     user = _require_auth(request)
     if not user:
         return RedirectResponse("/auth", status_code=302)
+    reason = request.query_params.get("reason", "")
     return templates.TemplateResponse(request, "payment.html", {
         "user": user,
+        "reason": reason,
         "packages": PAYMENT_PACKAGES,
     })
 

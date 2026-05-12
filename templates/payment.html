@@ -136,8 +136,20 @@
 </header>
 
 <main class="content">
-  <h1 class="page-title">Пополнить токены</h1>
-  <p class="page-sub">Выберите пакет и оплатите через Kaspi — токены поступят автоматически.</p>
+  {% if reason == 'welcome' %}
+  <div style="background:linear-gradient(135deg,#1a1430,#12111c);border:1px solid #7c5cff44;border-radius:16px;padding:20px 22px;margin-bottom:24px;text-align:center;">
+    <div style="font-size:1.5rem;margin-bottom:8px;">👋</div>
+    <div style="font-size:1rem;font-weight:700;margin-bottom:6px;">Добро пожаловать!</div>
+    <div style="font-size:.84rem;color:var(--muted);line-height:1.6;">Пополните баланс и создайте свой первый сайт-визитку за 5 минут.</div>
+  </div>
+  {% elif reason == 'no_credits' %}
+  <div style="background:#ff4f6a10;border:1px solid #ff4f6a33;border-radius:16px;padding:18px 22px;margin-bottom:24px;text-align:center;">
+    <div style="font-size:.9rem;font-weight:600;color:#ff4f6a;margin-bottom:4px;">Кредиты закончились</div>
+    <div style="font-size:.82rem;color:var(--muted);">Пополните баланс чтобы продолжить.</div>
+  </div>
+  {% endif %}
+  <h1 class="page-title">Пополнить кредиты</h1>
+  <p class="page-sub">Выберите пакет и оплатите через Kaspi — кредиты поступят автоматически.</p>
 
   <div class="balance-pill">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
@@ -262,8 +274,8 @@ function startPolling() {
       const d = await r.json();
       if (d.status === 'paid') {
         clearInterval(pollingInterval);
-        showStatus('success', '✅', 'Оплачено!', `+${d.tokens} кредитов зачислено на баланс.`);
-        setTimeout(() => window.location.href = '/dashboard', 2500);
+        showStatus('success', '✅', 'Оплачено!', `+${d.tokens} кредитов зачислено. Переходим...`);
+        setTimeout(() => window.location.href = '/create', 2500);
       } else if (d.status === 'payment.failed' || d.status === 'payment.expired') {
         clearInterval(pollingInterval);
         showStatus('error', '❌', 'Платёж отклонён', 'Попробуйте ещё раз или выберите другой пакет.');
