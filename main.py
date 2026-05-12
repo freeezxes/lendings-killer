@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
-import os, re, uuid, json, time, base64
+import os, re, uuid, json, time, base64, hashlib, hmac
 from pathlib import Path
 import anthropic
 import httpx
@@ -35,6 +35,18 @@ GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PHONE = "77777777777"
+
+# ── Kaspi Pay via kaspi-pos on astana-gb server ───────────────────────────────
+KASPI_POS_URL    = "http://92.38.49.113:4001"
+KASPI_API_KEY    = "lendings-kaspi-key"
+KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474edf0"
+
+# catalog item ids → token amounts
+PAYMENT_PACKAGES = [
+    {"catalog_item_id": "17785735222608682", "tokens": 100,  "price": 990,  "label": "100 токенов — 990 ₸"},
+    {"catalog_item_id": "17785735222608784", "tokens": 300,  "price": 2490, "label": "300 токенов — 2 490 ₸"},
+    {"catalog_item_id": "17785735222608267", "tokens": 50,   "price": 1990, "label": "Старт (1 сайт) — 1 990 ₸"},
+]
 
 # ── System prompt — cached as stable prefix ───────────────────────────────────
 SYSTEM_PROMPT = """Ты — эксперт по созданию красивых, живых HTML сайтов-визиток для малого бизнеса.
@@ -594,3 +606,118 @@ async def start(request: Request):
         "message": ONBOARDING_STEPS[0]["question"],
         "step": 0, "data": {}, "done": False,
     })
+
+
+# ── Payment routes ────────────────────────────────────────────────────────────
+
+@app.get("/payment", response_class=HTMLResponse)
+async def payment_page(request: Request):
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    return templates.TemplateResponse(request, "payment.html", {
+        "user": user,
+        "packages": PAYMENT_PACKAGES,
+    })
+
+
+@app.post("/payment/create")
+async def payment_create(request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+
+    body = await request.json()
+    catalog_item_id = body.get("catalog_item_id")
+    phone = body.get("phone", "").strip()
+
+    pkg = next((p for p in PAYMENT_PACKAGES if p["catalog_item_id"] == catalog_item_id), None)
+    if not pkg:
+        return JSONResponse({"error": "Неверный пакет"}, status_code=400)
+
+    phone_clean = re.sub(r"[^\d]", "", phone)
+    if len(phone_clean) < 10:
+        return JSONResponse({"error": "Введите номер телефона Kaspi"}, status_code=400)
+
+    order_id = uuid.uuid4().hex[:12].upper()
+
+    try:
+        resp = httpx.post(
+            f"{KASPI_POS_URL}/api/v1/invoices",
+            headers={"X-API-Key": KASPI_API_KEY, "Content-Type": "application/json"},
+            json={
+                "phone_number": phone_clean,
+                "external_order_id": f"lendings-{order_id}",
+                "webhook_url": "https://dum-e.com/payment/webhook",
+                "description": f"lendings.kz {pkg['label']}",
+                "cart_items": [{"catalog_item_id": catalog_item_id, "count": 1}],
+            },
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception as e:
+        return JSONResponse({"error": f"Ошибка платежного шлюза: {e}"}, status_code=502)
+
+    if not data.get("id"):
+        return JSONResponse({"error": "Kaspi не принял платёж", "detail": data}, status_code=400)
+
+    db.create_payment(
+        user_id=user["id"],
+        order_id=order_id,
+        invoice_id=str(data["id"]),
+        amount=pkg["price"],
+        tokens=pkg["tokens"],
+        status="pending",
+    )
+
+    return JSONResponse({
+        "ok": True,
+        "invoice_id": data["id"],
+        "order_id": order_id,
+        "message": f"Запрос отправлен на номер +{phone_clean}. Откройте Kaspi и подтвердите оплату.",
+    })
+
+
+@app.get("/payment/status/{order_id}")
+async def payment_status(order_id: str, request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+
+    order_id = re.sub(r"[^A-Za-z0-9]", "", order_id)
+    payment = db.get_payment_by_order(order_id)
+    if not payment or payment["user_id"] != user["id"]:
+        return JSONResponse({"error": "Не найдено"}, status_code=404)
+
+    return JSONResponse({"status": payment["status"], "tokens": payment["tokens"]})
+
+
+@app.post("/payment/webhook")
+async def payment_webhook(request: Request):
+    body_bytes = await request.body()
+
+    # Verify HMAC signature from kaspi-pos
+    sig = request.headers.get("X-Webhook-Signature", "")
+    expected = hmac.new(KASPI_WH_SECRET.encode(), body_bytes, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return JSONResponse({"error": "Invalid signature"}, status_code=401)
+
+    event = json.loads(body_bytes)
+    ext_id = event.get("external_order_id") or ""  # lendings-XXXX
+
+    if not ext_id.startswith("lendings-"):
+        return JSONResponse({"ok": True})  # чужое событие — игнорируем
+
+    order_id = ext_id.removeprefix("lendings-")
+    payment = db.get_payment_by_order(order_id)
+    if not payment or payment["status"] != "pending":
+        return JSONResponse({"ok": True})
+
+    ev_type = event.get("event")
+    if ev_type == "payment.success":
+        db.complete_payment(payment["id"])
+        db.add_tokens(payment["user_id"], payment["tokens"], f"kaspi_payment:{order_id}")
+    elif ev_type in ("payment.failed", "payment.expired"):
+        db.fail_payment(payment["id"], ev_type)
+
+    return JSONResponse({"ok": True})

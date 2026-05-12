@@ -55,6 +55,18 @@ def init_db():
             ts          TEXT DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS payments (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL REFERENCES users(id),
+            order_id   TEXT UNIQUE NOT NULL,
+            invoice_id TEXT,
+            amount     INTEGER NOT NULL,
+            tokens     INTEGER NOT NULL,
+            status     TEXT DEFAULT 'pending',
+            created    TEXT DEFAULT (datetime('now')),
+            updated    TEXT DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS sessions (
             id       TEXT PRIMARY KEY,
             user_id  INTEGER NOT NULL REFERENCES users(id),
@@ -189,5 +201,29 @@ def admin_stats() -> dict:
             "total_cost": total_cost, "total_tokens": total_tok,
             "recent_sites": [dict(r) for r in recent]
         }
+
+# ── Payments ──────────────────────────────────────────────────────────────
+def create_payment(user_id: int, order_id: str, invoice_id: str, amount: int, tokens: int, status: str = "pending") -> dict:
+    with get_conn() as c:
+        cur = c.execute(
+            "INSERT INTO payments (user_id, order_id, invoice_id, amount, tokens, status) VALUES (?,?,?,?,?,?)",
+            (user_id, order_id, invoice_id, amount, tokens, status)
+        )
+        row = c.execute("SELECT * FROM payments WHERE id=?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+def get_payment_by_order(order_id: str) -> dict | None:
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM payments WHERE order_id=?", (order_id,)).fetchone()
+        return dict(row) if row else None
+
+def complete_payment(payment_id: int):
+    with get_conn() as c:
+        c.execute("UPDATE payments SET status='paid', updated=datetime('now') WHERE id=?", (payment_id,))
+
+def fail_payment(payment_id: int, reason: str = "failed"):
+    with get_conn() as c:
+        c.execute("UPDATE payments SET status=?, updated=datetime('now') WHERE id=?", (reason, payment_id))
+
 
 init_db()
