@@ -6,144 +6,127 @@
 <title>Создать сайт — lendings.kz</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  :root {
-    --bg: #0a0a0f; --surface: #111118; --border: #1e1e2e;
-    --accent: #7c5cff; --accent-glow: #7c5cff33; --text: #f0eeff; --muted: #6b6b8a;
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;
+    --accent:#7c5cff;--accent-glow:#7c5cff33;--text:#f0eeff;--muted:#6b6b8a;
+    --green:#34d896;
   }
-  html, body { height:100%; font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+  html,body{height:100%;font-family:'Sora',-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
 
   /* Top bar */
-  .top-bar {
-    padding:14px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between;
-    background:#0a0a0fee; backdrop-filter:blur(12px);
-    position:sticky; top:0; z-index:10;
+  .top-bar{
+    padding:13px 18px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    background:#0a0a0fee;backdrop-filter:blur(12px);
+    position:sticky;top:0;z-index:10;
   }
-  .logo { font-size:.95rem; font-weight:700; }
-  .logo span { color:var(--accent); }
-  .top-right { display:flex; align-items:center; gap:10px; }
-  .token-badge {
-    display:inline-flex; align-items:center; gap:5px;
-    background:var(--accent-glow); border:1px solid #7c5cff44;
-    color:var(--accent); border-radius:20px;
-    padding:5px 10px; font-size:.76rem; font-weight:600;
+  .logo{font-size:.93rem;font-weight:700;}.logo span{color:var(--accent);}
+  .top-right{display:flex;align-items:center;gap:10px;}
+  .token-badge{
+    display:inline-flex;align-items:center;gap:5px;
+    background:var(--accent-glow);border:1px solid #7c5cff44;
+    color:var(--accent);border-radius:20px;
+    padding:4px 10px;font-size:.74rem;font-weight:600;
   }
-  .back-link {
-    color:var(--muted); text-decoration:none; font-size:.8rem;
-    display:flex; align-items:center; gap:4px; transition:color .2s;
-  }
-  .back-link:hover { color:var(--text); }
+  .back-link{color:var(--muted);text-decoration:none;font-size:.78rem;
+    display:flex;align-items:center;gap:4px;transition:color .2s;}
+  .back-link:hover{color:var(--text);}
 
-  /* Chat */
-  .chat-wrap { display:flex; flex-direction:column; height:calc(100vh - 57px); }
-  .chat-area { flex:1; overflow-y:auto; padding:20px 20px 8px; display:flex; flex-direction:column; gap:10px; }
+  /* Chat layout */
+  .chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 54px);}
+  .chat-area{flex:1;overflow-y:auto;padding:18px 18px 4px;display:flex;flex-direction:column;gap:10px;
+    scroll-behavior:smooth;}
 
-  .msg { max-width:78%; padding:12px 16px; border-radius:18px; line-height:1.55; font-size:.9rem; white-space:pre-wrap; }
-  .msg.bot  { background:var(--surface); border:1px solid var(--border); border-bottom-left-radius:4px; color:#ddd; align-self:flex-start; }
-  .msg.user { background:var(--accent); border-bottom-right-radius:4px; color:#fff; align-self:flex-end; }
+  /* Messages */
+  .msg{max-width:80%;padding:11px 15px;border-radius:18px;line-height:1.6;font-size:.88rem;white-space:pre-wrap;word-break:break-word;}
+  .msg.bot{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;color:#ddd;align-self:flex-start;}
+  .msg.user{background:var(--accent);border-bottom-right-radius:4px;color:#fff;align-self:flex-end;}
 
-  /* Photo upload */
-  .photo-upload-area { align-self:flex-start; margin-top:4px; }
-  .upload-btn {
-    display:inline-flex; align-items:center; gap:8px;
-    background:#1a1a2a; border:1.5px dashed #333; color:#aaa;
-    padding:10px 18px; border-radius:12px; font-size:.85rem;
-    cursor:pointer; transition:all .18s; font-family:inherit;
-  }
-  .upload-btn:hover { border-color:var(--accent); color:#fff; }
-  .photos-preview { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-  .photo-thumb { width:70px; height:70px; border-radius:8px; object-fit:cover; border:2px solid #333; }
-  .photo-count { font-size:.75rem; color:var(--accent); margin-top:6px; }
+  /* Photos row */
+  .photos-row{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:80%;margin-top:2px;}
+  .photo-thumb{width:68px;height:68px;border-radius:10px;object-fit:cover;border:2px solid #333;}
+  .photo-uploading{width:68px;height:68px;border-radius:10px;background:#1a1a2a;border:2px dashed #333;
+    display:flex;align-items:center;justify-content:center;}
 
-  /* Chips */
-  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-self:flex-start; max-width:90%; }
-  .chip {
-    background:#1a1a2a; border:1px solid #2a2a3a; color:#ccc;
-    padding:7px 14px; border-radius:20px; font-size:.82rem;
-    cursor:pointer; transition:all .18s; user-select:none; font-family:inherit;
-  }
-  .chip:hover { background:#7c5cff22; border-color:var(--accent); color:#fff; }
-  .chip.selected { background:var(--accent); border-color:var(--accent); color:#fff; }
+  /* Typing indicator */
+  .typing{display:flex;gap:5px;padding:12px 15px;background:var(--surface);border:1px solid var(--border);
+    border-radius:18px;border-bottom-left-radius:4px;width:52px;align-self:flex-start;}
+  .typing span{width:6px;height:6px;background:#444;border-radius:50%;animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
 
-  /* Vibe cards */
-  .vibe-cards { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; align-self:flex-start; max-width:95%; }
-  .vibe-card {
-    width:100px; border-radius:12px; overflow:hidden; cursor:pointer;
-    border:2px solid transparent; transition:all .2s; flex-shrink:0; user-select:none;
-  }
-  .vibe-card:hover { transform:translateY(-3px); }
-  .vibe-card.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-  .vibe-preview { height:70px; display:flex; flex-direction:column; justify-content:flex-end; padding:8px; position:relative; }
-  .vibe-preview .line1 { height:7px; border-radius:4px; margin-bottom:4px; width:65%; }
-  .vibe-preview .line2 { height:4px; border-radius:3px; width:45%; }
-  .vibe-preview .dot { position:absolute; top:8px; right:8px; width:16px; height:16px; border-radius:50%; }
-  .vibe-label { padding:6px 7px; font-size:.68rem; text-align:center; font-weight:500; line-height:1.3; }
-
-  /* Input */
-  .input-area {
-    padding:12px 16px; border-top:1px solid var(--border);
-    display:flex; gap:10px; background:var(--bg);
-  }
-  .text-inp {
-    flex:1; background:#111118; border:1px solid var(--border);
-    border-radius:24px; padding:11px 18px; color:var(--text);
-    font-family:inherit; font-size:.9rem; outline:none; transition:border-color .2s;
-  }
-  .text-inp:focus { border-color:#7c5cff55; }
-  .text-inp::placeholder { color:#444; }
-  .send-btn {
-    background:var(--accent); border:none; border-radius:50%;
-    width:42px; height:42px; cursor:pointer; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; transition:opacity .15s;
-  }
-  .send-btn:hover { opacity:.85; }
-  .send-btn:disabled { opacity:.4; cursor:not-allowed; }
-
-  /* Typing */
-  .typing { display:flex; gap:4px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; border-bottom-left-radius:4px; width:56px; align-self:flex-start; }
-  .typing span { width:6px; height:6px; background:#444; border-radius:50%; animation:bounce 1.2s infinite; }
-  .typing span:nth-child(2) { animation-delay:.2s; }
-  .typing span:nth-child(3) { animation-delay:.4s; }
-  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
-
-  /* Done */
-  .done-card {
+  /* Done card */
+  .done-card{
     background:linear-gradient(135deg,#1a1430,#12111c);
-    border:1px solid #7c5cff44; border-radius:18px;
-    padding:20px; align-self:flex-start; max-width:300px;
+    border:1px solid #7c5cff44;border-radius:18px;
+    padding:20px;align-self:flex-start;max-width:300px;
   }
-  .done-title { font-size:.9rem; font-weight:600; margin-bottom:4px; }
-  .done-sub { font-size:.78rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
-  .done-actions { display:flex; flex-direction:column; gap:8px; }
-  .btn-open {
-    display:flex; align-items:center; justify-content:center; gap:7px;
-    background:var(--accent); color:#fff; border:none; border-radius:10px;
-    padding:11px 16px; font-family:inherit; font-size:.85rem; font-weight:600;
-    cursor:pointer; text-decoration:none; transition:opacity .15s;
-  }
-  .btn-open:hover { opacity:.9; }
-  .btn-dash {
-    display:flex; align-items:center; justify-content:center; gap:7px;
-    background:#1e1e2e; color:var(--muted); border:1px solid var(--border);
-    border-radius:10px; padding:11px 16px; font-family:inherit; font-size:.85rem;
-    cursor:pointer; text-decoration:none; transition:all .15s;
-  }
-  .btn-dash:hover { color:var(--text); border-color:#7c5cff44; }
+  .done-title{font-size:.9rem;font-weight:600;margin-bottom:4px;}
+  .done-sub{font-size:.76rem;color:var(--muted);margin-bottom:14px;line-height:1.5;}
+  .done-actions{display:flex;flex-direction:column;gap:8px;}
+  .btn-open{display:flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:11px 16px;font-family:inherit;font-size:.84rem;font-weight:600;
+    cursor:pointer;text-decoration:none;transition:opacity .15s;}
+  .btn-open:hover{opacity:.9;}
+  .btn-dash{display:flex;align-items:center;justify-content:center;gap:6px;
+    background:#1e1e2e;color:var(--muted);border:1px solid var(--border);
+    border-radius:10px;padding:11px 16px;font-family:inherit;font-size:.84rem;
+    cursor:pointer;text-decoration:none;transition:all .15s;}
+  .btn-dash:hover{color:var(--text);border-color:#7c5cff44;}
 
   /* No tokens */
-  .no-tokens {
-    background:#ff4f6a15; border:1px solid #ff4f6a33; border-radius:16px;
-    padding:20px; align-self:flex-start; max-width:300px; text-align:center;
+  .no-tokens{background:#ff4f6a10;border:1px solid #ff4f6a33;border-radius:16px;
+    padding:18px;align-self:flex-start;max-width:300px;text-align:center;}
+  .no-tokens-title{font-size:.88rem;font-weight:600;color:#ff4f6a;margin-bottom:5px;}
+  .no-tokens-sub{font-size:.78rem;color:var(--muted);margin-bottom:13px;line-height:1.5;}
+  .btn-topup{display:inline-flex;align-items:center;gap:5px;
+    background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:10px 18px;font-family:inherit;font-size:.83rem;font-weight:600;
+    cursor:pointer;text-decoration:none;}
+
+  /* Input area */
+  .input-area{
+    padding:10px 14px 14px;border-top:1px solid var(--border);
+    display:flex;flex-direction:column;gap:8px;background:var(--bg);
   }
-  .no-tokens-title { font-size:.9rem; font-weight:600; color:#ff4f6a; margin-bottom:6px; }
-  .no-tokens-sub { font-size:.8rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
-  .btn-topup {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--accent); color:#fff; border:none; border-radius:10px;
-    padding:11px 20px; font-family:inherit; font-size:.85rem; font-weight:600;
-    cursor:pointer; text-decoration:none;
+
+  /* Photos preview above input */
+  .input-photos{display:flex;flex-wrap:wrap;gap:6px;padding:0 2px;}
+  .input-photo-wrap{position:relative;}
+  .input-photo-thumb{width:56px;height:56px;border-radius:9px;object-fit:cover;border:2px solid var(--accent);display:block;}
+  .remove-photo{position:absolute;top:-6px;right:-6px;width:18px;height:18px;
+    background:#ff4f6a;border:none;border-radius:50%;color:#fff;font-size:.7rem;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+
+  .input-row{display:flex;gap:8px;align-items:flex-end;}
+  .text-inp{
+    flex:1;background:#111118;border:1px solid var(--border);
+    border-radius:22px;padding:10px 16px;color:var(--text);
+    font-family:inherit;font-size:.88rem;outline:none;transition:border-color .2s;
+    resize:none;max-height:120px;line-height:1.5;
   }
+  .text-inp:focus{border-color:#7c5cff55;}
+  .text-inp::placeholder{color:#3a3a4a;}
+
+  .photo-btn{
+    background:#1a1a2a;border:1px solid var(--border);color:var(--muted);
+    border-radius:50%;width:40px;height:40px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:all .2s;
+  }
+  .photo-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .photo-btn.has-photos{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+
+  .send-btn{
+    background:var(--accent);border:none;border-radius:50%;
+    width:40px;height:40px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:opacity .15s;
+  }
+  .send-btn:hover{opacity:.85;}
+  .send-btn:disabled{opacity:.35;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -164,44 +147,41 @@
 
 <div class="chat-wrap">
   <div class="chat-area" id="chat"></div>
+
   <div class="input-area">
-    <input type="text" id="inp" class="text-inp" placeholder="Напиши ответ..." onkeydown="if(event.key==='Enter')send()">
-    <button class="send-btn" id="sendBtn" onclick="send()">
-      <svg viewBox="0 0 24 24" fill="white" width="17" height="17"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
-    </button>
+    <div class="input-photos" id="inputPhotos"></div>
+    <div class="input-row">
+      <label class="photo-btn" id="photoBtnLabel" title="Добавить фото">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <input type="file" accept="image/*" multiple id="photoInput" style="display:none" onchange="handlePhotos(this)">
+      </label>
+      <textarea id="inp" class="text-inp" placeholder="Напишите сообщение…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
+        oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
-let step = 0, data = {}, uploadedPhotos = [];
+let history = [];
+let photoUrls = [];
 let userTokens = {{ user.tokens }};
+let inputLocked = false;
 
-const STEP_IDS = ['name','services','city','photos','vibe','extra'];
-
-const VIBE_STYLES = [
-  { label:"Уютно\nи тепло",        value:"Уютно и тепло",          bg:"#FBF0EA", line1:"#C8847A", line2:"#E8C4BE", dot:"#C8847A" },
-  { label:"Дорого\nи стильно",     value:"Дорого и стильно",        bg:"#0D0D0D", line1:"#C9A84C", line2:"#7a6830", dot:"#C9A84C" },
-  { label:"Свежо\nсовременно",     value:"Свежо и современно",      bg:"#F0F7FF", line1:"#2D7DD2", line2:"#a8cbf0", dot:"#2D7DD2" },
-  { label:"Строго\nпрофи",         value:"Строго и профессионально",bg:"#F5F5F5", line1:"#222",   line2:"#888",   dot:"#222"    },
-  { label:"Ярко\nмолодёжно",       value:"Ярко и молодёжно",        bg:"#1a0a2e", line1:"#ff3cac", line2:"#784ba0",dot:"#ff3cac" },
-  { label:"Нежно\nпастельно",      value:"Нежно и пастельно",       bg:"#FFF0F8", line1:"#F4A7C3", line2:"#fad4e5",dot:"#F4A7C3" },
-  { label:"Тёмно\nзагадочно",      value:"Тёмно и загадочно",       bg:"#121212", line1:"#8B5CF6", line2:"#4c2a80",dot:"#8B5CF6" },
-  { label:"Минимализм",            value:"Минимализм и чистота",    bg:"#FFFFFF", line1:"#000",   line2:"#ccc",   dot:"#000"    },
-];
-
-const EXTRA_CHIPS = ["Всё ок 👍","Больше анимаций","Только светлые тона","Тёмные тона","Розовые/персиковые","Золотые акценты"];
-
-async function init() {
-  const r = await fetch('/start');
-  const j = await r.json();
-  addMsg(j.message, 'bot');
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-function addMsg(text, who, html=false) {
+// ── Render helpers ──────────────────────────────────────────────────────────
+function addMsg(text, who) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = `msg ${who}`;
-  if (html) div.innerHTML = text; else div.textContent = text;
+  div.textContent = text;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   return div;
@@ -221,113 +201,29 @@ function removeTyping() {
   if (t) t.remove();
 }
 
-function showPhotoUpload() {
-  const chat = document.getElementById('chat');
-  const wrap = document.createElement('div');
-  wrap.className = 'photo-upload-area';
-  wrap.innerHTML = `
-    <label class="upload-btn">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      Загрузить фото
-      <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
-    </label>
-    <div class="photos-preview" id="photos-preview"></div>
-    <div class="photo-count" id="photo-count"></div>
-  `;
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-async function handlePhotos(input) {
-  const files = Array.from(input.files);
-  const preview = document.getElementById('photos-preview');
-  const count = document.getElementById('photo-count');
-  for (const file of files) {
-    const fd = new FormData();
-    fd.append('file', file);
-    const r = await fetch('/upload-photo', { method:'POST', body:fd });
-    const j = await r.json();
-    uploadedPhotos.push(j.url);
-    const img = document.createElement('img');
-    img.className = 'photo-thumb'; img.src = j.url;
-    preview.appendChild(img);
-  }
-  count.textContent = `${uploadedPhotos.length} фото загружено`;
-  data.photo_urls = uploadedPhotos;
-}
-
-function showVibeCards() {
-  const chat = document.getElementById('chat');
-  const row = document.createElement('div');
-  row.className = 'vibe-cards';
-  VIBE_STYLES.forEach(s => {
-    const card = document.createElement('div');
-    card.className = 'vibe-card';
-    const isDark = s.bg.startsWith('#0') || s.bg.startsWith('#1') || s.bg === '#121212';
-    card.innerHTML = `
-      <div class="vibe-preview" style="background:${s.bg}">
-        <div class="dot" style="background:${s.dot}"></div>
-        <div class="line1" style="background:${s.line1}"></div>
-        <div class="line2" style="background:${s.line2}"></div>
-      </div>
-      <div class="vibe-label" style="background:${isDark ? '#ffffff10' : '#00000008'};color:${isDark ? '#ccc':'#555'}">${s.label}</div>
-    `;
-    card.onclick = () => {
-      row.querySelectorAll('.vibe-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      document.getElementById('inp').value = s.value;
-    };
-    row.appendChild(card);
-  });
-  chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function showChips(items) {
-  const chat = document.getElementById('chat');
-  const row = document.createElement('div');
-  row.className = 'chips';
-  items.forEach(label => {
-    const chip = document.createElement('div');
-    chip.className = 'chip'; chip.textContent = label;
-    chip.onclick = () => {
-      row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      document.getElementById('inp').value = label.replace(/\s*[\p{Emoji}].*/u, '').trim() || label;
-    };
-    row.appendChild(chip);
-  });
-  chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function showDone(siteUrl) {
+function showDone(siteUrl, reply) {
   const chat = document.getElementById('chat');
   const card = document.createElement('div');
   card.className = 'done-card';
+  const fullUrl = window.location.origin + siteUrl;
+  navigator.clipboard?.writeText(fullUrl).catch(()=>{});
   card.innerHTML = `
-    <div class="done-title">✅ Сайт готов!</div>
-    <div class="done-sub">Ссылка скопирована — можно сразу отправлять клиентам.</div>
+    <div class="done-title">✅ ${reply}</div>
+    <div class="done-sub">Ссылка уже скопирована — отправляй клиентам.</div>
     <div class="done-actions">
       <a href="${siteUrl}" target="_blank" class="btn-open">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         Открыть сайт
       </a>
       <a href="/dashboard?new=${siteUrl}" class="btn-dash">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Все мои сайты
       </a>
     </div>
   `;
   chat.appendChild(card);
   chat.scrollTop = chat.scrollHeight;
-
-  // copy link to clipboard silently
-  const fullUrl = window.location.origin + siteUrl;
-  navigator.clipboard?.writeText(fullUrl).catch(() => {});
-
-  document.getElementById('inp').disabled = true;
-  document.getElementById('sendBtn').disabled = true;
+  lockInput();
 }
 
 function showNoTokens() {
@@ -340,74 +236,120 @@ function showNoTokens() {
     <a href="/payment" class="btn-topup">Пополнить баланс →</a>
   `;
   chat.appendChild(div);
-  document.getElementById('inp').disabled = true;
-  document.getElementById('sendBtn').disabled = true;
+  lockInput();
 }
 
-async function send() {
-  const inp = document.getElementById('inp');
-  const answer = inp.value.trim();
-  if (!answer) return;
-  inp.value = '';
+function lockInput() {
+  inputLocked = true;
+  document.getElementById('inp').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('photoBtnLabel').style.pointerEvents = 'none';
+  document.getElementById('photoBtnLabel').style.opacity = '.4';
+}
 
-  // photos step — save and continue
-  if (STEP_IDS[step] === 'photos') {
-    data.photo_urls = uploadedPhotos;
+// ── Photos ──────────────────────────────────────────────────────────────────
+async function handlePhotos(input) {
+  const files = Array.from(input.files);
+  for (const file of files) {
+    // Show loading placeholder
+    const wrap = document.createElement('div');
+    wrap.className = 'input-photo-wrap';
+    wrap.innerHTML = '<div class="input-photo-thumb" style="background:#1a1a2a;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+    document.getElementById('inputPhotos').appendChild(wrap);
+
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/upload-photo', {method:'POST', body:fd});
+    const j = await r.json();
+    photoUrls.push(j.url);
+
+    const img = document.createElement('img');
+    img.className = 'input-photo-thumb';
+    img.src = j.url;
+    const btn = document.createElement('button');
+    btn.className = 'remove-photo';
+    btn.innerHTML = '✕';
+    const idx = photoUrls.length - 1;
+    btn.onclick = () => { photoUrls.splice(idx, 1); wrap.remove(); updatePhotoBtnStyle(); };
+    wrap.innerHTML = '';
+    wrap.appendChild(img);
+    wrap.appendChild(btn);
+    updatePhotoBtnStyle();
+  }
+  input.value = '';
+}
+
+function updatePhotoBtnStyle() {
+  const btn = document.getElementById('photoBtnLabel');
+  btn.classList.toggle('has-photos', photoUrls.length > 0);
+}
+
+// ── Send ────────────────────────────────────────────────────────────────────
+async function send() {
+  if (inputLocked) return;
+  const inp = document.getElementById('inp');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  inp.value = '';
+  inp.style.height = 'auto';
+  addMsg(text, 'user');
+
+  // Show uploaded photos in chat if any
+  if (photoUrls.length > 0) {
+    const chat = document.getElementById('chat');
+    const row = document.createElement('div');
+    row.className = 'photos-row';
+    photoUrls.forEach(url => {
+      const img = document.createElement('img');
+      img.className = 'photo-thumb'; img.src = url;
+      row.appendChild(img);
+    });
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
   }
 
-  addMsg(answer, 'user');
   showTyping();
 
-  const r = await fetch('/chat', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({step, answer, data})
-  });
-  const j = await r.json();
-
-  setTimeout(() => {
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: text, history, photo_urls: photoUrls})
+    });
+    const j = await r.json();
     removeTyping();
 
     if (j.error) {
-      if (j.error.includes('токен')) {
-        showNoTokens();
-      } else {
-        addMsg(j.error, 'bot');
-      }
+      if (j.error.includes('токен')) { showNoTokens(); }
+      else { addMsg(j.error, 'bot'); }
       return;
     }
 
-    data = j.data;
-    step = j.step;
+    history = j.history;
 
     if (j.done) {
-      // Update token badge
-      userTokens = j.tokens_left;
+      userTokens = j.tokens_left ?? userTokens;
       document.getElementById('tokenBadge').innerHTML = `
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-        ${userTokens} токенов
-      `;
-      showDone(j.site_url);
+        ${userTokens} токенов`;
+      showDone(j.site_url, j.message);
     } else {
-      const nextId = STEP_IDS[step];
-      if (nextId === 'photos') {
-        addMsg(j.message, 'bot');
-        showPhotoUpload();
-        showChips(['Пропустить →']);
-      } else if (nextId === 'vibe') {
-        addMsg(j.message, 'bot');
-        showVibeCards();
-      } else if (nextId === 'extra') {
-        addMsg(j.message, 'bot');
-        showChips(EXTRA_CHIPS);
-      } else {
-        addMsg(j.message, 'bot');
-      }
+      addMsg(j.message, 'bot');
     }
-  }, 500);
+  } catch(e) {
+    removeTyping();
+    addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
+  }
 }
 
-init();
+// ── Init ────────────────────────────────────────────────────────────────────
+(async function() {
+  const r = await fetch('/start');
+  const j = await r.json();
+  addMsg(j.message, 'bot');
+  document.getElementById('inp').focus();
+})();
 </script>
 </body>
 </html>

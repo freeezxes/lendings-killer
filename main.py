@@ -245,16 +245,28 @@ def _ai_generate(data: dict) -> dict:
     else:
         photos_block = "\nФото не добавлены — сделай красивые плейсхолдеры с эмодзи или CSS градиентами."
 
+    # Include AI dialogue as rich context if available
+    chat_history = data.get("chat_history", [])
+    if chat_history:
+        dialogue_lines = []
+        for msg in chat_history:
+            role = "Клиент" if msg["role"] == "user" else "Консультант"
+            dialogue_lines.append(f"{role}: {msg['content']}")
+        dialogue_block = "\n=== ДИАЛОГ С КЛИЕНТОМ (полный контекст) ===\n" + "\n".join(dialogue_lines)
+    else:
+        dialogue_block = ""
+
     user_content = f"""Данные клиента:
 - Имя/профессия: {data.get('name', '')}
 - Услуги и цены: {data.get('services', '')}
 - Город и контакт: {data.get('city', '')}
+{dialogue_block}
 {photos_block}
 
 === СТИЛЬ И ДИЗАЙН ===
 {style_block}
 
-Сгенерируй полный HTML сайт-визитку для этого клиента."""
+Сгенерируй полный HTML сайт-визитку для этого клиента. Используй все детали из диалога — специализацию, нюансы бизнеса, тон общения клиента."""
 
     resp = ai_client.messages.create(
         model=BEDROCK_MODEL,
@@ -311,6 +323,29 @@ def _save_cost(entry: dict):
     COSTS_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2))
 
 
+def _ai_chat(history: list) -> dict:
+    """Run one turn of the onboarding dialogue. Returns parsed JSON from the model."""
+    resp = ai_client.messages.create(
+        model=BEDROCK_MODEL,
+        max_tokens=512,
+        system=[{
+            "type": "text",
+            "text": CHAT_SYSTEM,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=history,
+    )
+    raw = resp.content[0].text.strip()
+    # Strip accidental markdown fences
+    raw = re.sub(r'^```[a-z]*\n?', '', raw)
+    raw = re.sub(r'\n?```$', '', raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Fallback: extract reply text and mark not ready
+        return {"reply": raw, "ready": False, "collected": {}}
+
+
 # ── Auth middleware ───────────────────────────────────────────────────────────
 class SessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -328,14 +363,35 @@ templates = Jinja2Templates(directory="templates")
 UPLOADS_DIR = Path("static/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-ONBOARDING_STEPS = [
-    {"id": "name",     "question": "Как тебя зовут и чем занимаешься? Например: «Я Айгуль, мастер маникюра»"},
-    {"id": "services", "question": "Какие услуги ты оказываешь? Перечисли с ценами как удобно"},
-    {"id": "city",     "question": "В каком городе работаешь и как к тебе записаться? (WhatsApp, Telegram или телефон)"},
-    {"id": "photos",   "question": "Добавь фотки своих работ — они появятся на сайте! Можно загрузить несколько. Или напиши «пропустить»"},
-    {"id": "vibe",     "question": "Как должен чувствовать себя посетитель на твоём сайте?\nНапример: уютно и тепло / дорого и стильно / свежо и современно / строго и профессионально\n\nМожешь описать своими словами — или скинуть ссылку на сайт чей дизайн тебе нравится"},
-    {"id": "extra",    "question": "Хочешь что-то добавить? Любимые цвета, пожелания по стилю, чего точно не хочешь — или просто напиши «всё ок»"},
-]
+# ── AI-driven onboarding chat ─────────────────────────────────────────────────
+CHAT_SYSTEM = """Ты — дружелюбный консультант сервиса lendings.kz. Помогаешь мастерам и малому бизнесу создать сайт-визитку через разговор.
+
+Твоя задача — в ходе живого диалога (3-6 сообщений) собрать всё необходимое для создания сайта:
+1. Имя и ниша (кто человек, чем занимается — уточни специфику: барбер мужских стрижек? репетитор по математике? массаж спортивный или релакс?)
+2. Услуги с ценами (попроси перечислить конкретные услуги и цены, если не дал)
+3. Город и контакт для записи (WhatsApp/Telegram/телефон)
+4. Стиль сайта — ОБЯЗАТЕЛЬНО спроси: «Как должен выглядеть сайт? Можешь описать атмосферу или скинуть ссылку на сайт с понравившимся дизайном»
+
+Правила диалога:
+- Пиши коротко, по-дружески, на «ты»
+- Задавай по 1-2 вопроса за раз, не все сразу
+- Если ниша понятна — задавай вопросы специфичные для неё (барберу: «стрижки только мужские?», репетитору: «какие классы/предметы?»)
+- После каждого ответа кратко подтверди что понял («Понял, Астана, WhatsApp — отлично!»)
+- Когда собрал имя+услуги+контакт+стиль — скажи что готов делать сайт
+
+ВАЖНО: отвечай ТОЛЬКО валидным JSON без markdown-обёртки:
+{
+  "reply": "твой текст сообщения",
+  "ready": false,
+  "collected": {
+    "name": "имя и профессия или null",
+    "services": "услуги с ценами или null",
+    "city": "город и контакт или null",
+    "vibe": "стиль/ссылка или null"
+  }
+}
+
+Когда все 4 поля собраны — ставь "ready": true и в reply напиши что-то вроде «Отлично! Всё есть — сейчас сделаю сайт ✨»"""
 
 
 # ── Helper: require auth ──────────────────────────────────────────────────────
@@ -517,80 +573,95 @@ async def upload_photo(file: UploadFile = File(...)):
 
 # ── Chat / site generation ────────────────────────────────────────────────────
 
+@app.get("/start")
+async def start(request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({
+        "message": "Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?",
+        "history": [],
+        "done": False,
+    })
+
+
 @app.post("/chat")
 async def chat(request: Request):
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
 
-    body   = await request.json()
-    step   = body.get("step", 0)
-    answer = body.get("answer", "")
-    data   = body.get("data", {})
+    body       = await request.json()
+    message    = body.get("message", "").strip()
+    history    = body.get("history", [])   # list of {role, content}
+    photo_urls = body.get("photo_urls", [])
 
-    if step < len(ONBOARDING_STEPS):
-        data[ONBOARDING_STEPS[step]["id"]] = answer
+    if not message:
+        return JSONResponse({"error": "Пустое сообщение"}, status_code=400)
 
-    next_step = step + 1
+    # Append user message to history
+    history.append({"role": "user", "content": message})
 
-    if next_step < len(ONBOARDING_STEPS):
+    # Ask AI what to do next
+    result = _ai_chat(history)
+    reply      = result.get("reply", "Продолжай, я слушаю")
+    ready      = result.get("ready", False)
+    collected  = result.get("collected", {})
+
+    # Append assistant reply to history
+    history.append({"role": "assistant", "content": reply})
+
+    if not ready:
         return JSONResponse({
-            "message": ONBOARDING_STEPS[next_step]["question"],
-            "step":    next_step,
-            "data":    data,
+            "message": reply,
+            "history": history,
             "done":    False,
         })
 
-    # Final step — generate site
-    vibe  = data.get("vibe", "").strip()
-    extra = data.get("extra", "").strip()
-
-    ref_url = ""
-    for field in [vibe, extra]:
-        if _is_url(field):
-            ref_url = field
-            break
-    data["ref_url"] = ref_url
-
-    # Check token balance before generating
+    # ── Ready to generate ──────────────────────────────────────────────────
     if user["tokens"] < 1:
         return JSONResponse({"error": "Недостаточно токенов для генерации сайта"}, status_code=402)
 
-    result = _ai_generate(data)
+    # Build data dict from collected fields + photos
+    vibe = collected.get("vibe") or ""
+    data = {
+        "name":       collected.get("name") or "Бизнес",
+        "services":   collected.get("services") or "",
+        "city":       collected.get("city") or "",
+        "vibe":       vibe,
+        "extra":      "",
+        "photo_urls": photo_urls,
+        "ref_url":    vibe if _is_url(vibe) else "",
+        "chat_history": history,   # pass full dialogue as extra context
+    }
 
-    inp = result["input_tokens"]
-    out = result["output_tokens"]
-    cr  = result["cache_read_tokens"]
-    cc  = result["cache_create_tokens"]
+    gen = _ai_generate(data)
+
+    inp = gen["input_tokens"]
+    out = gen["output_tokens"]
+    cr  = gen["cache_read_tokens"]
+    cc  = gen["cache_create_tokens"]
     cost = _calc_cost(inp, out, cr, cc)
-
-    # Token accounting: 1K claude tokens = 1 our token
     our_tokens = _tokens_to_ours(inp, out)
 
-    # Build slug from client name
-    name = data.get("name", "site")
+    name = data["name"]
     clean_name = re.sub(r'^я\s+', '', name.lower().strip())
     slug = _slugify(clean_name.split(',')[0].strip())
-
-    # Ensure slug is unique for this user by appending short uid if needed
     existing = db.get_site_by_slug(slug)
     if existing and existing.get("user_id") != user["id"]:
         slug = f"{slug}-{uuid.uuid4().hex[:4]}"
 
-    html_path = str(GENERATED_DIR / f"{slug}.html")
-    (GENERATED_DIR / f"{slug}.html").write_text(result["html"], encoding="utf-8")
+    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
 
-    # Persist to DB
     site = db.create_site(
         user_id=user["id"],
         slug=slug,
         title=name,
         data=data,
-        html_path=html_path,
+        html_path=str(GENERATED_DIR / f"{slug}.html"),
         tokens_used=our_tokens,
     )
 
-    # Deduct tokens
     db.deduct_tokens(
         user_id=user["id"],
         amount=our_tokens,
@@ -602,42 +673,24 @@ async def chat(request: Request):
         cost_usd=cost,
     )
 
-    # Legacy cost log
     _save_cost({
-        "ts":                  time.strftime("%Y-%m-%d %H:%M:%S"),
-        "client":              name,
-        "slug":                slug,
-        "user_id":             user["id"],
-        "style":               data.get("ref_url") or data.get("vibe") or "random",
-        "input_tokens":        inp,
-        "output_tokens":       out,
-        "cache_read_tokens":   cr,
-        "cache_create_tokens": cc,
-        "cost_usd":            round(cost, 6),
-        "our_tokens_spent":    our_tokens,
-        "model":               BEDROCK_MODEL,
+        "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "client": name, "slug": slug, "user_id": user["id"],
+        "style": data["ref_url"] or vibe or "ai-chat",
+        "input_tokens": inp, "output_tokens": out,
+        "cache_read_tokens": cr, "cache_create_tokens": cc,
+        "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
+        "model": BEDROCK_MODEL,
     })
 
     return JSONResponse({
-        "message":         "Сайт готов!",
-        "step":            next_step,
-        "data":            data,
-        "done":            True,
-        "site_url":        f"/site/{slug}",
-        "cost_usd":        round(cost, 6),
-        "tokens_spent":    our_tokens,
-        "tokens_left":     user["tokens"] - our_tokens,
-    })
-
-
-@app.get("/start")
-async def start(request: Request):
-    user = _require_auth(request)
-    if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-    return JSONResponse({
-        "message": ONBOARDING_STEPS[0]["question"],
-        "step": 0, "data": {}, "done": False,
+        "message":      reply,
+        "history":      history,
+        "done":         True,
+        "site_url":     f"/site/{slug}",
+        "cost_usd":     round(cost, 6),
+        "tokens_spent": our_tokens,
+        "tokens_left":  user["tokens"] - our_tokens,
     })
 
 
