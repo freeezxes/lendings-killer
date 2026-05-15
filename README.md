@@ -1,16 +1,19 @@
 # lendings-killer
 
-AI website builder SaaS — мастер красоты отвечает на 6 вопросов в чате и получает готовый сайт-визитку через 30 секунд.
+AI website builder SaaS — мастер красоты отвечает на 6 вопросов в чате и получает готовый сайт-визитку через 30–60 секунд.
 
 **Прод:** [dum-e.com](https://dum-e.com) · **Сервер:** `92.38.48.227` · **GitHub:** `freeezxes/lendings-killer`
+
+Полная документация → **[AGENTS.md](AGENTS.md)**
 
 ---
 
 ## Стек
 
 - **FastAPI** + Jinja2 templates
-- **SQLite** (`lendings.db`) — users, sites, sessions, token_log
+- **SQLite** (`lendings.db`) — users, sites, sessions, token_log, payments
 - **Anthropic Bedrock** Haiku 4.5 — генерирует HTML сайт
+- **Kaspi Pay** через kaspi-pos прокси (`92.38.49.113:4001`)
 - **bcrypt** — пароли
 - **google-auth** + **httpx** — Google OAuth 2.0
 - **Pillow** — ресайз фото при загрузке
@@ -21,17 +24,16 @@ AI website builder SaaS — мастер красоты отвечает на 6 
 
 ```
 lendings-killer/
-├── main.py              # FastAPI app — все роуты, onboarding, AI генерация
-├── db.py                # SQLite слой — users, sites, sessions, token_log
+├── main.py              # FastAPI app — все роуты, onboarding, AI генерация, платежи
+├── db.py                # SQLite слой — users, sites, sessions, token_log, payments
 ├── templates/
 │   ├── landing.html     # Главная (публичная)
 │   ├── auth.html        # Регистрация / вход
 │   ├── index.html       # Чат-онбординг (создать сайт)
 │   ├── dashboard.html   # Личный кабинет пользователя
-│   ├── admin.html       # Админ-панель
-│   ├── site_1.html      # Шаблон 1 (не используется — сайты генерирует AI)
-│   ├── site_2.html
-│   └── site_3.html
+│   ├── profile.html     # Профиль + история токенов
+│   ├── payment.html     # Покупка слотов / кредитов
+│   └── admin.html       # Админ-панель
 ├── static/
 │   └── uploads/         # Фото пользователей (не в git)
 ├── generated_sites/     # Готовые HTML сайты клиентов (не в git)
@@ -188,23 +190,33 @@ sudo systemctl restart lendings
 
 ## Бизнес-логика
 
-### Онбординг (6 шагов в чате)
+### Онбординг (чат до генерации)
 
+AI (`CHAT_SYSTEM`) собирает через диалог:
 1. Имя / профессия
 2. Услуги и цены
 3. Город и контакт (WhatsApp/Telegram/телефон)
-4. Фото работ (загрузка или «пропустить»)
-5. Вайб / ссылка на референс-сайт
-6. Дополнительные пожелания
+4. Вайб / ссылка на референс-сайт (опционально)
 
-После последнего шага — AI генерирует полный HTML и сохраняет в `generated_sites/<slug>.html`.
+После сбора всех данных — AI генерирует полный HTML и сохраняет в `generated_sites/<slug>.html`.
+
+### Платёжная модель
+
+| Пакет                  | Цена   | Даёт              |
+|------------------------|--------|-------------------|
+| 1 сайт                 | 5 000₸ | +1 слот +1000 кредитов |
+| 500 кредитов           | 990₸   | +500 кредитов     |
+| 1 500 кредитов         | 2 490₸ | +1500 кредитов    |
+
+Новый пользователь → сразу на страницу оплаты (0 слотов).
 
 ### Токены
 
-| Событие               | Изменение            |
-|----------------------|----------------------|
-| Регистрация           | +500 токенов         |
-| Генерация сайта       | −1 токен на ~1K claude tokens |
+| Событие               | Изменение                              |
+|----------------------|----------------------------------------|
+| Генерация сайта       | −1 кредит на каждые ~1K claude tokens |
+| Редактирование сайта  | −1 кредит на каждые ~1K claude tokens |
+| Admin grant           | +N кредитов вручную                    |
 
 ### Дизайн-бриф с референса
 
@@ -214,31 +226,45 @@ sudo systemctl restart lendings
 
 ## Роуты
 
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | `/` | Лендинг |
-| GET | `/auth` | Страница входа/регистрации |
-| POST | `/auth/register` | Регистрация |
-| POST | `/auth/login` | Вход |
-| GET | `/auth/google` | Старт Google OAuth |
-| GET | `/auth/google/callback` | Callback Google OAuth |
-| POST | `/auth/logout` | Выход |
-| GET | `/create` | Чат-онбординг |
-| GET | `/dashboard` | Личный кабинет |
-| GET | `/site/{slug}` | Просмотр сгенерированного сайта |
-| POST | `/chat` | Шаг онбординга / запуск генерации |
-| POST | `/upload-photo` | Загрузка фото |
-| GET | `/admin` | Админ-панель (phone: `77777777777`) |
-| GET | `/admin/api/stats` | Статистика JSON |
+| Метод | URL                           | Описание                                  |
+|-------|-------------------------------|-------------------------------------------|
+| GET   | `/`                           | Лендинг                                   |
+| GET   | `/auth`                       | Страница входа/регистрации                |
+| POST  | `/auth/register`              | Регистрация                               |
+| POST  | `/auth/login`                 | Вход                                      |
+| GET   | `/auth/google`                | Старт Google OAuth                        |
+| GET   | `/auth/google/callback`       | Callback Google OAuth                     |
+| POST  | `/auth/logout`                | Выход                                     |
+| GET   | `/create`                     | Чат-онбординг                             |
+| GET   | `/dashboard`                  | Личный кабинет                            |
+| GET   | `/profile`                    | Профиль + история токенов                 |
+| GET   | `/site/{slug}`                | Просмотр сгенерированного сайта           |
+| POST  | `/site/{slug}/edit`           | Редактирование сайта через чат            |
+| POST  | `/site/{slug}/delete`         | Удалить сайт                              |
+| GET   | `/start`                      | Начало чата (приветствие)                 |
+| POST  | `/chat`                       | Шаг онбординга / запуск генерации         |
+| POST  | `/upload-photo`               | Загрузка фото                             |
+| GET   | `/payment`                    | Страница оплаты                           |
+| POST  | `/payment/create`             | Создать инвойс Kaspi                      |
+| GET   | `/payment/status/{order_id}`  | Статус оплаты                             |
+| POST  | `/payment/webhook`            | Webhook от kaspi-pos (HMAC)               |
+| GET   | `/admin`                      | Админ-панель (phone: `77064177628`)       |
+| GET   | `/admin/api/stats`            | Статистика JSON                           |
+| GET   | `/admin/api/users`            | Список пользователей                      |
+| GET   | `/admin/api/user/{uid}`       | Детали пользователя                       |
+| POST  | `/admin/api/user/{uid}/add-tokens` | Начислить токены вручную            |
 
 ---
 
 ## База данных
 
 ```sql
-users       — id, phone, password (bcrypt, nullable для Google), email, google_id, auth_provider, avatar_url, name, tokens, site_slots, created
-sites       — id, user_id, slug, title, data (JSON), html_path, tokens_used, created
+users       — id, phone, password (bcrypt, nullable для Google), email, google_id,
+              auth_provider, avatar_url, name, tokens, site_slots, created
+sites       — id, user_id, slug, title, data (JSON), html_path, tokens_used,
+              chat_in, chat_out, gen_in, gen_out, cache_read, cost_usd, created, updated
 token_log   — id, user_id, site_id, delta, reason, claude_in, claude_out, cache_read, cost_usd, ts
+payments    — id, user_id, order_id, invoice_id, amount, tokens, catalog_item_id, status, created
 sessions    — id (hex), user_id, expires
 ```
 
