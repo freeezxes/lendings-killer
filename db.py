@@ -1,4 +1,4 @@
-import sqlite3, json, re, bcrypt as _bcrypt
+import sqlite3, json, re, secrets, hashlib, hmac, time, bcrypt as _bcrypt
 from pathlib import Path
 from datetime import datetime
 
@@ -26,6 +26,10 @@ def init_db():
             phone       TEXT UNIQUE,
             password    TEXT,
             email       TEXT UNIQUE,
+            email_verified INTEGER DEFAULT 0,
+            email_verify_token TEXT,
+            email_verify_expires INTEGER,
+            verification_sent_at INTEGER,
             google_id   TEXT UNIQUE,
             auth_provider TEXT DEFAULT 'local',
             avatar_url  TEXT,
@@ -154,6 +158,10 @@ def migrate_add_oauth_columns():
         cols = {r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()}
         for col, defn in [
             ("email", "TEXT"),
+            ("email_verified", "INTEGER DEFAULT 0"),
+            ("email_verify_token", "TEXT"),
+            ("email_verify_expires", "INTEGER"),
+            ("verification_sent_at", "INTEGER"),
             ("google_id", "TEXT"),
             ("auth_provider", "TEXT DEFAULT 'local'"),
             ("avatar_url", "TEXT"),
@@ -172,6 +180,10 @@ def migrate_add_oauth_columns():
             "ON users(google_id) WHERE google_id IS NOT NULL"
         )
         c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_users_email_verify_token "
+            "ON users(email_verify_token) WHERE email_verify_token IS NOT NULL"
+        )
+        c.execute(
             "UPDATE users SET auth_provider='local' "
             "WHERE auth_provider IS NULL OR auth_provider=''"
         )
@@ -179,13 +191,22 @@ def migrate_add_oauth_columns():
     _make_user_columns_nullable(["password", "phone"])
 
 # ── Users ──────────────────────────────────────────────────────────────────
-def create_user(phone: str, password: str, name: str = "") -> dict | None:
+def _hash_email_verify_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+def generate_email_verify_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def create_user(phone: str, password: str, name: str = "", email: str = "") -> dict | None:
+    email = normalize_email(email)
     try:
         hashed = bcrypt.hash(password)
         with get_conn() as c:
             cur = c.execute(
-                "INSERT INTO users (phone, password, name, tokens) VALUES (?,?,?,0)",
-                (phone, hashed, name)
+                """INSERT INTO users
+                   (phone, password, email, email_verified, name, tokens)
+                   VALUES (?,?,?,?,?,0)""",
+                (phone, hashed, email or None, 0, name)
             )
             row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row) if row else None
@@ -227,7 +248,134 @@ def verify_password(phone: str, password: str) -> dict | None:
         return user
     return None
 
-def create_google_user(email: str, google_id: str, name: str = "", avatar_url: str = "") -> dict | None:
+def set_email_verification_token(user_id: int, token: str | None = None,
+                                 expires_at: int | None = None,
+                                 sent_at: int | None = None) -> str | None:
+    token = token or generate_email_verify_token()
+    token_hash = _hash_email_verify_token(token)
+    expires_at = int(expires_at or (time.time() + 3600))
+    sent_at = int(sent_at or time.time())
+    with get_conn() as c:
+        cur = c.execute(
+            """UPDATE users
+               SET email_verify_token=?, email_verify_expires=?, verification_sent_at=?
+               WHERE id=? AND email IS NOT NULL AND COALESCE(email_verified,0)=0""",
+            (token_hash, expires_at, sent_at, user_id),
+        )
+        return token if cur.rowcount else None
+
+def clear_email_verification(user_id: int):
+    with get_conn() as c:
+        c.execute(
+            """UPDATE users
+               SET email_verify_token=NULL,
+                   email_verify_expires=NULL,
+                   verification_sent_at=NULL
+               WHERE id=?""",
+            (user_id,),
+        )
+
+def mark_email_verified(user_id: int) -> dict | None:
+    with get_conn() as c:
+        c.execute(
+            """UPDATE users
+               SET email_verified=1,
+                   email_verify_token=NULL,
+                   email_verify_expires=NULL,
+                   verification_sent_at=NULL
+               WHERE id=?""",
+            (user_id,),
+        )
+    return get_user_by_id(user_id)
+
+def verify_email_token(token: str) -> dict:
+    token = (token or "").strip()
+    if not token:
+        return {"ok": False, "error": "invalid_token"}
+
+    token_hash = _hash_email_verify_token(token)
+    with get_conn() as c:
+        row = c.execute(
+            "SELECT * FROM users WHERE email_verify_token=?",
+            (token_hash,),
+        ).fetchone()
+        if not row:
+            return {"ok": False, "error": "invalid_token"}
+
+        user = dict(row)
+        stored = user.get("email_verify_token") or ""
+        if not hmac.compare_digest(stored, token_hash):
+            return {"ok": False, "error": "invalid_token"}
+
+        expires_at = int(user.get("email_verify_expires") or 0)
+        if expires_at < int(time.time()):
+            clear_email_verification(user["id"])
+            return {"ok": False, "error": "expired_token", "user": user}
+
+        return {"ok": True, "user": user}
+
+def resend_verification_email(user_id: int, cooldown_seconds: int = 60,
+                              expires_seconds: int = 3600) -> dict:
+    now = int(time.time())
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "email_not_found"}
+
+        user = dict(row)
+        if not user.get("email"):
+            return {"ok": False, "error": "email_not_found", "user": user}
+        if int(user.get("email_verified") or 0):
+            return {"ok": False, "error": "email_already_verified", "user": user}
+
+        sent_at = int(user.get("verification_sent_at") or 0)
+        if sent_at and now - sent_at < cooldown_seconds:
+            return {
+                "ok": False,
+                "error": "resend_cooldown",
+                "retry_after": cooldown_seconds - (now - sent_at),
+                "user": user,
+            }
+
+    token = set_email_verification_token(
+        user_id,
+        expires_at=now + expires_seconds,
+        sent_at=now,
+    )
+    if not token:
+        return {"ok": False, "error": "verification_failed"}
+
+    user = get_user_by_id(user_id)
+    return {
+        "ok": True,
+        "token": token,
+        "expires_at": now + expires_seconds,
+        "retry_after": cooldown_seconds,
+        "user": user,
+    }
+
+def update_user_email_for_verification(user_id: int, email: str) -> dict | None:
+    email = normalize_email(email)
+    if not email:
+        return None
+    try:
+        with get_conn() as c:
+            c.execute(
+                """UPDATE users
+                   SET email=?,
+                       email_verified=0,
+                       email_verify_token=NULL,
+                       email_verify_expires=NULL,
+                       verification_sent_at=NULL
+                   WHERE id=?""",
+                (email, user_id),
+            )
+        return get_user_by_id(user_id)
+    except sqlite3.IntegrityError:
+        return None
+
+def create_google_user(email: str, google_id: str, name: str = "", avatar_url: str = "",
+                       email_verified: bool = True) -> dict | None:
     email = normalize_email(email)
     google_id = (google_id or "").strip()
     if not email or not google_id:
@@ -238,16 +386,17 @@ def create_google_user(email: str, google_id: str, name: str = "", avatar_url: s
         with get_conn() as c:
             cur = c.execute(
                 """INSERT INTO users
-                   (phone, password, email, google_id, auth_provider, avatar_url, name, tokens)
-                   VALUES (NULL, NULL, ?, ?, 'google', ?, ?, 0)""",
-                (email, google_id, avatar_url or "", display_name),
+                   (phone, password, email, email_verified, google_id, auth_provider, avatar_url, name, tokens)
+                   VALUES (NULL, NULL, ?, ?, ?, 'google', ?, ?, 0)""",
+                (email, 1 if email_verified else 0, google_id, avatar_url or "", display_name),
             )
             row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row) if row else None
     except sqlite3.IntegrityError:
         return None
 
-def link_google_to_existing_user(user_id: int, email: str, google_id: str, avatar_url: str = "") -> dict | None:
+def link_google_to_existing_user(user_id: int, email: str, google_id: str, avatar_url: str = "",
+                                 email_verified: bool = True) -> dict | None:
     email = normalize_email(email)
     google_id = (google_id or "").strip()
     if not user_id or not email or not google_id:
@@ -281,9 +430,23 @@ def link_google_to_existing_user(user_id: int, email: str, google_id: str, avata
 
             c.execute(
                 """UPDATE users
-                   SET email=?, google_id=?, avatar_url=?, auth_provider=?
+                   SET email=?,
+                       email_verified=?,
+                       email_verify_token=NULL,
+                       email_verify_expires=NULL,
+                       verification_sent_at=NULL,
+                       google_id=?,
+                       avatar_url=?,
+                       auth_provider=?
                    WHERE id=?""",
-                (email, google_id, avatar_url or user["avatar_url"] or "", auth_provider, user_id),
+                (
+                    email,
+                    1 if email_verified else int(user["email_verified"] or 0),
+                    google_id,
+                    avatar_url or user["avatar_url"] or "",
+                    auth_provider,
+                    user_id,
+                ),
             )
         return get_user_by_id(user_id)
     except sqlite3.IntegrityError:

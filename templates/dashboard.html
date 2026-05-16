@@ -39,6 +39,13 @@
     padding:5px 10px; font-size:.76rem; font-weight:600; white-space:nowrap; flex-shrink:0;
   }
   .token-badge svg { width:11px; height:11px; }
+  .verified-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background:#34d89618; border:1px solid #34d89633;
+    color:var(--green); border-radius:20px;
+    padding:5px 10px; font-size:.72rem; font-weight:600; white-space:nowrap; flex-shrink:0;
+  }
+  .verified-badge svg { width:12px; height:12px; }
   .header-btn {
     background:none; border:1px solid var(--border); color:var(--muted);
     border-radius:9px; padding:7px 12px; font-family:inherit; font-size:.78rem;
@@ -78,6 +85,33 @@
   .new-banner-link {
     color:var(--green); text-decoration:none; font-size:.8rem; font-weight:600;
     white-space:nowrap; display:flex; align-items:center; gap:4px;
+  }
+
+  /* Email verification */
+  .verify-banner {
+    background:linear-gradient(135deg,#1a1430,#12111c);
+    border:1px solid #f5c84244; border-radius:14px;
+    padding:16px 18px; margin-bottom:20px;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+    animation:fadeUp .4s both;
+  }
+  .verify-title { font-size:.9rem; font-weight:700; margin-bottom:4px; }
+  .verify-sub { font-size:.78rem; color:var(--muted); line-height:1.5; }
+  .verify-status { font-size:.76rem; margin-top:8px; min-height:18px; }
+  .verify-status.ok { color:var(--green); }
+  .verify-status.err { color:var(--red); }
+  .verify-actions { display:flex; gap:8px; flex-shrink:0; }
+  .verify-btn {
+    background:var(--accent); color:#fff; border:none; border-radius:10px;
+    padding:9px 13px; font-family:inherit; font-size:.78rem; font-weight:700;
+    cursor:pointer; white-space:nowrap; transition:opacity .2s, transform .15s;
+  }
+  .verify-btn:hover:not(:disabled) { opacity:.9; transform:translateY(-1px); }
+  .verify-btn:disabled { opacity:.45; cursor:not-allowed; }
+  @media(max-width:560px){
+    .verify-banner{flex-direction:column;}
+    .verify-actions{width:100%;}
+    .verify-btn{width:100%;}
   }
 
   /* Hero card */
@@ -221,6 +255,12 @@
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
       {{ user.tokens }} кредитов
     </div>
+    {% if user.email and user.email_verified %}
+    <div class="verified-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+      Email
+    </div>
+    {% endif %}
     <a href="/profile" class="header-btn">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Профиль
@@ -246,6 +286,21 @@
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
     </a>
   </div>
+
+  {% if user.email and not user.email_verified %}
+  <div class="verify-banner" id="verifyBanner">
+    <div>
+      <div class="verify-title">Подтвердите email</div>
+      <div class="verify-sub">Мы отправили ссылку на {{ user.email }}. Подтверждение помогает защитить аккаунт и восстановление доступа.</div>
+      <div class="verify-status {{ 'ok' if verification_notice.success else 'err' if verification_notice.error else '' }}" id="verifyStatus">
+        {{ verification_notice.success or verification_notice.error or '' }}
+      </div>
+    </div>
+    <div class="verify-actions">
+      <button class="verify-btn" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}" onclick="resendVerification()">Отправить ещё раз</button>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Hero -->
   <div class="hero-card">
@@ -416,6 +471,55 @@ function closeModal() {
 document.getElementById('deleteModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+
+let verifyCooldown = 0;
+function setVerifyStatus(message, ok) {
+  const el = document.getElementById('verifyStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('ok', !!ok);
+  el.classList.toggle('err', !ok && !!message);
+}
+function tickVerifyCooldown() {
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  if (verifyCooldown > 0) {
+    btn.disabled = true;
+    btn.textContent = `Повторно через ${verifyCooldown}с`;
+    verifyCooldown -= 1;
+    setTimeout(tickVerifyCooldown, 1000);
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Отправить ещё раз';
+  }
+}
+async function resendVerification() {
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = 'Отправляем...';
+  try {
+    const r = await fetch('/auth/resend-email-verification', {method:'POST'});
+    const data = await r.json();
+    if (data.ok) {
+      setVerifyStatus(data.message || 'Письмо отправлено.', true);
+      verifyCooldown = data.retry_after || 60;
+    } else {
+      setVerifyStatus(data.message || 'Не удалось отправить письмо.', false);
+      verifyCooldown = data.retry_after || 0;
+    }
+  } catch (e) {
+    setVerifyStatus('Ошибка соединения. Попробуйте позже.', false);
+    verifyCooldown = 0;
+  }
+  tickVerifyCooldown();
+}
+(function(){
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  verifyCooldown = Number(btn.dataset.cooldown || 0);
+  if (verifyCooldown > 0) tickVerifyCooldown();
+})();
 </script>
 </body>
 </html>

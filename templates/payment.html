@@ -36,6 +36,16 @@
   .banner-icon{font-size:1.6rem;margin-bottom:8px;}
   .banner-title{font-size:.95rem;font-weight:700;margin-bottom:5px;}
   .banner-sub{font-size:.82rem;color:var(--muted);line-height:1.6;}
+  .verify-banner{background:linear-gradient(135deg,#1a1430,#12111c);border:1px solid #f5c84244;
+    border-radius:14px;padding:15px 18px;margin-bottom:20px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+  .verify-title{font-size:.88rem;font-weight:700;margin-bottom:4px;}
+  .verify-sub{font-size:.77rem;color:var(--muted);line-height:1.5;}
+  .verify-status{font-size:.75rem;margin-top:7px;min-height:17px;}
+  .verify-status.ok{color:var(--green);} .verify-status.err{color:var(--red);}
+  .verify-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 12px;
+    font-family:inherit;font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .verify-btn:disabled{opacity:.45;cursor:not-allowed;}
+  @media(max-width:520px){.verify-banner{flex-direction:column}.verify-btn{width:100%;}}
 
   /* Section */
   .section{margin-bottom:28px;animation:fadeUp .4s both;}
@@ -144,6 +154,19 @@
   </div>
   {% endif %}
 
+  {% if user.email and not user.email_verified %}
+  <div class="verify-banner">
+    <div>
+      <div class="verify-title">Подтвердите email</div>
+      <div class="verify-sub">Ссылка отправляется на {{ user.email }}. Если письма нет, отправьте его повторно.</div>
+      <div class="verify-status {{ 'ok' if verification_notice.success else 'err' if verification_notice.error else '' }}" id="verifyStatus">
+        {{ verification_notice.success or verification_notice.error or '' }}
+      </div>
+    </div>
+    <button class="verify-btn" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}" onclick="resendVerification()">Отправить ещё раз</button>
+  </div>
+  {% endif %}
+
   {% if user.tokens > 0 or user.site_slots > 0 %}
   <div class="balance-row">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
@@ -249,6 +272,55 @@ function showStatus(type, icon, title, sub) {
   if (type==='pending') c.innerHTML = `<div class="spinner"></div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
   else c.innerHTML = `<div style="font-size:2rem;margin-bottom:8px">${icon}</div><div class="status-title">${title}</div><div class="status-sub">${sub}</div>`;
 }
+
+let verifyCooldown = 0;
+function setVerifyStatus(message, ok) {
+  const el = document.getElementById('verifyStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('ok', !!ok);
+  el.classList.toggle('err', !ok && !!message);
+}
+function tickVerifyCooldown() {
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  if (verifyCooldown > 0) {
+    btn.disabled = true;
+    btn.textContent = `Повторно через ${verifyCooldown}с`;
+    verifyCooldown -= 1;
+    setTimeout(tickVerifyCooldown, 1000);
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Отправить ещё раз';
+  }
+}
+async function resendVerification() {
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = 'Отправляем...';
+  try {
+    const r = await fetch('/auth/resend-email-verification', {method:'POST'});
+    const data = await r.json();
+    if (data.ok) {
+      setVerifyStatus(data.message || 'Письмо отправлено.', true);
+      verifyCooldown = data.retry_after || 60;
+    } else {
+      setVerifyStatus(data.message || 'Не удалось отправить письмо.', false);
+      verifyCooldown = data.retry_after || 0;
+    }
+  } catch(e) {
+    setVerifyStatus('Ошибка соединения. Попробуйте позже.', false);
+    verifyCooldown = 0;
+  }
+  tickVerifyCooldown();
+}
+(function(){
+  const btn = document.getElementById('verifyResendBtn');
+  if (!btn) return;
+  verifyCooldown = Number(btn.dataset.cooldown || 0);
+  if (verifyCooldown > 0) tickVerifyCooldown();
+})();
 
 function resetBtn() {
   const btn = document.getElementById('payBtn');

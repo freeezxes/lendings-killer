@@ -16,6 +16,7 @@ AI website builder SaaS — мастер красоты отвечает на 6 
 - **Kaspi Pay** через kaspi-pos прокси (`92.38.49.113:4001`)
 - **bcrypt** — пароли
 - **google-auth** + **httpx** — Google OAuth 2.0
+- **Resend API** — transactional email для подтверждения email
 - **Pillow** — ресайз фото при загрузке
 
 ---
@@ -68,11 +69,16 @@ Environment=AWS_REGION=us-east-1
 Environment=GOOGLE_CLIENT_ID=<google-oauth-client-id>
 Environment=GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
 Environment=GOOGLE_REDIRECT_URI=https://dum-e.com/auth/google/callback
+Environment=RESEND_API_KEY=<resend-api-key>
+Environment=EMAIL_FROM=noreply@dum-e.com
+Environment=APP_BASE_URL=https://dum-e.com
 ```
 
 Токен истекает — при ошибке Bedrock обновить значение в сервис-файле и сделать `sudo systemctl daemon-reload && sudo systemctl restart lendings`.
 
 Google OAuth необязателен: если переменные `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` не заданы или пакет `google-auth` не установлен, обычный вход по телефону продолжает работать, а кнопка Google не показывается.
+
+Email verification тоже graceful: если `RESEND_API_KEY` или `EMAIL_FROM` не заданы, регистрация и вход продолжают работать, но письма подтверждения не отправляются до настройки Resend.
 
 ---
 
@@ -111,12 +117,15 @@ ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo systemctl status lendings"
 ```bash
 cd ~/Documents/GitHub/lendings-killer
 python -m venv venv && source venv/bin/activate
-pip install fastapi uvicorn anthropic httpx google-auth requests pillow bcrypt jinja2 python-multipart aiofiles
+pip install fastapi uvicorn anthropic httpx google-auth requests resend pillow bcrypt jinja2 python-multipart aiofiles
 export AWS_BEARER_TOKEN_BEDROCK=<token>
 export AWS_REGION=us-east-1
 export GOOGLE_CLIENT_ID=<local-client-id>
 export GOOGLE_CLIENT_SECRET=<local-client-secret>
 export GOOGLE_REDIRECT_URI=http://127.0.0.1:8002/auth/google/callback
+export RESEND_API_KEY=<resend-api-key>
+export EMAIL_FROM=noreply@dum-e.com
+export APP_BASE_URL=http://127.0.0.1:8002
 uvicorn main:app --reload --port 8002
 ```
 
@@ -188,6 +197,157 @@ sudo systemctl restart lendings
 
 ---
 
+## Email Verification через Resend
+
+Новые local-пользователи регистрируются с email и получают письмо подтверждения. Google-пользователи с `email_verified=true` автоматически считаются подтверждёнными. Старые пользователи без email продолжают работать; подтверждение станет актуальным после добавления email в профиль.
+
+Код отправляет письма через HTTPS endpoint Resend `POST https://api.resend.com/emails`. Пакет `resend` можно установить вместе с остальными зависимостями, но приложение использует прямой API через `httpx`, чтобы не ломаться при отсутствии SDK.
+
+### 1. Создать Resend account
+
+1. Откройте [resend.com](https://resend.com/).
+2. Нажмите Sign up.
+3. Зарегистрируйтесь на рабочий email.
+4. Подтвердите email в Resend.
+5. Зайдите в Dashboard.
+
+### 2. Добавить домен `dum-e.com`
+
+1. В Resend Dashboard откройте `Domains`.
+2. Нажмите `Add Domain`.
+3. Введите `dum-e.com`.
+4. Сохраните домен.
+5. Resend покажет DNS records для SPF/DKIM/MX. Не копируйте примеры из README вслепую: значения нужно брать именно из Resend, потому что DKIM уникален для домена.
+
+Resend официально требует DNS records для SPF и DKIM, а также MX для bounce/complaint feedback. Документация: [Managing Domains](https://resend.com/docs/dashboard/domains/introduction).
+
+### 3. Добавить DNS records
+
+DNS records добавляются там, где управляется DNS домена `dum-e.com`: Cloudflare, регистратор домена, хостинг DNS или другой DNS provider.
+
+Обычно Resend покажет:
+
+| Record | Type | Name | Value |
+|--------|------|------|-------|
+| SPF | TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+| SPF feedback | MX | `send` | `feedback-smtp.<region>.amazonses.com` |
+| DKIM | CNAME или TXT | уникальный `..._domainkey` | уникальное значение от Resend |
+
+SPF означает Sender Policy Framework: TXT record, который говорит почтовым сервисам, что Resend/Amazon SES имеет право отправлять письма от вашего домена.
+
+DKIM означает DomainKeys Identified Mail: криптографическая подпись писем. DNS record публикует публичный ключ, а получатель проверяет, что письмо действительно разрешено доменом.
+
+DNS propagation: после добавления records они не всегда видны сразу. Обычно это занимает от нескольких минут до нескольких часов, иногда до 24 часов. Если Resend не видит записи сразу, подождите и нажмите `Verify DNS Records` позже.
+
+### 4. Проверить домен в Resend
+
+1. Вернитесь в `Domains`.
+2. Откройте `dum-e.com`.
+3. Нажмите `Verify DNS Records`.
+4. Дождитесь статуса `Verified`.
+5. Если статус не меняется, проверьте:
+   - record добавлен в правильный DNS provider;
+   - `Name` и `Value` совпадают с Resend;
+   - DKIM records не перепутаны;
+   - для MX value иногда нужен trailing dot: `feedback-smtp...amazonaws.com.`;
+   - не создано две SPF TXT записи на одном и том же hostname.
+
+### 5. Создать API key
+
+1. В Resend Dashboard откройте `API Keys`.
+2. Нажмите `Create API Key`.
+3. Назовите ключ, например `lendings-production`.
+4. Выберите permission для отправки email.
+5. Скопируйте ключ один раз и сохраните в безопасном месте.
+
+### 6. Env vars
+
+Локально:
+
+```bash
+export RESEND_API_KEY=re_xxxxxxxxx
+export EMAIL_FROM=noreply@dum-e.com
+export APP_BASE_URL=http://127.0.0.1:8002
+```
+
+Продакшен `/etc/systemd/system/lendings.service`:
+
+```ini
+Environment=RESEND_API_KEY=re_xxxxxxxxx
+Environment=EMAIL_FROM=noreply@dum-e.com
+Environment=APP_BASE_URL=https://dum-e.com
+```
+
+`EMAIL_FROM` должен быть адресом на verified domain. Для понятного имени можно использовать формат `dum-e <noreply@dum-e.com>`.
+
+### 7. Local test
+
+```bash
+source venv/bin/activate
+pip install resend
+export RESEND_API_KEY=re_xxxxxxxxx
+export EMAIL_FROM=noreply@dum-e.com
+export APP_BASE_URL=http://127.0.0.1:8002
+python -m uvicorn main:app --reload --port 8002
+```
+
+Проверка:
+
+1. Откройте `http://127.0.0.1:8002/auth`.
+2. Зарегистрируйте local user с реальным email.
+3. Проверьте inbox/spam.
+4. Откройте ссылку `/auth/verify-email?token=...`.
+5. После клика `email_verified` станет `1`; пользователь со слотом попадёт в dashboard, новый пользователь без слота останется в payment flow с success-сообщением.
+6. Повторный клик по той же ссылке должен дать `invalid_token`.
+
+### 8. Production deploy email verification
+
+```bash
+ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227
+cd /opt/lendings
+source venv/bin/activate
+pip install resend
+sudo nano /etc/systemd/system/lendings.service
+```
+
+Добавьте env vars:
+
+```ini
+Environment=RESEND_API_KEY=re_xxxxxxxxx
+Environment=EMAIL_FROM=noreply@dum-e.com
+Environment=APP_BASE_URL=https://dum-e.com
+```
+
+Примените:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart lendings
+sudo journalctl -u lendings -f
+```
+
+Тест в продакшене:
+
+1. Откройте `https://dum-e.com/auth`.
+2. Зарегистрируйте тестовый аккаунт с email.
+3. Убедитесь, что письмо пришло.
+4. Нажмите verify link.
+5. Проверьте dashboard: warning должен исчезнуть, появится verified badge.
+
+### Troubleshooting email
+
+| Симптом | Что проверить |
+|---------|---------------|
+| Письмо не приходит | `RESEND_API_KEY`, `EMAIL_FROM`, verified domain, spam folder |
+| `resend_service_unavailable` | Resend env vars отсутствуют или API вернул ошибку |
+| `resend_cooldown` | Повторная отправка доступна через 60 секунд |
+| `resend_rate_limited` | Слишком много resend-запросов за 10 минут |
+| `invalid_token` | Ссылка уже использована, повреждена или не существует |
+| `expired_token` | Ссылка старше 1 часа, отправьте новую |
+| Resend domain pending | DNS propagation ещё не завершился или records добавлены не туда |
+
+---
+
 ## Бизнес-логика
 
 ### Онбординг (чат до генерации)
@@ -234,6 +394,9 @@ AI (`CHAT_SYSTEM`) собирает через диалог:
 | POST  | `/auth/login`                 | Вход                                      |
 | GET   | `/auth/google`                | Старт Google OAuth                        |
 | GET   | `/auth/google/callback`       | Callback Google OAuth                     |
+| POST  | `/auth/send-email-verification` | Отправить письмо подтверждения текущему пользователю |
+| POST  | `/auth/resend-email-verification` | Повторно отправить письмо подтверждения |
+| GET   | `/auth/verify-email`          | Подтвердить email по одноразовому токену  |
 | POST  | `/auth/logout`                | Выход                                     |
 | GET   | `/create`                     | Чат-онбординг                             |
 | GET   | `/dashboard`                  | Личный кабинет                            |
@@ -259,7 +422,8 @@ AI (`CHAT_SYSTEM`) собирает через диалог:
 ## База данных
 
 ```sql
-users       — id, phone, password (bcrypt, nullable для Google), email, google_id,
+users       — id, phone, password (bcrypt, nullable для Google), email, email_verified,
+              email_verify_token, email_verify_expires, verification_sent_at, google_id,
               auth_provider, avatar_url, name, tokens, site_slots, created
 sites       — id, user_id, slug, title, data (JSON), html_path, tokens_used,
               chat_in, chat_out, gen_in, gen_out, cache_read, cost_usd, created, updated
@@ -268,4 +432,16 @@ payments    — id, user_id, order_id, invoice_id, amount, tokens, catalog_item_
 sessions    — id (hex), user_id, expires
 ```
 
-Миграции выполняются при старте через `init_db()`: OAuth-колонки добавляются только если их нет, уникальность email/google_id обеспечивается индексами, существующие данные не удаляются и таблицы не пересоздаются.
+Миграции выполняются при старте через `init_db()`: OAuth/email-колонки добавляются только если их нет, уникальность email/google_id обеспечивается индексами, существующие данные не удаляются и таблицы не пересоздаются.
+
+Email verification migration добавляет nullable-поля и не форсит старых пользователей подтверждать email. Токены подтверждения хранятся как SHA-256 hash, истекают через 1 час и очищаются после успешного подтверждения.
+
+## Rollback
+
+Если нужно быстро откатить email verification:
+
+1. Откатите код на предыдущий commit/tag.
+2. Перезапустите сервис: `sudo systemctl restart lendings`.
+3. Можно оставить новые DB columns — они nullable и не мешают старому коду.
+4. Можно убрать `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL` из systemd и сделать `sudo systemctl daemon-reload && sudo systemctl restart lendings`.
+5. Не удаляйте columns из SQLite вручную на продакшене: это не нужно для rollback и повышает риск потери данных.

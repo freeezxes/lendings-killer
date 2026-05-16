@@ -70,7 +70,8 @@
 
   /* Edit name inline */
   .name-edit-form { display:none; margin-top:12px; }
-  .name-edit-form.show { display:flex; gap:8px; }
+  .name-edit-form.show { display:flex; flex-direction:column; gap:8px; }
+  .name-edit-row { display:flex; gap:8px; }
   .name-input {
     flex:1; background:var(--surface2); border:1px solid var(--border);
     color:var(--text); border-radius:10px; padding:10px 14px;
@@ -83,6 +84,13 @@
     white-space:nowrap; transition:opacity .15s;
   }
   .name-save-btn:hover { opacity:.9; }
+  .profile-notice {
+    margin-top:10px; border-radius:10px; padding:10px 12px;
+    border:1px solid #7c5cff33; background:#7c5cff12;
+    color:var(--muted); font-size:.76rem; line-height:1.5;
+  }
+  .profile-notice.ok { border-color:#34d89633; background:#34d89612; color:var(--green); }
+  .profile-notice.err { border-color:#ff4f6a33; background:#ff4f6a12; color:var(--red); }
 
   /* Section */
   .section { margin-bottom:20px; animation:fadeUp .4s .1s both; }
@@ -163,11 +171,25 @@
       </button>
     </div>
     <div class="profile-phone">{{ user.phone or user.email or 'Google аккаунт' }}</div>
+    {% if user.email and user.email_verified %}
+    <div class="profile-notice ok">Email подтверждён</div>
+    {% elif user.email %}
+    <div class="profile-notice err">Email не подтверждён. Отправьте письмо повторно из дашборда.</div>
+    {% endif %}
+    {% if verification_notice.success or verification_notice.error %}
+    <div class="profile-notice {{ 'ok' if verification_notice.success else 'err' }}">
+      {{ verification_notice.success or verification_notice.error }}
+    </div>
+    {% endif %}
 
     <form class="name-edit-form" id="nameEditForm" method="POST" action="/profile/update">
       <input type="text" name="name" class="name-input" id="nameInput"
              value="{{ user.name or '' }}" placeholder="Введите имя" maxlength="60">
-      <button type="submit" class="name-save-btn">Сохранить</button>
+      <div class="name-edit-row">
+        <input type="email" name="email" class="name-input"
+               value="{{ user.email or '' }}" placeholder="Email для подтверждения" autocomplete="email">
+        <button type="submit" class="name-save-btn">Сохранить</button>
+      </div>
     </form>
 
     <div class="stats-row">

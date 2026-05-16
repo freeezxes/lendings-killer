@@ -53,6 +53,12 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 OAUTH_STATE_COOKIE = "oauth_state"
 OAUTH_STATE_COOKIE_PATH = "/auth/google"
+EMAIL_VERIFY_SECONDS = 3600
+EMAIL_RESEND_COOLDOWN_SECONDS = 60
+EMAIL_RESEND_RATE_LIMIT_WINDOW = 10 * 60
+EMAIL_RESEND_RATE_LIMIT_MAX = 5
+_EMAIL_RESEND_ATTEMPTS: dict[str, list[float]] = {}
+_EMAIL_VERIFY_ATTEMPTS: dict[str, list[float]] = {}
 
 # ── Kaspi Pay via kaspi-pos on astana-gb server ───────────────────────────────
 KASPI_POS_URL    = "http://92.38.49.113:4001"
@@ -453,6 +459,20 @@ AUTH_ERROR_MESSAGES = {
     "account_conflict": "Этот Google аккаунт конфликтует с существующим пользователем.",
     "invalid_code": "Google вернул неверный или просроченный код входа.",
     "user_cancelled": "Вход через Google отменён.",
+    "invalid_token": "Ссылка подтверждения email неверна или уже использована.",
+    "expired_token": "Ссылка подтверждения email истекла. Запросите новую.",
+    "verification_failed": "Не удалось подтвердить email. Попробуйте ещё раз.",
+    "resend_cooldown": "Письмо уже отправлено. Подождите минуту перед повторной отправкой.",
+    "resend_rate_limited": "Слишком много запросов. Попробуйте позже.",
+    "resend_service_unavailable": "Отправка email временно недоступна.",
+    "email_already_verified": "Email уже подтверждён.",
+    "email_not_found": "Добавьте email в профиль, чтобы подтвердить его.",
+    "invalid_email": "Введите корректный email.",
+}
+
+AUTH_SUCCESS_MESSAGES = {
+    "email_verified": "Email подтверждён. Можно продолжать работу.",
+    "verification_sent": "Письмо для подтверждения отправлено.",
 }
 
 
@@ -488,8 +508,10 @@ def _cookie_secure(request: Request) -> bool:
 
 def _auth_context(request: Request, error: str | None = None, active_tab: str | None = None) -> dict:
     code = error or request.query_params.get("error", "")
+    success = request.query_params.get("success", "")
     return {
         "error": AUTH_ERROR_MESSAGES.get(code, code) if code else None,
+        "success": AUTH_SUCCESS_MESSAGES.get(success, success) if success else None,
         "active_tab": active_tab or request.query_params.get("tab", ""),
         "google_configured": _google_oauth_configured(),
     }
@@ -585,10 +607,170 @@ def _verify_google_profile(id_token_value: str) -> dict:
 
     return {
         "email": email,
+        "email_verified": True,
         "google_id": google_id,
         "name": (payload.get("name") or "").strip(),
         "avatar_url": (payload.get("picture") or "").strip(),
     }
+
+
+# ── Email verification helpers ────────────────────────────────────────────────
+class EmailServiceUnavailable(Exception):
+    pass
+
+
+def _email_settings() -> dict:
+    return {
+        "api_key": os.environ.get("RESEND_API_KEY", "").strip(),
+        "from_email": os.environ.get("EMAIL_FROM", "").strip(),
+        "app_base_url": os.environ.get("APP_BASE_URL", "").strip().rstrip("/"),
+    }
+
+
+def _email_configured() -> bool:
+    settings = _email_settings()
+    return bool(settings["api_key"] and settings["from_email"])
+
+
+def _valid_email(email: str) -> bool:
+    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email or ""))
+
+
+def _verification_url(request: Request, token: str) -> str:
+    base_url = _email_settings()["app_base_url"] or str(request.base_url).rstrip("/")
+    return f"{base_url}/auth/verify-email?{urlencode({'token': token})}"
+
+
+def _email_retry_after(user: dict | None) -> int:
+    if not user or not user.get("verification_sent_at"):
+        return 0
+    sent_at = int(user.get("verification_sent_at") or 0)
+    return max(0, EMAIL_RESEND_COOLDOWN_SECONDS - (int(time.time()) - sent_at))
+
+
+def _verification_notice(request: Request, user: dict | None) -> dict:
+    code = request.query_params.get("email_error", "")
+    success = request.query_params.get("email_success", "")
+    verify_status = request.query_params.get("verify", "")
+    notice = {
+        "error": AUTH_ERROR_MESSAGES.get(code, code) if code else None,
+        "success": AUTH_SUCCESS_MESSAGES.get(success, success) if success else None,
+        "sent": verify_status == "sent",
+        "unavailable": verify_status == "unavailable",
+        "retry_after": _email_retry_after(user),
+    }
+    if verify_status == "sent":
+        notice["success"] = AUTH_SUCCESS_MESSAGES["verification_sent"]
+    elif verify_status == "unavailable":
+        notice["error"] = AUTH_ERROR_MESSAGES["resend_service_unavailable"]
+    return notice
+
+
+def _resend_rate_limited(request: Request, user: dict) -> bool:
+    forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+    ip = forwarded or (request.client.host if request.client else "unknown")
+    key = f"{user['id']}:{ip}"
+    now = time.time()
+    attempts = [
+        ts for ts in _EMAIL_RESEND_ATTEMPTS.get(key, [])
+        if now - ts < EMAIL_RESEND_RATE_LIMIT_WINDOW
+    ]
+    if len(attempts) >= EMAIL_RESEND_RATE_LIMIT_MAX:
+        _EMAIL_RESEND_ATTEMPTS[key] = attempts
+        return True
+    attempts.append(now)
+    _EMAIL_RESEND_ATTEMPTS[key] = attempts
+    return False
+
+
+def _verify_attempt_limited(request: Request) -> bool:
+    forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+    ip = forwarded or (request.client.host if request.client else "unknown")
+    now = time.time()
+    attempts = [
+        ts for ts in _EMAIL_VERIFY_ATTEMPTS.get(ip, [])
+        if now - ts < EMAIL_RESEND_RATE_LIMIT_WINDOW
+    ]
+    if len(attempts) >= 30:
+        _EMAIL_VERIFY_ATTEMPTS[ip] = attempts
+        return True
+    attempts.append(now)
+    _EMAIL_VERIFY_ATTEMPTS[ip] = attempts
+    return False
+
+
+def _verification_json(code: str, status_code: int = 400, retry_after: int = 0) -> JSONResponse:
+    return JSONResponse(
+        {
+            "ok": False,
+            "error": code,
+            "message": AUTH_ERROR_MESSAGES.get(code, "Не удалось отправить письмо."),
+            "retry_after": retry_after,
+        },
+        status_code=status_code,
+    )
+
+
+async def _send_verification_email(request: Request, user: dict, token: str):
+    settings = _email_settings()
+    if not _email_configured():
+        raise EmailServiceUnavailable("Resend email is not configured")
+
+    verify_url = _verification_url(request, token)
+    html = templates.env.get_template("email_verification.html").render(
+        verify_url=verify_url,
+        email=user["email"],
+        expires_minutes=EMAIL_VERIFY_SECONDS // 60,
+    )
+    payload = {
+        "from": settings["from_email"],
+        "to": [user["email"]],
+        "subject": "Verify your email — dum-e",
+        "html": html,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings['api_key']}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+    except httpx.HTTPError as exc:
+        raise EmailServiceUnavailable("Resend API request failed") from exc
+
+    if resp.status_code >= 400:
+        raise EmailServiceUnavailable(f"Resend API returned {resp.status_code}")
+
+
+async def _prepare_and_send_verification(request: Request, user: dict,
+                                         rate_limit: bool = True) -> dict:
+    if not user.get("email"):
+        return {"ok": False, "error": "email_not_found"}
+    if int(user.get("email_verified") or 0):
+        return {"ok": False, "error": "email_already_verified"}
+    if rate_limit and _resend_rate_limited(request, user):
+        return {"ok": False, "error": "resend_rate_limited"}
+
+    prepared = db.resend_verification_email(
+        user["id"],
+        cooldown_seconds=EMAIL_RESEND_COOLDOWN_SECONDS,
+        expires_seconds=EMAIL_VERIFY_SECONDS,
+    )
+    if not prepared.get("ok"):
+        return prepared
+
+    try:
+        await _send_verification_email(request, prepared["user"], prepared["token"])
+    except EmailServiceUnavailable:
+        logger.warning("Email verification send failed or is not configured")
+        db.clear_email_verification(user["id"])
+        return {"ok": False, "error": "resend_service_unavailable"}
+
+    return prepared
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -786,6 +968,7 @@ async def auth_google_callback(request: Request):
                 profile["email"],
                 profile["google_id"],
                 profile["avatar_url"],
+                profile["email_verified"],
             )
         elif user_by_email:
             user = db.link_google_to_existing_user(
@@ -793,6 +976,7 @@ async def auth_google_callback(request: Request):
                 profile["email"],
                 profile["google_id"],
                 profile["avatar_url"],
+                profile["email_verified"],
             )
         else:
             user = db.create_google_user(
@@ -800,6 +984,7 @@ async def auth_google_callback(request: Request):
                 profile["google_id"],
                 profile["name"],
                 profile["avatar_url"],
+                profile["email_verified"],
             )
             is_new_user = True
 
@@ -821,23 +1006,30 @@ async def auth_google_callback(request: Request):
 async def auth_register(
     request: Request,
     phone: str = Form(...),
+    email: str = Form(...),
     password: str = Form(...),
     name: str = Form(""),
 ):
     # Normalise phone: keep digits only, strip leading +
     phone = re.sub(r'[^\d]', '', phone)
+    email = db.normalize_email(email)
     if not phone:
         return templates.TemplateResponse(request, "auth.html",
                                           _auth_context(request, "Неверный номер телефона", "register"), status_code=400)
+    if not _valid_email(email):
+        return templates.TemplateResponse(request, "auth.html",
+                                          _auth_context(request, "Неверный email", "register"), status_code=400)
 
-    user = db.create_user(phone, password, name.strip())
+    user = db.create_user(phone, password, name.strip(), email)
     if user is None:
         return templates.TemplateResponse(request, "auth.html",
-                                          _auth_context(request, "Этот номер уже зарегистрирован", "register"), status_code=400)
+                                          _auth_context(request, "Этот номер или email уже зарегистрирован", "register"), status_code=400)
 
     sid = db.create_session(user["id"])
+    verification = await _prepare_and_send_verification(request, user, rate_limit=False)
+    verify_param = "sent" if verification.get("ok") else "unavailable"
     # New user has 0 credits — send to payment first
-    response = RedirectResponse("/payment?reason=welcome", status_code=302)
+    response = RedirectResponse(f"/payment?reason=welcome&verify={verify_param}", status_code=302)
     _set_session_cookie(response, request, sid)
     return response
 
@@ -876,13 +1068,67 @@ async def auth_logout(request: Request):
     return response
 
 
+@app.post("/auth/send-email-verification")
+async def auth_send_email_verification(request: Request):
+    user = _require_auth(request)
+    if not user:
+        return _verification_json("verification_failed", status_code=401)
+    result = await _prepare_and_send_verification(request, user)
+    if not result.get("ok"):
+        code = result.get("error", "verification_failed")
+        return _verification_json(
+            code,
+            status_code=429 if code in {"resend_cooldown", "resend_rate_limited"} else 400,
+            retry_after=int(result.get("retry_after") or 0),
+        )
+    return JSONResponse({
+        "ok": True,
+        "message": AUTH_SUCCESS_MESSAGES["verification_sent"],
+        "retry_after": EMAIL_RESEND_COOLDOWN_SECONDS,
+    })
+
+
+@app.post("/auth/resend-email-verification")
+async def auth_resend_email_verification(request: Request):
+    return await auth_send_email_verification(request)
+
+
+@app.get("/auth/verify-email")
+async def auth_verify_email(request: Request):
+    if _verify_attempt_limited(request):
+        return RedirectResponse("/auth?error=invalid_token", status_code=302)
+
+    result = db.verify_email_token(request.query_params.get("token", ""))
+    if not result.get("ok"):
+        code = result.get("error", "verification_failed")
+        return RedirectResponse(f"/auth?error={code}", status_code=302)
+
+    user = db.mark_email_verified(result["user"]["id"])
+    if not user:
+        logger.warning("Email verification failed while marking user verified")
+        return RedirectResponse("/auth?error=verification_failed", status_code=302)
+
+    sid = db.create_session(user["id"])
+    if int(user.get("site_slots") or 0):
+        dest = "/dashboard?email_success=email_verified"
+    else:
+        dest = "/payment?reason=welcome&email_success=email_verified"
+    response = RedirectResponse(dest, status_code=302)
+    _set_session_cookie(response, request, sid)
+    return response
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     user = _require_auth(request)
     if blocked := _require_paid(user):
         return blocked
     sites = db.get_user_sites(user["id"])
-    return templates.TemplateResponse(request, "dashboard.html", {"user": user, "sites": sites})
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "user": user,
+        "sites": sites,
+        "verification_notice": _verification_notice(request, user),
+    })
 
 
 @app.get("/site/{slug}", response_class=HTMLResponse)
@@ -1248,15 +1494,30 @@ async def profile_page(request: Request):
         "user": user,
         "log": log,
         "sites_count": len(sites),
+        "verification_notice": _verification_notice(request, user),
     })
 
 
 @app.post("/profile/update")
-async def profile_update(request: Request, name: str = Form(...)):
+async def profile_update(request: Request, name: str = Form(...), email: str = Form("")):
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
     db.update_user_name(user["id"], name)
+
+    new_email = db.normalize_email(email)
+    current_email = db.normalize_email(user.get("email"))
+    if new_email and new_email != current_email:
+        if not _valid_email(new_email):
+            return RedirectResponse("/profile?email_error=invalid_email", status_code=302)
+        updated = db.update_user_email_for_verification(user["id"], new_email)
+        if not updated:
+            return RedirectResponse("/profile?email_error=account_conflict", status_code=302)
+        result = await _prepare_and_send_verification(request, updated, rate_limit=False)
+        if result.get("ok"):
+            return RedirectResponse("/profile?email_success=verification_sent", status_code=302)
+        return RedirectResponse(f"/profile?email_error={result.get('error', 'verification_failed')}", status_code=302)
+
     return RedirectResponse("/profile", status_code=302)
 
 
@@ -1292,6 +1553,7 @@ async def payment_page(request: Request):
         "sites_count": len(sites),
         "slot_pkg":    slot_pkg,
         "credit_pkgs": credit_pkgs,
+        "verification_notice": _verification_notice(request, user),
     })
 
 
