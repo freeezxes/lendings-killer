@@ -1888,6 +1888,16 @@
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
     }
+    
+    /* View Transition for Theme Toggle */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+    .no-transitions * {
+      transition: none !important;
+    }
   </style>
   <script>
     (function(){
@@ -1930,8 +1940,8 @@
         <div class="sidebar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
           <a class="brand" href="/dashboard" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
           <div style="display:flex; gap:6px;">
-            <button class="lang-toggle" id="langToggle" onclick="toggleLang()">RU</button>
-            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle Theme">
+            <button class="lang-toggle" id="langToggle" onclick="toggleLang(event)">RU</button>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme(event)" aria-label="Toggle Theme">
               <svg viewBox="0 0 24 24" class="sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               <svg viewBox="0 0 24 24" class="moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             </button>
@@ -2403,11 +2413,58 @@
     if (verifyCooldown > 0) tickVerifyCooldown();
     document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show') }));
     document.addEventListener('click', e => { if (!e.target.closest('#notifications') && !e.target.closest('.icon-btn')) document.getElementById('notifications')?.classList.remove('show') });
-    function toggleTheme() {
+    function toggleTheme(event) {
       const cur = document.documentElement.getAttribute('data-theme');
       const next = cur === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
+      
+      if (!document.startViewTransition || !event) {
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        return;
+      }
+      
+      const x = event.clientX;
+      const y = event.clientY;
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+      
+      const transition = document.startViewTransition(() => {
+        document.documentElement.classList.add('no-transitions');
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+      
+      transition.ready.then(() => {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`
+        ];
+        document.documentElement.animate(
+          {
+            clipPath: clipPath,
+          },
+          {
+            duration: 450,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+
+        document.documentElement.animate(
+          { opacity: [0, 1] },
+          {
+            duration: 450,
+            easing: 'ease-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      });
+      
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove('no-transitions');
+      });
     }
     const I18N = {
       ru: {
@@ -2555,10 +2612,56 @@
       }
     }
 
-    function toggleLang() {
+    function toggleLang(event) {
       const cur = document.documentElement.getAttribute('lang') || 'ru';
       const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
-      setLang(next);
+      
+      if (!document.startViewTransition || !event) {
+        setLang(next);
+        return;
+      }
+      
+      const x = event.clientX;
+      const y = event.clientY;
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+      
+      const transition = document.startViewTransition(() => {
+        document.documentElement.classList.add('no-transitions');
+        setLang(next);
+      });
+      
+      transition.ready.then(() => {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`
+        ];
+        document.documentElement.animate(
+          {
+            clipPath: clipPath,
+          },
+          {
+            duration: 450,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+
+        document.documentElement.animate(
+          { opacity: [0, 1] },
+          {
+            duration: 450,
+            easing: 'ease-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      });
+      
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove('no-transitions');
+      });
     }
     (function () {
       const params = new URLSearchParams(location.search);
