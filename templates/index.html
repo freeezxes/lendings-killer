@@ -2,474 +2,125 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Создать сайт — lendings.kz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AI создание страницы — lendings.kz</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-  :root{
-    --bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;
-    --accent:#7c5cff;--accent-glow:#7c5cff33;--text:#f0eeff;--muted:#6b6b8a;
-    --green:#34d896;
-  }
-  html,body{height:100%;font-family:'Sora',-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
-
-  /* Top bar */
-  .top-bar{
-    padding:13px 18px;border-bottom:1px solid var(--border);
-    display:flex;align-items:center;justify-content:space-between;
-    background:#0a0a0fee;backdrop-filter:blur(12px);
-    position:sticky;top:0;z-index:10;
-  }
-  .logo{font-size:.93rem;font-weight:700;}.logo span{color:var(--accent);}
-  .top-right{display:flex;align-items:center;gap:10px;}
-  .token-badge{
-    display:inline-flex;align-items:center;gap:5px;
-    background:var(--accent-glow);border:1px solid #7c5cff44;
-    color:var(--accent);border-radius:20px;
-    padding:4px 10px;font-size:.74rem;font-weight:600;
-  }
-  .back-link{color:var(--muted);text-decoration:none;font-size:.78rem;
-    display:flex;align-items:center;gap:4px;transition:color .2s;}
-  .back-link:hover{color:var(--text);}
-
-  /* Chat layout */
-  .chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 54px);}
-  .chat-area{flex:1;overflow-y:auto;padding:18px 18px 4px;display:flex;flex-direction:column;gap:10px;
-    scroll-behavior:smooth;}
-
-  /* Messages */
-  .msg{max-width:80%;padding:11px 15px;border-radius:18px;line-height:1.6;font-size:.88rem;white-space:pre-wrap;word-break:break-word;}
-  .msg.bot{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;color:#ddd;align-self:flex-start;}
-  .msg.user{background:var(--accent);border-bottom-right-radius:4px;color:#fff;align-self:flex-end;}
-
-  /* Photos row */
-  .photos-row{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:80%;margin-top:2px;}
-  .photo-thumb{width:68px;height:68px;border-radius:10px;object-fit:cover;border:2px solid #333;}
-  .photo-uploading{width:68px;height:68px;border-radius:10px;background:#1a1a2a;border:2px dashed #333;
-    display:flex;align-items:center;justify-content:center;}
-
-  /* Typing indicator */
-  .typing{display:flex;gap:5px;padding:12px 15px;background:var(--surface);border:1px solid var(--border);
-    border-radius:18px;border-bottom-left-radius:4px;width:52px;align-self:flex-start;}
-  .typing span{width:6px;height:6px;background:#444;border-radius:50%;animation:bounce 1.2s infinite;}
-  .typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
-  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-
-  /* Done card */
-  .done-card{
-    background:linear-gradient(135deg,#1a1430,#12111c);
-    border:1px solid #7c5cff44;border-radius:18px;
-    padding:20px;align-self:flex-start;max-width:300px;
-  }
-  .done-title{font-size:.9rem;font-weight:600;margin-bottom:4px;}
-  .done-sub{font-size:.76rem;color:var(--muted);margin-bottom:14px;line-height:1.5;}
-  .done-actions{display:flex;flex-direction:column;gap:8px;}
-  .btn-open{display:flex;align-items:center;justify-content:center;gap:6px;
-    background:var(--accent);color:#fff;border:none;border-radius:10px;
-    padding:11px 16px;font-family:inherit;font-size:.84rem;font-weight:600;
-    cursor:pointer;text-decoration:none;transition:opacity .15s;}
-  .btn-open:hover{opacity:.9;}
-  .btn-dash{display:flex;align-items:center;justify-content:center;gap:6px;
-    background:#1e1e2e;color:var(--muted);border:1px solid var(--border);
-    border-radius:10px;padding:11px 16px;font-family:inherit;font-size:.84rem;
-    cursor:pointer;text-decoration:none;transition:all .15s;}
-  .btn-dash:hover{color:var(--text);border-color:#7c5cff44;}
-
-  /* No tokens */
-  .no-tokens{background:#ff4f6a10;border:1px solid #ff4f6a33;border-radius:16px;
-    padding:18px;align-self:flex-start;max-width:300px;text-align:center;}
-  .no-tokens-title{font-size:.88rem;font-weight:600;color:#ff4f6a;margin-bottom:5px;}
-  .no-tokens-sub{font-size:.78rem;color:var(--muted);margin-bottom:13px;line-height:1.5;}
-  .btn-topup{display:inline-flex;align-items:center;gap:5px;
-    background:var(--accent);color:#fff;border:none;border-radius:10px;
-    padding:10px 18px;font-family:inherit;font-size:.83rem;font-weight:600;
-    cursor:pointer;text-decoration:none;}
-
-  /* Input area */
-  .input-area{
-    padding:10px 14px 14px;border-top:1px solid var(--border);
-    display:flex;flex-direction:column;gap:8px;background:var(--bg);
-  }
-
-  /* Photos preview above input */
-  .input-photos{display:flex;flex-wrap:wrap;gap:6px;padding:0 2px;}
-  .input-photo-wrap{position:relative;}
-  .input-photo-thumb{width:56px;height:56px;border-radius:9px;object-fit:cover;border:2px solid var(--accent);display:block;}
-  .remove-photo{position:absolute;top:-6px;right:-6px;width:18px;height:18px;
-    background:#ff4f6a;border:none;border-radius:50%;color:#fff;font-size:.7rem;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-
-  .input-row{display:flex;gap:8px;align-items:flex-end;}
-  .text-inp{
-    flex:1;background:#111118;border:1px solid var(--border);
-    border-radius:22px;padding:10px 16px;color:var(--text);
-    font-family:inherit;font-size:.88rem;outline:none;transition:border-color .2s;
-    resize:none;max-height:120px;line-height:1.5;
-  }
-  .text-inp:focus{border-color:#7c5cff55;}
-  .text-inp::placeholder{color:#3a3a4a;}
-
-  .photo-btn{
-    background:#1a1a2a;border:1px solid var(--border);color:var(--muted);
-    border-radius:50%;width:40px;height:40px;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;
-    transition:all .2s;
-  }
-  .photo-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .photo-btn.has-photos{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
-  @keyframes photoPulse{0%,100%{box-shadow:0 0 0 0 var(--accent-glow)}50%{box-shadow:0 0 0 6px var(--accent-glow)}}
-
-  .send-btn{
-    background:var(--accent);border:none;border-radius:50%;
-    width:40px;height:40px;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;
-    transition:opacity .15s;
-  }
-  .send-btn:hover{opacity:.85;}
-  .send-btn:disabled{opacity:.35;cursor:not-allowed;}
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+  :root{--bg:#0a0a0f;--panel:#111118;--soft:#16161f;--line:#1e1e2e;--text:#f0eeff;--muted:#6b6b8a;--brand:#7c5cff;--green:#34d896;--warn:#e7a63a;--red:#ff4f6a;--shadow:0 12px 40px rgba(0,0,0,.4);--radius:16px}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:'Sora',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 30% at 15% 10%,#7c5cff14 0%,transparent 60%);}
+  button,input,textarea{font-family:inherit}a{text-decoration:none;color:inherit}
+  .top{height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(10,10,15,.82);backdrop-filter:blur(18px);position:relative;z-index:10}
+  .brand{font-weight:800;letter-spacing:-.04em}.brand span{color:var(--brand)}.top-actions{display:flex;align-items:center;gap:9px}.pill{height:36px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border:1px solid var(--line);background:var(--panel);border-radius:12px;color:var(--muted);font-size:.76rem;font-weight:800}.pill strong{color:var(--text)}
+  .btn,.ghost,.icon{border:0;border-radius:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.18s}.btn{min-height:40px;padding:0 15px;background:var(--brand);color:#fff;box-shadow:0 12px 24px rgba(124,92,255,.18)}.btn:hover{transform:translateY(-1px);background:#8a6dfc}.btn.green{background:var(--green)}.btn.warn{background:var(--warn);color:#2b1b00}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}.ghost{min-height:38px;padding:0 13px;background:transparent;border:1px solid var(--line);color:var(--muted);font-size:.8rem}.ghost:hover{border-color:var(--brand);color:var(--text)}
+  .shell{height:calc(100vh - 68px);display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:16px;padding:16px;overflow:hidden;position:relative;z-index:1}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-height:0}.left,.right{padding:18px;overflow:auto}.left h1{font-size:1.45rem;letter-spacing:-.055em;line-height:1.12;margin:8px 0 10px}.muted{font-size:.82rem;color:var(--muted);line-height:1.6}
+  .step-list{display:grid;gap:8px;margin-top:18px}.step{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--muted);font-size:.78rem;font-weight:800}.step-dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--brand);font-size:.72rem}.step.done{background:#34d89615;color:var(--green);border-color:#34d89633}.step.active{background:#7c5cff15;color:var(--brand);border-color:#7c5cff44}
+  .progress{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:16px}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--green));border-radius:inherit;transition:width .3s}
+  .summary{display:grid;gap:9px;margin-top:14px}.sum-row{padding:11px;border:1px solid var(--line);background:var(--soft);border-radius:12px}.sum-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin-bottom:4px}.sum-value{font-size:.8rem;line-height:1.45;color:var(--text);word-break:break-word}.empty-value{color:var(--muted)}
+  .chat-panel{display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 18px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.chat-head h2{font-size:1rem;letter-spacing:-.035em}.chat-status{font-size:.76rem;color:var(--muted);font-weight:800}
+  .chat{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}.msg{max-width:min(76%,680px);padding:12px 14px;border-radius:17px;font-size:.88rem;line-height:1.62;white-space:pre-wrap;word-break:break-word;animation:pop .18s ease-out both}.msg.bot{align-self:flex-start;background:var(--soft);border:1px solid var(--line);border-bottom-left-radius:5px}.msg.user{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:5px;border:1px solid var(--brand)}.typing{align-self:flex-start;display:flex;gap:5px;background:var(--soft);border:1px solid var(--line);border-radius:17px;border-bottom-left-radius:5px;padding:13px 15px}.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}}@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .confirm{align-self:center;width:min(620px,100%);background:var(--panel);border:1px solid var(--brand);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.confirm h3{font-size:1.08rem;letter-spacing:-.04em;margin-bottom:8px}.confirm-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}.confirm .sum-row{background:var(--soft)}.confirm-actions{display:flex;gap:9px;flex-wrap:wrap}
+  .generation{align-self:center;width:min(580px,100%);background:var(--panel);color:#fff;border-radius:20px;padding:22px;border:1px solid var(--brand);box-shadow:var(--shadow)}.gen-top{display:flex;align-items:center;gap:12px;margin-bottom:15px}.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.gen-title{font-weight:800}.gen-sub{color:var(--muted);font-size:.8rem;margin-top:3px}.gen-stage{display:flex;align-items:center;gap:9px;padding:9px 0;color:var(--muted);font-size:.82rem}.gen-stage span{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-size:.65rem}.gen-stage.active{color:var(--text)}.gen-stage.active span{background:var(--green);color:#fff}
+  .input-area{border-top:1px solid var(--line);padding:12px;background:var(--panel)}.photos{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}.thumb-wrap{position:relative}.thumb{width:54px;height:54px;object-fit:cover;border-radius:12px;border:2px solid var(--line)}.remove{position:absolute;right:-6px;top:-6px;width:19px;height:19px;border:0;border-radius:50%;background:var(--red);color:#fff;cursor:pointer}.input-row{display:flex;gap:9px;align-items:flex-end}.photo-btn{width:42px;height:42px;border-radius:13px;border:1px solid var(--line);background:var(--soft);color:var(--muted);display:grid;place-items:center;cursor:pointer;flex-shrink:0}.photo-btn.has{border-color:var(--brand);color:var(--brand);background:#7c5cff15}.text{flex:1;min-height:42px;max-height:120px;resize:none;border:1px solid var(--line);border-radius:14px;padding:11px 13px;outline:none;font-size:.88rem;line-height:1.5;background:var(--soft);color:var(--text)}.text:focus{border-color:var(--brand)}.send{width:42px;height:42px;border-radius:13px;padding:0}
+  .warning{background:#e7a63a15;border-color:#e7a63a44;color:#e7a63a}.danger{background:#ff4f6a15;border-color:#ff4f6a44;color:#ff4f6a}
+  .toast{position:fixed;left:50%;top:82px;transform:translateX(-50%) translateY(-8px);background:var(--surface2);color:#fff;border-radius:12px;padding:12px 15px;font-size:.82rem;box-shadow:var(--shadow);border:1px solid var(--line);z-index:100;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  @media(max-width:1080px){.shell{grid-template-columns:280px minmax(0,1fr)}.msg{max-width:86%}}
+  @media(max-width:760px){html,body{overflow:auto}.top{height:62px;padding:0 14px}.pill.hide-sm{display:none}.shell{height:auto;min-height:calc(100vh - 62px);display:flex;flex-direction:column;padding:10px;overflow:visible}.left{max-height:none;order:1}.chat-panel{min-height:calc(100vh - 250px);order:2}.chat{min-height:360px}.msg{max-width:92%;font-size:.84rem}.confirm-grid{grid-template-columns:1fr}.top-actions .ghost span{display:none}}
 </style>
 </head>
 <body>
-
-<div class="top-bar">
-  <div class="logo">lendings<span>.kz</span></div>
-  <div class="top-right">
-    <div class="token-badge" id="tokenBadge">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-      {{ user.tokens }} токенов
-    </div>
-    <a href="/dashboard" class="back-link">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Дашборд
-    </a>
+<header class="top">
+  <a class="brand" href="/dashboard">lendings<span>.kz</span></a>
+  <div class="top-actions">
+    <div class="pill hide-sm">Dev <strong id="creditBadge">{{ user.dev_credits or 0 }}</strong></div>
+    <a class="ghost" href="/dashboard"><span>Dashboard</span>←</a>
   </div>
-</div>
+</header>
 
-<div class="chat-wrap">
-  <div class="chat-area" id="chat"></div>
+<main class="shell">
+  <aside class="panel left">
+    <div class="pill">AI onboarding</div>
+    <h1>{% if edit_site %}Улучшение страницы{% else %}Создание бизнес-страницы{% endif %}</h1>
+    <p class="muted">{% if edit_site %}Напишите, что изменить. AI уточнит детали и обновит страницу без конструктора.{% else %}AI проведёт через короткий разговор: бизнес, услуги, контакты, стиль, фото и подтверждение перед генерацией.{% endif %}</p>
+    <div class="progress"><div class="bar" id="progressBar"></div></div>
+    <div class="step-list" id="steps"></div>
+    <div class="summary" id="summary" hidden></div>
+  </aside>
 
-  <div class="input-area">
-    <div class="input-photos" id="inputPhotos"></div>
-    <div class="input-row">
-      <label class="photo-btn" id="photoBtnLabel" title="Добавить фото">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <input type="file" accept="image/*" multiple id="photoInput" style="display:none" onchange="handlePhotos(this)">
-      </label>
-      <textarea id="inp" class="text-inp" placeholder="Напишите сообщение…" rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
-        oninput="autoResize(this)"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="send()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
-      </button>
+  <section class="panel chat-panel">
+    <div class="chat-head">
+      <div><h2>{% if edit_site %}AI редактор{% else %}Диалог с AI{% endif %}</h2><div class="chat-status" id="chatStatus">Черновик сохраняется автоматически</div></div>
+      {% if not edit_site %}<button class="ghost" onclick="resetDraft()">Новый черновик</button>{% endif %}
     </div>
-  </div>
-</div>
+    <div class="chat" id="chat"></div>
+    <div class="input-area" id="inputArea">
+      <div class="photos" id="inputPhotos"></div>
+      <div class="input-row">
+        <label class="photo-btn" id="photoBtn" title="Добавить фото">▧<input type="file" id="photoInput" accept="image/*" multiple hidden onchange="handlePhotos(this)"></label>
+        <textarea id="inp" class="text" rows="1" placeholder="Напишите ответ..." oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+        <button class="btn send" id="sendBtn" onclick="send()">→</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
 
 <script>
-let history = [];
-let photoUrls = [];
-let userTokens = {{ user.tokens }};
+const editConfig = {% if edit_site %}{{ edit_site|tojson }}{% else %}null{% endif %};
+let sessionId = {{ (onboarding.session.id if onboarding and onboarding.session else none) | tojson }};
+let history = {{ (onboarding.session.history if onboarding and onboarding.session else []) | tojson }};
+let collected = {{ (onboarding.session.collected if onboarding and onboarding.session else {}) | tojson }};
+let photoUrls = {{ (onboarding.session.photo_urls if onboarding and onboarding.session else []) | tojson }};
+let chatIn = {{ (onboarding.session.chat_in if onboarding and onboarding.session else 0) | tojson }};
+let chatOut = {{ (onboarding.session.chat_out if onboarding and onboarding.session else 0) | tojson }};
+let chatCr = {{ (onboarding.session.chat_cr if onboarding and onboarding.session else 0) | tojson }};
+let status = {{ (onboarding.session.status if onboarding and onboarding.session else 'draft') | tojson }};
+let editMode = Boolean(editConfig);
+let currentSlug = editConfig ? editConfig.slug : null;
+let editHistory = [];
 let inputLocked = false;
-let editMode = false;   // after generation — chat becomes edit requests
-let currentSlug = null;
-let editHistory = [];   // separate dialogue history for edit clarification
-// Accumulated chat token counters (sent back each turn for server-side tracking)
-let chatIn = 0, chatOut = 0, chatCr = 0;
+const STEPS = [
+  ['name','Business'],
+  ['services','Services'],
+  ['city','Contacts'],
+  ['vibe','Style'],
+  ['photos','Photos'],
+  ['confirm','Confirmation']
+];
+const GENERATION_STAGES = ['Создаем структуру','Подбираем стиль','Оптимизируем мобильную версию','Готовим публикацию'];
 
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800)}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px'}
+function addMsg(text, who){const chat=document.getElementById('chat');const div=document.createElement('div');div.className=`msg ${who}`;div.textContent=text;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div}
+function showTyping(){const chat=document.getElementById('chat');const div=document.createElement('div');div.className='typing';div.id='typing';div.innerHTML='<span></span><span></span><span></span>';chat.appendChild(div);chat.scrollTop=chat.scrollHeight}
+function removeTyping(){document.getElementById('typing')?.remove()}
+function lockInput(lock=true){inputLocked=lock;document.getElementById('inp').disabled=lock;document.getElementById('sendBtn').disabled=lock;document.getElementById('photoBtn').style.pointerEvents=lock?'none':'';document.getElementById('photoBtn').style.opacity=lock?'.5':''}
+function setStatus(text){document.getElementById('chatStatus').textContent=text}
+function progress(){let done=0;for(const [key] of STEPS){if(key==='photos'){if(photoUrls.length)done++}else if(key==='confirm'){if(status==='ready'||status==='generating'||status==='completed')done++}else if(collected[key])done++}return Math.round(done/STEPS.length*100)}
+function renderSteps(){const p=progress();document.getElementById('progressBar').style.width=p+'%';const current=STEPS.find(([k])=>!((k==='photos'&&photoUrls.length)||(k==='confirm'&&['ready','generating','completed'].includes(status))||collected[k]))?.[0]||'confirm';document.getElementById('steps').innerHTML=STEPS.map(([key,label],i)=>{const done=(key==='photos'&&photoUrls.length)||(key==='confirm'&&['ready','generating','completed'].includes(status))||collected[key];return `<div class="step ${done?'done':key===current?'active':''}"><span class="step-dot">${done?'✓':i+1}</span>${label}</div>`}).join('')}
+function renderSummary(summaryRows){}
+function renderPhotos(){const box=document.getElementById('inputPhotos');box.innerHTML='';photoUrls.forEach((url,idx)=>{const wrap=document.createElement('div');wrap.className='thumb-wrap';wrap.innerHTML=`<img class="thumb" src="${url}" alt=""><button class="remove" onclick="removePhoto(${idx})">×</button>`;box.appendChild(wrap)});document.getElementById('photoBtn').classList.toggle('has',photoUrls.length>0);renderSteps();renderSummary()}
+function removePhoto(idx){photoUrls.splice(idx,1);renderPhotos();autosave()}
+async function handlePhotos(input){for(const file of Array.from(input.files||[])){const fd=new FormData();fd.append('file',file);try{const r=await fetch('/upload-photo',{method:'POST',body:fd});const j=await r.json();if(j.url)photoUrls.push(j.url)}catch(e){toast('Не удалось загрузить фото')}}input.value='';renderPhotos();autosave()}
+async function autosave(){if(editMode)return;setStatus('Сохраняю черновик...');try{const r=await fetch('/api/onboarding/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,status,history,collected,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});const data=await r.json();if(data.session){sessionId=data.session.id;status=data.session.status||status}setStatus('Черновик сохранён')}catch(e){setStatus('Черновик не сохранился')}}
+function showConfirmation(summaryRows){status='ready';lockInput(true);renderSteps();renderSummary(summaryRows);const chat=document.getElementById('chat');const card=document.createElement('div');card.className='confirm';card.id='confirmCard';card.innerHTML=`<h3>Собрал данные. Делаю сайт?</h3><p class="muted">Проверьте краткое резюме. Если что-то не так, можно вернуться к диалогу и дописать детали.</p><div class="confirm-grid">${(summaryRows||[]).filter(r=>r.key!=='photos').map(r=>`<div class="sum-row"><div class="sum-label">${r.label}</div><div class="sum-value">${r.value||'не заполнено'}</div></div>`).join('')}<div class="sum-row"><div class="sum-label">Фото</div><div class="sum-value">${photoUrls.length} фото</div></div></div><div class="confirm-actions"><button class="btn green" onclick="generateSite()">Да, создать сайт</button><button class="ghost" onclick="editMore()">Дополнить информацию</button></div>`;chat.appendChild(card);chat.scrollTop=chat.scrollHeight}
+function editMore(){document.getElementById('confirmCard')?.remove();status='draft';lockInput(false);setStatus('Дополните информацию');document.getElementById('inp').placeholder='Что изменить или добавить?';renderSteps();autosave()}
+function showGeneration(){lockInput(true);const chat=document.getElementById('chat');const box=document.createElement('div');box.className='generation';box.id='generationBox';box.innerHTML=`<div class="gen-top"><div class="spinner"></div><div><div class="gen-title">Создаём страницу</div><div class="gen-sub">Это может занять до минуты</div></div></div>${GENERATION_STAGES.map((s,i)=>`<div class="gen-stage" id="stage-${i}"><span>${i+1}</span>${s}</div>`).join('')}`;chat.appendChild(box);chat.scrollTop=chat.scrollHeight;let i=0;function tick(){GENERATION_STAGES.forEach((_,idx)=>document.getElementById(`stage-${idx}`)?.classList.toggle('active',idx<=i));i=Math.min(i+1,GENERATION_STAGES.length-1);if(document.getElementById('generationBox'))setTimeout(tick,1300)}tick()}
+async function generateSite(){document.getElementById('confirmCard')?.remove();status='generating';showGeneration();try{const r=await fetch('/api/onboarding/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Не удалось создать сайт');setStatus('Страница готова');window.location.href=data.workspace_url||'/dashboard/sites'}catch(e){document.getElementById('generationBox')?.remove();status='failed';lockInput(false);addMsg(e.message,'bot');renderSteps();autosave()}}
+async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});const j=await r.json();removeTyping();if(j.error)throw new Error(j.error);if(j.edit_history)editHistory=j.edit_history;if(!j.done){addMsg(j.message,'bot');return}addMsg('Готово. Страница обновлена.','bot');setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900)}catch(e){removeTyping();addMsg(e.message||'Ошибка правки','bot')}return}
+  try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,message:text,history,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});const j=await r.json();removeTyping();if(j.error)throw new Error(j.error);history=j.history||history;sessionId=j.session_id||sessionId;collected=j.collected||collected;chatIn=j.chat_in??chatIn;chatOut=j.chat_out??chatOut;chatCr=j.chat_cr??chatCr;addMsg(j.message,'bot');renderSteps();renderSummary(j.summary);if(j.confirm_required){showConfirmation(j.summary)}else{autosave()}}catch(e){removeTyping();addMsg(e.message||'Что-то пошло не так, попробуйте ещё раз.','bot')}}
+async function resetDraft(){if(!confirm('Начать новый черновик? Текущий диалог останется в истории браузера, но активный черновик будет новым.'))return;try{const r=await fetch('/api/onboarding/reset',{method:'POST'});const d=await r.json();sessionId=d.session.id;history=[];collected={};photoUrls=[];chatIn=chatOut=chatCr=0;status='draft';document.getElementById('chat').innerHTML='';addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot');lockInput(false);renderPhotos();renderSteps();renderSummary()}catch(e){toast('Не удалось сбросить черновик')}}
+async function loadInitial(){renderSteps();renderSummary();renderPhotos();if(editMode){history=JSON.parse(editConfig.history||'[]');currentSlug=editConfig.slug;for(const msg of history){if(msg.role==='user')addMsg(msg.content,'user');else addMsg(msg.content,'bot')}addMsg(`Страница «${editConfig.title}» открыта. Что изменить?`,'bot');document.getElementById('inp').placeholder='Например: сделай стиль темнее';return}
+  if(history.length){for(const msg of history){addMsg(msg.content,msg.role==='user'?'user':'bot')}if(status==='ready')showConfirmation(({{ (onboarding.summary if onboarding else []) | tojson }}));else addMsg('Продолжим с места, где остановились.','bot')}else{addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot')}
+  if(status==='generating'){showGeneration();setStatus('Генерация уже запускалась. Если страница не появилась, попробуйте позже.')}
 }
-
-// ── Render helpers ──────────────────────────────────────────────────────────
-function addMsg(text, who) {
-  const chat = document.getElementById('chat');
-  const div = document.createElement('div');
-  div.className = `msg ${who}`;
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
-}
-
-function showTyping() {
-  const chat = document.getElementById('chat');
-  const div = document.createElement('div');
-  div.className = 'typing'; div.id = 'typing';
-  div.innerHTML = '<span></span><span></span><span></span>';
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function removeTyping() {
-  const t = document.getElementById('typing');
-  if (t) t.remove();
-}
-
-let doneCardEl = null;
-
-function showDone(siteUrl, reply) {
-  const chat = document.getElementById('chat');
-  const slug = siteUrl.split('/').pop();
-
-  if (!doneCardEl) {
-    doneCardEl = document.createElement('div');
-    doneCardEl.className = 'done-card';
-    chat.appendChild(doneCardEl);
-  }
-
-  const fullUrl = window.location.origin + siteUrl;
-  navigator.clipboard?.writeText(fullUrl).catch(()=>{});
-
-  doneCardEl.innerHTML = `
-    <div class="done-title">✅ ${reply}</div>
-    <div class="done-sub">Ссылка скопирована. Можешь попросить что-то изменить прямо здесь.</div>
-    <div class="done-actions">
-      <a href="${siteUrl}" target="_blank" class="btn-open" id="siteOpenBtn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-        Открыть сайт
-      </a>
-      <a href="/dashboard?new=${siteUrl}" class="btn-dash">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Все мои сайты
-      </a>
-    </div>
-  `;
-  chat.scrollTop = chat.scrollHeight;
-
-  // Switch to edit mode
-  currentSlug = slug;
-  editMode = true;
-  const inp = document.getElementById('inp');
-  const btn = document.getElementById('sendBtn');
-  inp.disabled = false;
-  btn.disabled = false;
-  inp.placeholder = 'Что изменить? Например: поменяй цвет на тёмный, добавь Instagram…';
-  inp.focus();
-  document.getElementById('photoBtnLabel').style.pointerEvents = '';
-  document.getElementById('photoBtnLabel').style.opacity = '';
-}
-
-function showNoTokens() {
-  const chat = document.getElementById('chat');
-  const div = document.createElement('div');
-  div.className = 'no-tokens';
-  div.innerHTML = `
-    <div class="no-tokens-title">Недостаточно токенов</div>
-    <div class="no-tokens-sub">Пополните баланс — и сайт будет готов за минуту.</div>
-    <a href="/payment" class="btn-topup">Пополнить баланс →</a>
-  `;
-  chat.appendChild(div);
-  lockInput();
-}
-
-function lockInput() {
-  inputLocked = true;
-  document.getElementById('inp').disabled = true;
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('photoBtnLabel').style.pointerEvents = 'none';
-  document.getElementById('photoBtnLabel').style.opacity = '.4';
-}
-
-// ── Photos ──────────────────────────────────────────────────────────────────
-async function handlePhotos(input) {
-  const files = Array.from(input.files);
-  for (const file of files) {
-    // Show loading placeholder
-    const wrap = document.createElement('div');
-    wrap.className = 'input-photo-wrap';
-    wrap.innerHTML = '<div class="input-photo-thumb" style="background:#1a1a2a;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
-    document.getElementById('inputPhotos').appendChild(wrap);
-
-    const fd = new FormData();
-    fd.append('file', file);
-    const r = await fetch('/upload-photo', {method:'POST', body:fd});
-    const j = await r.json();
-    photoUrls.push(j.url);
-
-    const img = document.createElement('img');
-    img.className = 'input-photo-thumb';
-    img.src = j.url;
-    const btn = document.createElement('button');
-    btn.className = 'remove-photo';
-    btn.innerHTML = '✕';
-    const idx = photoUrls.length - 1;
-    btn.onclick = () => { photoUrls.splice(idx, 1); wrap.remove(); updatePhotoBtnStyle(); };
-    wrap.innerHTML = '';
-    wrap.appendChild(img);
-    wrap.appendChild(btn);
-    updatePhotoBtnStyle();
-  }
-  input.value = '';
-}
-
-function updatePhotoBtnStyle() {
-  const btn = document.getElementById('photoBtnLabel');
-  btn.classList.toggle('has-photos', photoUrls.length > 0);
-}
-
-function showPhotoPrompt() {
-  // Pulse the photo button to draw attention
-  const btn = document.getElementById('photoBtnLabel');
-  btn.style.borderColor = 'var(--accent)';
-  btn.style.color = 'var(--accent)';
-  btn.style.animation = 'photoPulse 1s ease-in-out 3';
-  setTimeout(() => {
-    btn.style.animation = '';
-    if (photoUrls.length === 0) {
-      btn.style.borderColor = '';
-      btn.style.color = '';
-    }
-  }, 3100);
-}
-
-// ── Send ────────────────────────────────────────────────────────────────────
-async function send() {
-  if (inputLocked) return;
-  const inp = document.getElementById('inp');
-  const text = inp.value.trim();
-  if (!text) return;
-
-  inp.value = '';
-  inp.style.height = 'auto';
-  addMsg(text, 'user');
-
-  if (photoUrls.length > 0 && !editMode) {
-    const chat = document.getElementById('chat');
-    const row = document.createElement('div');
-    row.className = 'photos-row';
-    photoUrls.forEach(url => {
-      const img = document.createElement('img');
-      img.className = 'photo-thumb'; img.src = url;
-      row.appendChild(img);
-    });
-    chat.appendChild(row);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  showTyping();
-
-  // ── Edit mode: dialogue-first then generate ───────────────────────────────
-  if (editMode && currentSlug) {
-    try {
-      const r = await fetch(`/site/${currentSlug}/edit`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          message: text,
-          history,
-          edit_history: editHistory,
-          photo_urls: photoUrls,
-        })
-      });
-      const j = await r.json();
-      removeTyping();
-
-      if (j.error) {
-        if (j.error.includes('токен')) { showNoTokens(); }
-        else { addMsg(j.error, 'bot'); }
-        return;
-      }
-
-      if (j.edit_history) editHistory = j.edit_history;
-
-      if (!j.done) {
-        addMsg(j.message, 'bot');
-        // If needs photos — show upload button prominently
-        if (j.needs_photos) {
-          showPhotoPrompt();
-        }
-        return;
-      }
-
-      // Generation complete — clear photos, reset edit history
-      photoUrls = [];
-      document.getElementById('inputPhotos').innerHTML = '';
-      updatePhotoBtnStyle();
-      if (j.history) history = j.history;
-      userTokens = j.tokens_left ?? userTokens;
-      updateTokenBadge();
-      addMsg('Готово! Сайт обновлён ✨', 'bot');
-      editHistory = [];
-      showDone(j.site_url, 'Сайт обновлён!');
-    } catch(e) {
-      removeTyping();
-      addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
-    }
-    return;
-  }
-
-  // ── Onboarding mode: regular chat ────────────────────────────────────────
-  try {
-    const r = await fetch('/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: text, history, photo_urls: photoUrls,
-        chat_in: chatIn, chat_out: chatOut, chat_cr: chatCr
-      })
-    });
-    const j = await r.json();
-    removeTyping();
-
-    if (j.error) {
-      if (j.error.includes('токен')) { showNoTokens(); }
-      else { addMsg(j.error, 'bot'); }
-      return;
-    }
-
-    history = j.history;
-    if (!j.done) {
-      chatIn  = j.chat_in  ?? chatIn;
-      chatOut = j.chat_out ?? chatOut;
-      chatCr  = j.chat_cr  ?? chatCr;
-    }
-
-    if (j.done) {
-      userTokens = j.tokens_left ?? userTokens;
-      updateTokenBadge();
-      showDone(j.site_url, j.message);
-    } else {
-      addMsg(j.message, 'bot');
-    }
-  } catch(e) {
-    removeTyping();
-    addMsg('Что-то пошло не так, попробуй ещё раз.', 'bot');
-  }
-}
-
-function updateTokenBadge() {
-  document.getElementById('tokenBadge').innerHTML = `
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-    ${userTokens} токенов`;
-}
-
-// ── Init ────────────────────────────────────────────────────────────────────
-(async function() {
-  {% if edit_site %}
-  // Edit mode: restore full history and slug
-  currentSlug = '{{ edit_site.slug }}';
-  editMode = true;
-  history = {{ edit_site.history | safe }};
-  const siteUrl = '/site/' + currentSlug;
-  // Show restored history in chat
-  for (const msg of history) {
-    if (msg.role === 'user' && !msg.content.startsWith('[РЕДАКТИРОВАНИЕ]')) addMsg(msg.content, 'user');
-    else if (msg.role === 'assistant' && msg.content !== 'Понял, вношу изменения.') addMsg(msg.content, 'bot');
-  }
-  if (history.length === 0) {
-    addMsg('Сайт «{{ edit_site.title }}» загружен.', 'bot');
-  }
-  addMsg('Что хочешь изменить? Напиши — и я обновлю сайт.', 'bot');
-  showDone(siteUrl, 'Продолжаем редактирование');
-  {% else %}
-  const r = await fetch('/start');
-  const j = await r.json();
-  addMsg(j.message, 'bot');
-  {% endif %}
-  document.getElementById('inp').focus();
-})();
+loadInitial();
 </script>
 </body>
 </html>

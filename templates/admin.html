@@ -218,29 +218,29 @@
 
 <main class="content">
 
-  <!-- Stats -->
+  <!-- stats -->
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-label">Юзеры</div><div class="stat-value accent" id="s-users">—</div><div class="stat-sub">всего</div></div>
     <div class="stat-card"><div class="stat-label">Сайты</div><div class="stat-value green" id="s-sites">—</div><div class="stat-sub">сгенерировано</div></div>
     <div class="stat-card"><div class="stat-label">Платежи</div><div class="stat-value yellow" id="s-paid-count">—</div><div class="stat-sub">успешных</div></div>
     <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value white" id="s-paid-sum">—</div><div class="stat-sub">₸ оплачено</div></div>
     <div class="stat-card"><div class="stat-label">AI стоимость</div><div class="stat-value red" id="s-cost">—</div><div class="stat-sub">USD Claude</div></div>
-    <div class="stat-card"><div class="stat-label">AI токены</div><div class="stat-value blue" id="s-tokens">—</div><div class="stat-sub">использовано</div></div>
+    <div class="stat-card"><div class="stat-label">AI tokens</div><div class="stat-value blue" id="s-tokens">—</div><div class="stat-sub">Claude usage</div></div>
   </div>
 
-  <!-- Tabs -->
+  <!-- tabs -->
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('users')">Пользователи</button>
     <button class="tab-btn" onclick="switchTab('sites')">Последние сайты</button>
   </div>
 
-  <!-- Users panel -->
+  <!-- users panel -->
   <div class="panel active" id="panel-users">
     <div class="table-wrap">
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>#</th><th>Телефон</th><th>Имя</th><th>Токены</th>
+            <th>#</th><th>Телефон</th><th>Имя</th><th>Dev</th>
             <th>Сайты</th><th>Оплатил</th><th>Дата рег.</th>
           </tr></thead>
           <tbody id="users-tbody"><tr class="state-row"><td colspan="7"><span class="spinner"></span>Загрузка…</td></tr></tbody>
@@ -249,13 +249,13 @@
     </div>
   </div>
 
-  <!-- Sites panel -->
+  <!-- sites panel -->
   <div class="panel" id="panel-sites">
     <div class="table-wrap">
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Телефон</th><th>Имя</th><th>Сайт</th><th>Токены</th><th>Дата</th><th></th>
+            <th>Телефон</th><th>Имя</th><th>Сайт</th><th>Dev</th><th>Дата</th><th></th>
           </tr></thead>
           <tbody id="sites-tbody"><tr class="state-row"><td colspan="6"><span class="spinner"></span>Загрузка…</td></tr></tbody>
         </table>
@@ -265,7 +265,7 @@
 
 </main>
 
-<!-- User detail modal -->
+<!-- user detail modal -->
 <div class="modal-overlay" id="userModal" onclick="closeModalOutside(event)">
   <div class="modal" id="modalContent">
     <div class="modal-header">
@@ -343,7 +343,7 @@ async function loadUsers() {
       <td class="mono" style="color:var(--muted2)">${i+1}</td>
       <td class="mono">${esc(identity(u))}</td>
       <td>${esc(u.name||'—')}</td>
-      <td><span class="badge badge-purple">${u.tokens}</span></td>
+      <td><span class="badge badge-purple">${u.dev_credits ?? u.tokens}</span></td>
       <td><span class="badge badge-green">${u.sites_count}</span></td>
       <td>${u.paid_total > 0 ? `<span class="badge badge-yellow">${Number(u.paid_total).toLocaleString('ru')} ₸</span>` : '<span style="color:var(--muted2)">—</span>'}</td>
       <td class="mono">${esc((u.created||'').slice(0,10))}</td>
@@ -366,8 +366,8 @@ async function openUser(uid) {
 
   const fmtK  = n => n ? (n>=1000 ? (n/1000).toFixed(1)+'K' : String(n)) : '—';
   const fmtReason = r => {
-    if (!r) return 'Начальные токены';
-    if (r.startsWith('site_generate:')) return 'Генерация сайта';
+    if (!r) return 'Начальные Development Credits';
+    if (r.startsWith('site_generate:')) return 'Создание страницы';
     if (r.startsWith('kaspi_payment:')) return 'Пополнение Kaspi';
     if (r === 'admin_grant') return 'Начислено админом';
     return r;
@@ -382,7 +382,7 @@ async function openUser(uid) {
           <div class="site-card-top">
             <div class="site-card-title" title="${esc(s.title)}">${esc(s.title||s.slug)}</div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              <span class="badge badge-purple">${s.tokens_used} tok</span>
+              <span class="badge badge-purple">${s.tokens_used} dev</span>
               <a href="/site/${esc(s.slug)}" target="_blank" class="site-open-link">
                 Открыть <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
               </a>
@@ -432,12 +432,15 @@ async function openUser(uid) {
 
   // Payments
   const paymentsHtml = d.payments.length
-    ? `<div class="pay-list">${d.payments.map(p=>`
-        <div class="pay-row">
+    ? `<div class="pay-list">${d.payments.map(p=>{
+        const creditInfo = p.payment_kind === 'promo_credits'
+          ? `+${p.promo_credits||0} Promotion Credits`
+          : `+${p.dev_credits||p.tokens||0} Development Credits`;
+        return `<div class="pay-row">
           <div class="pay-amount" style="color:${p.status==='paid'?'var(--green)':'var(--muted)'}">${Number(p.amount).toLocaleString('ru')} ₸</div>
-          <div class="pay-info">+${p.tokens} токенов · <span style="color:${p.status==='paid'?'var(--green)':p.status==='pending'?'var(--yellow)':'var(--red)'}">${p.status}</span></div>
+          <div class="pay-info">${creditInfo} · <span style="color:${p.status==='paid'?'var(--green)':p.status==='pending'?'var(--yellow)':'var(--red)'}">${p.status}</span></div>
           <div class="pay-date">${esc((p.created||'').slice(0,10))}</div>
-        </div>`).join('')}
+        </div>`}).join('')}
       </div>`
     : '<div class="empty-sub">Платежей нет</div>';
 
@@ -452,8 +455,8 @@ async function openUser(uid) {
 
     <div class="user-stats">
       <div class="user-stat">
-        <div class="user-stat-val" style="color:var(--accent)">${u.tokens}</div>
-        <div class="user-stat-lbl">токенов</div>
+        <div class="user-stat-val" style="color:var(--accent)">${u.dev_credits ?? u.tokens}</div>
+        <div class="user-stat-lbl">Dev Credits</div>
       </div>
       <div class="user-stat">
         <div class="user-stat-val" style="color:var(--green)">${d.sites.length}</div>
@@ -470,7 +473,7 @@ async function openUser(uid) {
     </div>
 
     <div>
-      <div class="sub-title">Начислить токены</div>
+      <div class="sub-title">Начислить Development Credits</div>
       <div class="add-tokens-form">
         <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
         <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
@@ -489,7 +492,7 @@ async function openUser(uid) {
     </div>
 
     <div>
-      <div class="sub-title">История токенов</div>
+      <div class="sub-title">История Development Credits</div>
       ${logHtml}
     </div>
   `;
@@ -504,7 +507,7 @@ async function addTokens(uid) {
   });
   const d = await r.json();
   if (d.ok) {
-    document.getElementById('addResult').textContent = `✓ баланс: ${d.tokens}`;
+    document.getElementById('addResult').textContent = `✓ баланс: ${d.dev_credits ?? d.tokens}`;
     loadUsers(); loadStats();
   }
 }

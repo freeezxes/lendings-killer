@@ -9,6 +9,15 @@ from urllib.parse import urlencode
 import anthropic
 import httpx
 import db
+import auth_services
+import services
+from domain import (
+    CAMPAIGN_MIN_CREDITS,
+    CAMPAIGN_MIN_DURATION_HOURS,
+    PROMO_CREDIT_TENGE,
+    PROMO_MIN_PURCHASE,
+    PROMO_SETUP_COST,
+)
 
 try:
     from google.auth.transport.requests import Request as GoogleAuthRequest
@@ -21,7 +30,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# ── Transliteration ──────────────────────────────────────────────────────────
+# transliteration
 _CYR_MAP = {
     'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
     'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
@@ -29,11 +38,12 @@ _CYR_MAP = {
     'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
 }
 def _slugify(text: str) -> str:
+    # slugify
     t = ''.join(_CYR_MAP.get(c.lower(), c) for c in text)
     t = re.sub(r'[^a-zA-Z0-9]+', '-', t.lower()).strip('-')[:30]
     return t or uuid.uuid4().hex[:8]
 
-# ── Claude via Bedrock ────────────────────────────────────────────────────────
+# claude via bedrock
 BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 PRICE_INPUT   = 1.00   # $1.00 per 1M input tokens
 PRICE_OUTPUT  = 5.00   # $5.00 per 1M output tokens
@@ -53,6 +63,15 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 OAUTH_STATE_COOKIE = "oauth_state"
 OAUTH_STATE_COOKIE_PATH = "/auth/google"
+AUTH_CSRF_COOKIE = auth_services.AUTH_CSRF_COOKIE
+AUTH_MAX_BODY_BYTES = 16 * 1024
+AUTH_FORM_POST_PATHS = {
+    "/auth/register",
+    "/auth/login",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/profile/update",
+}
 EMAIL_VERIFY_SECONDS = 3600
 EMAIL_RESEND_COOLDOWN_SECONDS = 60
 EMAIL_RESEND_RATE_LIMIT_WINDOW = 10 * 60
@@ -60,21 +79,21 @@ EMAIL_RESEND_RATE_LIMIT_MAX = 5
 _EMAIL_RESEND_ATTEMPTS: dict[str, list[float]] = {}
 _EMAIL_VERIFY_ATTEMPTS: dict[str, list[float]] = {}
 
-# ── Kaspi Pay via kaspi-pos on astana-gb server ───────────────────────────────
+# kaspi pay via kaspi-pos
 KASPI_POS_URL    = "http://92.38.49.113:4001"
 KASPI_API_KEY    = "lendings-kaspi-key"
 KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474edf0"
 
-# catalog item ids → token amounts
-# type: "slot" = buy a site slot (5000₸ → +1 slot +1000 credits)
-#        "credits" = buy extra credits only
+# catalog item ids to token amounts
+# type slot = buy a site slot
+# type credits = buy extra credits only
 PAYMENT_PACKAGES = [
     {"catalog_item_id": "17785986704184106", "type": "slot",    "slots": 1, "tokens": 1000, "price": 5000, "label": "1 сайт — 5 000 ₸",       "desc": "Слот + 1 000 кредитов на правки"},
     {"catalog_item_id": "17785986704186047", "type": "credits", "slots": 0, "tokens": 500,  "price": 990,  "label": "500 кредитов — 990 ₸",    "desc": "Только кредиты на правки"},
     {"catalog_item_id": "17785986704193557", "type": "credits", "slots": 0, "tokens": 1500, "price": 2490, "label": "1 500 кредитов — 2 490 ₸", "desc": "Только кредиты на правки"},
 ]
 
-# ── System prompt — cached as stable prefix ───────────────────────────────────
+# system prompt cached as stable prefix
 SYSTEM_PROMPT = """Ты — эксперт по созданию красивых, живых HTML сайтов-визиток для малого бизнеса.
 
 Тебе дадут:
@@ -98,6 +117,8 @@ SYSTEM_PROMPT = """Ты — эксперт по созданию красивы�
 - Верни ТОЛЬКО чистый HTML начиная с <!DOCTYPE html> — никакого markdown, никаких ```
 - ТОЧНО используй цвета, шрифты и CSS переменные из брифа — это реальные значения с референсного сайта
 - Подключи указанные Google Fonts через <link> в <head>
+- НЕ выдумывай цены, адреса, отзывы, гарантии, лицензии, опыт, результаты, сертификаты или факты о бизнесе
+- Можно только структурировать, улучшать формулировки и расширять уже подтверждённую клиентом информацию
 - Имя: убери «Я», «меня зовут» — только само имя
 - Услуги: красивые карточки с ценами, каждая услуга отдельно
 - WhatsApp кнопка: реальная ссылка https://wa.me/НОМЕР (номер начиная с 7, без +)
@@ -108,7 +129,7 @@ SYSTEM_PROMPT = """Ты — эксперт по созданию красивы�
 
 
 def _extract_design_tokens(css: str, html: str) -> dict:
-    """Вытаскивает дизайн-токены из CSS: цвета, шрифты, радиусы, тени."""
+    # extract css design tokens
     tokens = {}
 
     css_vars = re.findall(r'--([\w-]+)\s*:\s*([^;}{]+)', css)
@@ -154,7 +175,7 @@ def _extract_design_tokens(css: str, html: str) -> dict:
 
 
 def _fetch_url(url: str) -> str:
-    """Скачивает CSS сайта и возвращает структурированный дизайн-бриф для Claude."""
+    # fetch and parse reference site css
     if not url.startswith("http"):
         url = "https://" + url
 
@@ -223,12 +244,13 @@ def _fetch_url(url: str) -> str:
 
 
 def _is_url(text: str) -> bool:
+    # is url
     return bool(re.match(r'https?://|www\.', text.strip(), re.I)) or \
            bool(re.match(r'[a-zA-Z0-9-]+\.[a-zA-Z]{2,}', text.strip()))
 
 
 def _ai_generate(data: dict) -> dict:
-    """AI генерирует полный HTML сайт на основе данных клиента и его пожеланий по стилю."""
+    # generate complete html site via ai
     ref_url = data.get("ref_url", "").strip()
     vibe    = data.get("vibe", "").strip()
     extra   = data.get("extra", "").strip()
@@ -337,6 +359,7 @@ def _ai_generate(data: dict) -> dict:
 
 
 def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
+    # calc cost
     return (
         inp * PRICE_INPUT +
         out * PRICE_OUTPUT +
@@ -346,26 +369,28 @@ def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
 
 
 def _tokens_to_ours(inp: int, out: int) -> int:
-    """1K claude tokens = 1 our credit."""
+    # calculate dev credit usage
     return max(1, round((inp + out) / 1_000))
 
 
-# ── Cost tracking ─────────────────────────────────────────────────────────────
+# cost tracking
 COSTS_FILE = Path("costs.json")
 
 def _load_costs() -> list:
+    # load costs
     if COSTS_FILE.exists():
         return json.loads(COSTS_FILE.read_text())
     return []
 
 def _save_cost(entry: dict):
+    # save cost
     rows = _load_costs()
     rows.append(entry)
     COSTS_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2))
 
 
 def _ai_edit_chat(history: list, site_context: str = "") -> dict:
-    """Single turn of edit dialogue — clarifies request before generating."""
+    # handle ai edit chat turn
     system_text = EDIT_CHAT_SYSTEM
     if site_context:
         system_text += f"\n\n=== ТЕКУЩИЙ КОНТЕНТ САЙТА ===\n{site_context}"
@@ -388,7 +413,7 @@ def _ai_edit_chat(history: list, site_context: str = "") -> dict:
 
 
 def _ai_chat(history: list) -> dict:
-    """Run one turn of the onboarding dialogue. Returns parsed JSON + usage."""
+    # generate onboarding response
     resp = ai_client.messages.create(
         model=BEDROCK_MODEL,
         max_tokens=512,
@@ -415,16 +440,29 @@ def _ai_chat(history: list) -> dict:
     return result
 
 
-# ── Auth middleware ───────────────────────────────────────────────────────────
+# auth middleware
 class SessionMiddleware(BaseHTTPMiddleware):
+    # session middleware class
     async def dispatch(self, request: Request, call_next):
+        # dispatch
+        if request.method == "POST" and request.url.path in AUTH_FORM_POST_PATHS:
+            content_length = request.headers.get("content-length")
+            try:
+                too_large = bool(content_length and int(content_length) > AUTH_MAX_BODY_BYTES)
+            except ValueError:
+                too_large = True
+            if too_large:
+                return JSONResponse({"ok": False, "error": "Unable to process request"}, status_code=413)
+            content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            if content_type not in {"application/x-www-form-urlencoded", "multipart/form-data"}:
+                return JSONResponse({"ok": False, "error": "Unable to process request"}, status_code=415)
         sid = request.cookies.get("sid")
         request.state.user = db.get_session_user(sid) if sid else None
         return await call_next(request)
 
 
 def _require_paid(user: dict | None) -> RedirectResponse | None:
-    """Returns redirect if user has no site slots purchased."""
+    # redirect if no site slots available
     if not user:
         return RedirectResponse("/auth", status_code=302)
     if not user.get("site_slots", 0):
@@ -432,20 +470,31 @@ def _require_paid(user: dict | None) -> RedirectResponse | None:
     return None
 
 
-# ── Google OAuth helpers ──────────────────────────────────────────────────────
+def _dev_credits(user: dict | None) -> int:
+    # dev credits
+    if not user:
+        return 0
+    return int(user.get("dev_credits") if user.get("dev_credits") is not None else user.get("tokens") or 0)
+
+
+# google oauth helpers
 class OAuthInvalidCode(Exception):
+    # o auth invalid code class
     pass
 
 
 class OAuthServiceError(Exception):
+    # o auth service error class
     pass
 
 
 class OAuthNoEmail(Exception):
+    # o auth no email class
     pass
 
 
 class OAuthEmailNotVerified(Exception):
+    # o auth email not verified class
     pass
 
 
@@ -473,10 +522,12 @@ AUTH_ERROR_MESSAGES = {
 AUTH_SUCCESS_MESSAGES = {
     "email_verified": "Email подтверждён. Можно продолжать работу.",
     "verification_sent": "Письмо для подтверждения отправлено.",
+    "password_reset": "Пароль обновлён. Вы уже вошли в аккаунт.",
 }
 
 
 def _google_settings() -> dict:
+    # google settings
     return {
         "client_id": os.environ.get("GOOGLE_CLIENT_ID", "").strip(),
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", "").strip(),
@@ -485,6 +536,7 @@ def _google_settings() -> dict:
 
 
 def _google_oauth_configured() -> bool:
+    # google oauth configured
     settings = _google_settings()
     return bool(
         GOOGLE_AUTH_AVAILABLE
@@ -495,6 +547,10 @@ def _google_oauth_configured() -> bool:
 
 
 def _cookie_secure(request: Request) -> bool:
+    # disable secure cookies on localhost for development
+    if request.url.hostname in {"localhost", "127.0.0.1"}:
+        return False
+
     proto = request.headers.get("x-forwarded-proto", "")
     app_env = os.environ.get("APP_ENV", os.environ.get("ENV", "")).lower()
     redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
@@ -506,7 +562,47 @@ def _cookie_secure(request: Request) -> bool:
     )
 
 
+def _local_guest_enabled(request: Request) -> bool:
+    # local guest enabled
+    host = (request.url.hostname or "").lower()
+    if host in {"localhost", "127.0.0.1", "::1", "testserver"}:
+        return True
+    return os.environ.get("ALLOW_GUEST_LOGIN", "").strip() == "1"
+
+
+def _get_or_create_local_guest() -> dict:
+    # get or create local guest
+    email = "guest@localhost.test"
+    user = db.get_user_by_email(email)
+    if not user:
+        user = db.create_user(
+            phone="",
+            password=secrets.token_urlsafe(24),
+            name="Local Guest",
+            email=email,
+        )
+    if not user:
+        raise RuntimeError("Unable to create local guest user")
+
+    with db.get_conn() as c:
+        c.execute(
+            """UPDATE users
+               SET email_verified=1,
+                   auth_provider='guest',
+                   name=COALESCE(NULLIF(name,''), 'Local Guest'),
+                   site_slots=MAX(COALESCE(site_slots,0), 3),
+                   tokens=MAX(COALESCE(tokens,0), 3000),
+                   dev_credits=MAX(COALESCE(dev_credits,0), 3000),
+                   promo_credits=MAX(COALESCE(promo_credits,0), 1000),
+                   updated_at=datetime('now')
+               WHERE id=?""",
+            (user["id"],),
+        )
+    return db.get_user_by_id(user["id"]) or user
+
+
 def _auth_context(request: Request, error: str | None = None, active_tab: str | None = None) -> dict:
+    # auth context
     code = error or request.query_params.get("error", "")
     success = request.query_params.get("success", "")
     return {
@@ -514,16 +610,72 @@ def _auth_context(request: Request, error: str | None = None, active_tab: str | 
         "success": AUTH_SUCCESS_MESSAGES.get(success, success) if success else None,
         "active_tab": active_tab or request.query_params.get("tab", ""),
         "google_configured": _google_oauth_configured(),
+        "local_guest_enabled": _local_guest_enabled(request),
     }
 
 
+def _auth_page_context(
+    request: Request,
+    error: str | None = None,
+    active_tab: str | None = None,
+    field: str | None = None,
+    values: dict | None = None,
+    success_message: str | None = None,
+    reset_token: str | None = None,
+    dev_reset_url: str | None = None,
+) -> dict:
+    # auth page context
+    csrf_token = auth_services.CsrfService.generate()
+    ctx = _auth_context(request, error, active_tab)
+    ctx.update({
+        "csrf_token": csrf_token,
+        "field_error": field or "",
+        "values": values or {},
+        "success": success_message or ctx.get("success"),
+        "reset_token": reset_token or request.query_params.get("token", ""),
+        "dev_reset_url": dev_reset_url,
+    })
+    return ctx
+
+
+def _set_auth_csrf_cookie(response, request: Request, token: str):
+    # set auth csrf cookie
+    response.set_cookie(
+        AUTH_CSRF_COOKIE,
+        token,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        max_age=2 * 3600,
+    )
+
+
+def _auth_template(
+    request: Request,
+    status_code: int = 200,
+    **context,
+):
+    # auth template
+    ctx = _auth_page_context(request, **context)
+    response = templates.TemplateResponse(request, "auth.html", ctx, status_code=status_code)
+    _set_auth_csrf_cookie(response, request, ctx["csrf_token"])
+    return response
+
+
+def _verify_auth_csrf(request: Request, csrf_token: str):
+    # verify auth csrf
+    auth_services.CsrfService.verify(csrf_token, request.cookies.get(AUTH_CSRF_COOKIE))
+
+
 def _auth_error_redirect(code: str) -> RedirectResponse:
+    # auth error redirect
     response = RedirectResponse(f"/auth?error={code}", status_code=302)
     response.delete_cookie(OAUTH_STATE_COOKIE, path=OAUTH_STATE_COOKIE_PATH)
     return response
 
 
 def _set_session_cookie(response: RedirectResponse, request: Request, sid: str):
+    # set session cookie
     response.set_cookie(
         "sid",
         sid,
@@ -535,12 +687,12 @@ def _set_session_cookie(response: RedirectResponse, request: Request, sid: str):
 
 
 def _oauth_destination(user: dict, is_new_user: bool) -> str:
-    if is_new_user:
-        return "/payment?reason=welcome"
-    return "/dashboard" if int(user.get("tokens") or 0) > 0 else "/payment?reason=no_credits"
+    # oauth destination
+    return "/dashboard"
 
 
 async def _exchange_google_code(code: str) -> str:
+    # exchange google code
     settings = _google_settings()
     payload = {
         "code": code,
@@ -575,6 +727,7 @@ async def _exchange_google_code(code: str) -> str:
 
 
 def _verify_google_profile(id_token_value: str) -> dict:
+    # verify google profile
     settings = _google_settings()
     if not GOOGLE_AUTH_AVAILABLE:
         raise OAuthServiceError("google-auth is not installed")
@@ -593,8 +746,9 @@ def _verify_google_profile(id_token_value: str) -> dict:
     if payload.get("iss") not in GOOGLE_ISSUERS:
         raise OAuthInvalidCode("Google ID token issuer mismatch")
 
-    email = db.normalize_email(payload.get("email"))
-    if not email:
+    try:
+        email = auth_services.validate_email(payload.get("email"))
+    except auth_services.AuthError:
         raise OAuthNoEmail("Google profile has no email")
 
     email_verified = payload.get("email_verified")
@@ -605,21 +759,28 @@ def _verify_google_profile(id_token_value: str) -> dict:
     if not google_id:
         raise OAuthInvalidCode("Google profile has no subject")
 
+    try:
+        name = auth_services.validate_name(payload.get("name"), required=False)
+    except auth_services.AuthError:
+        name = ""
+
     return {
         "email": email,
         "email_verified": True,
         "google_id": google_id,
-        "name": (payload.get("name") or "").strip(),
+        "name": name,
         "avatar_url": (payload.get("picture") or "").strip(),
     }
 
 
-# ── Email verification helpers ────────────────────────────────────────────────
+# email verification helpers
 class EmailServiceUnavailable(Exception):
+    # email service unavailable class
     pass
 
 
 def _email_settings() -> dict:
+    # email settings
     return {
         "api_key": os.environ.get("RESEND_API_KEY", "").strip(),
         "from_email": os.environ.get("EMAIL_FROM", "").strip(),
@@ -628,20 +789,24 @@ def _email_settings() -> dict:
 
 
 def _email_configured() -> bool:
+    # email configured
     settings = _email_settings()
     return bool(settings["api_key"] and settings["from_email"])
 
 
 def _valid_email(email: str) -> bool:
-    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email or ""))
+    # valid email
+    return auth_services.is_valid_email(email)
 
 
 def _verification_url(request: Request, token: str) -> str:
+    # verification url
     base_url = _email_settings()["app_base_url"] or str(request.base_url).rstrip("/")
     return f"{base_url}/auth/verify-email?{urlencode({'token': token})}"
 
 
 def _email_retry_after(user: dict | None) -> int:
+    # email retry after
     if not user or not user.get("verification_sent_at"):
         return 0
     sent_at = int(user.get("verification_sent_at") or 0)
@@ -649,6 +814,7 @@ def _email_retry_after(user: dict | None) -> int:
 
 
 def _verification_notice(request: Request, user: dict | None) -> dict:
+    # verification notice
     code = request.query_params.get("email_error", "")
     success = request.query_params.get("email_success", "")
     verify_status = request.query_params.get("verify", "")
@@ -667,6 +833,7 @@ def _verification_notice(request: Request, user: dict | None) -> dict:
 
 
 def _resend_rate_limited(request: Request, user: dict) -> bool:
+    # resend rate limited
     forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
     ip = forwarded or (request.client.host if request.client else "unknown")
     key = f"{user['id']}:{ip}"
@@ -684,6 +851,7 @@ def _resend_rate_limited(request: Request, user: dict) -> bool:
 
 
 def _verify_attempt_limited(request: Request) -> bool:
+    # verify attempt limited
     forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
     ip = forwarded or (request.client.host if request.client else "unknown")
     now = time.time()
@@ -700,6 +868,7 @@ def _verify_attempt_limited(request: Request) -> bool:
 
 
 def _verification_json(code: str, status_code: int = 400, retry_after: int = 0) -> JSONResponse:
+    # verification json
     return JSONResponse(
         {
             "ok": False,
@@ -712,6 +881,7 @@ def _verification_json(code: str, status_code: int = 400, retry_after: int = 0) 
 
 
 async def _send_verification_email(request: Request, user: dict, token: str):
+    # send verification email
     settings = _email_settings()
     if not _email_configured():
         raise EmailServiceUnavailable("Resend email is not configured")
@@ -746,8 +916,56 @@ async def _send_verification_email(request: Request, user: dict, token: str):
         raise EmailServiceUnavailable(f"Resend API returned {resp.status_code}")
 
 
+def _password_reset_url(request: Request, token: str) -> str:
+    # password reset url
+    base_url = _email_settings()["app_base_url"] or str(request.base_url).rstrip("/")
+    return f"{base_url}/auth/reset?{urlencode({'token': token})}"
+
+
+async def _send_password_reset_email(request: Request, reset: dict):
+    # send password reset email
+    settings = _email_settings()
+    if not _email_configured():
+        raise EmailServiceUnavailable("Resend email is not configured")
+
+    reset_url = _password_reset_url(request, reset["token"])
+    html = f"""
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;color:#161620">
+      <h2 style="margin:0 0 12px">Восстановление пароля lendings.kz</h2>
+      <p>Нажмите кнопку ниже, чтобы задать новый пароль. Ссылка действует {reset['expires_minutes']} минут.</p>
+      <p style="margin:24px 0">
+        <a href="{reset_url}" style="background:#5b7cfa;color:white;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Сменить пароль</a>
+      </p>
+      <p style="color:#667085;font-size:13px">Если вы не запрашивали восстановление, просто проигнорируйте это письмо.</p>
+    </div>
+    """
+    payload = {
+        "from": settings["from_email"],
+        "to": [reset["email"]],
+        "subject": "Reset your lendings.kz password",
+        "html": html,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings['api_key']}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+    except httpx.HTTPError as exc:
+        raise EmailServiceUnavailable("Resend API request failed") from exc
+
+    if resp.status_code >= 400:
+        raise EmailServiceUnavailable(f"Resend API returned {resp.status_code}")
+
+
 async def _prepare_and_send_verification(request: Request, user: dict,
                                          rate_limit: bool = True) -> dict:
+    # prepare and send verification
     if not user.get("email"):
         return {"ok": False, "error": "email_not_found"}
     if int(user.get("email_verified") or 0):
@@ -794,6 +1012,7 @@ CHAT_SYSTEM = """Ты — дружелюбный консультант серв
 Правила диалога:
 - Пиши коротко, по-дружески, на «ты»
 - Задавай по 1-2 вопроса за раз, не все сразу
+- Не выдумывай цены, адрес, отзывы, гарантии, лицензии, опыт или результаты. Если данных нет — спроси или оставь пустым
 - Если ниша понятна — задавай вопросы специфичные для неё (барберу: «стрижки только мужские?», репетитору: «какие классы/предметы?»)
 - После каждого ответа кратко подтверди что понял («Понял, Астана, WhatsApp — отлично!»)
 - Когда собрал имя+услуги+контакт+стиль — скажи что готов делать сайт
@@ -838,7 +1057,7 @@ EDIT_CHAT_SYSTEM = """Ты — помощник по редактировани�
 
 # ── Helper: require auth ──────────────────────────────────────────────────────
 def _require_auth(request: Request):
-    """Returns user dict if authenticated, else None."""
+    # check if user is authenticated
     return request.state.user
 
 
@@ -846,11 +1065,22 @@ def _require_auth(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
-    return templates.TemplateResponse(request, "landing.html")
+    # landing
+    user = _require_auth(request)
+    return templates.TemplateResponse(request, "landing.html", {"user": user})
 
 
 @app.get("/create", response_class=HTMLResponse)
 async def create_page(request: Request):
+    # create page
+    if not _require_auth(request):
+        return RedirectResponse("/auth", status_code=302)
+    return RedirectResponse("/dashboard/create", status_code=302)
+
+
+@app.get("/dashboard/create", response_class=HTMLResponse)
+async def dashboard_create_page(request: Request):
+    # dashboard create page
     user = _require_auth(request)
     if blocked := _require_paid(user):
         return blocked
@@ -867,24 +1097,63 @@ async def create_page(request: Request):
     if edit_slug:
         site = db.get_site_by_slug(edit_slug)
         if site and site["user_id"] == user["id"]:
+            site = services.SupportService.refresh_site(site["id"]) or site
+            if not services.is_support_operational(site.get("support_status")):
+                return RedirectResponse("/dashboard?support=inactive", status_code=302)
             site_data = site.get("data") or {}
             edit_site = {
                 "slug":    site["slug"],
                 "title":   site["title"],
                 "history": json.dumps(site_data.get("chat_history", []), ensure_ascii=False),
             }
-    return templates.TemplateResponse(request, "index.html", {"user": user, "edit_site": edit_site})
+    return await dashboard_view(
+        request,
+        "create",
+        edit_site=edit_site,
+        onboarding=services.OnboardingService.current(user["id"]) if not edit_site else None,
+    )
 
 
 @app.get("/auth", response_class=HTMLResponse)
 async def auth_page(request: Request):
+    # auth page
     if request.state.user:
-        return RedirectResponse("/create", status_code=302)
-    return templates.TemplateResponse(request, "auth.html", _auth_context(request))
+        return RedirectResponse("/dashboard", status_code=302)
+    return _auth_template(request)
+
+
+@app.api_route("/auth/guest", methods=["GET", "POST"])
+async def auth_guest(request: Request):
+    # auth guest
+    if not _local_guest_enabled(request):
+        return HTMLResponse("<h1>404 Not Found</h1>", status_code=404)
+    user = _get_or_create_local_guest()
+    sid = auth_services.SessionService.create(user["id"])
+    dest = request.query_params.get("next") or "/dashboard"
+    if not dest.startswith("/") or dest.startswith("//"):
+        dest = "/dashboard"
+    response = RedirectResponse(dest, status_code=302)
+    _set_session_cookie(response, request, sid)
+    return response
+
+
+@app.get("/auth/reset", response_class=HTMLResponse)
+async def auth_reset_page(request: Request):
+    # auth reset page
+    if request.state.user:
+        return RedirectResponse("/dashboard", status_code=302)
+
+    token = request.query_params.get("token", "")
+    try:
+        auth_services.PasswordResetService.validate(token)
+        return _auth_template(request, active_tab="reset", reset_token=token)
+    except auth_services.AuthError as exc:
+        return _auth_template(request, error=exc.message, active_tab="forgot", status_code=400)
 
 
 @app.get("/auth/google")
 async def auth_google(request: Request):
+    # auth google
     if not _google_oauth_configured():
         logger.warning("Google OAuth requested but configuration is incomplete")
         return _auth_error_redirect("google_not_configured")
@@ -914,6 +1183,7 @@ async def auth_google(request: Request):
 
 @app.get("/auth/google/callback")
 async def auth_google_callback(request: Request):
+    # auth google callback
     google_error = request.query_params.get("error")
     if google_error:
         logger.info("Google OAuth callback returned error=%s", google_error)
@@ -992,7 +1262,7 @@ async def auth_google_callback(request: Request):
             logger.warning("Google OAuth account linking or creation failed")
             return _auth_error_redirect("account_conflict")
 
-        sid = db.create_session(user["id"])
+        sid = auth_services.SessionService.create(user["id"])
         response = RedirectResponse(_oauth_destination(user, is_new_user), status_code=302)
         _set_session_cookie(response, request, sid)
         response.delete_cookie(OAUTH_STATE_COOKIE, path=OAUTH_STATE_COOKIE_PATH)
@@ -1005,31 +1275,40 @@ async def auth_google_callback(request: Request):
 @app.post("/auth/register")
 async def auth_register(
     request: Request,
-    phone: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    confirm_password: str = Form(""),
     name: str = Form(""),
+    csrf_token: str = Form(""),
 ):
-    # Normalise phone: keep digits only, strip leading +
-    phone = re.sub(r'[^\d]', '', phone)
-    email = db.normalize_email(email)
-    if not phone:
-        return templates.TemplateResponse(request, "auth.html",
-                                          _auth_context(request, "Неверный номер телефона", "register"), status_code=400)
-    if not _valid_email(email):
-        return templates.TemplateResponse(request, "auth.html",
-                                          _auth_context(request, "Неверный email", "register"), status_code=400)
+    # auth register
+    values = {
+        "email": auth_services.safe_form_value(email, 254),
+        "name": auth_services.safe_form_value(name, 80),
+    }
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        user = auth_services.AuthService.register(
+            email=email,
+            password=password,
+            confirm_password=confirm_password,
+            name=name,
+            key=auth_services.client_key(request, "register"),
+        )
+    except auth_services.AuthError as exc:
+        return _auth_template(
+            request,
+            error=exc.message,
+            active_tab="register",
+            field=exc.field,
+            values=values,
+            status_code=exc.status_code,
+        )
 
-    user = db.create_user(phone, password, name.strip(), email)
-    if user is None:
-        return templates.TemplateResponse(request, "auth.html",
-                                          _auth_context(request, "Этот номер или email уже зарегистрирован", "register"), status_code=400)
-
-    sid = db.create_session(user["id"])
+    sid = auth_services.SessionService.create(user["id"])
     verification = await _prepare_and_send_verification(request, user, rate_limit=False)
     verify_param = "sent" if verification.get("ok") else "unavailable"
-    # New user has 0 credits — send to payment first
-    response = RedirectResponse(f"/payment?reason=welcome&verify={verify_param}", status_code=302)
+    response = RedirectResponse(f"/dashboard?verify={verify_param}", status_code=302)
     _set_session_cookie(response, request, sid)
     return response
 
@@ -1037,32 +1316,118 @@ async def auth_register(
 @app.post("/auth/login")
 async def auth_login(
     request: Request,
-    phone: str = Form(...),
+    email: str = Form(""),
+    phone: str = Form(""),
     password: str = Form(...),
+    csrf_token: str = Form(""),
 ):
-    phone = re.sub(r'[^\d]', '', phone)
-    user = db.verify_password(phone, password)
-    if not user:
-        return templates.TemplateResponse(request, "auth.html",
-                                          _auth_context(request, "Неверный номер или пароль", "login"), status_code=401)
+    # auth login
+    identity = email or phone
+    values = {"email": auth_services.safe_form_value(identity, 254)}
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        user = auth_services.AuthService.login(
+            email=identity,
+            password=password,
+            key=auth_services.client_key(request, "login"),
+        )
+    except auth_services.AuthError as exc:
+        return _auth_template(
+            request,
+            error=exc.message,
+            active_tab="login",
+            field=exc.field,
+            values=values,
+            status_code=exc.status_code,
+        )
 
-    sid = db.create_session(user["id"])
-    if user.get("site_slots", 0) == 0:
-        dest = "/payment?reason=welcome"
-    elif user["tokens"] <= 0:
-        dest = "/payment?reason=no_credits"
-    else:
-        dest = "/dashboard"
+    sid = auth_services.SessionService.create(user["id"])
+    dest = "/dashboard"
     response = RedirectResponse(dest, status_code=302)
+    _set_session_cookie(response, request, sid)
+    return response
+
+
+@app.post("/auth/forgot-password")
+async def auth_forgot_password(
+    request: Request,
+    email: str = Form(...),
+    csrf_token: str = Form(""),
+):
+    # auth forgot password
+    values = {"email": auth_services.safe_form_value(email, 254)}
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        reset = auth_services.PasswordResetService.request(
+            email=email,
+            key=auth_services.client_key(request, "forgot"),
+        )
+    except auth_services.AuthError as exc:
+        return _auth_template(
+            request,
+            error=exc.message,
+            active_tab="forgot",
+            field=exc.field,
+            values=values,
+            status_code=exc.status_code,
+        )
+
+    dev_reset_url = None
+    if reset.get("sent"):
+        try:
+            await _send_password_reset_email(request, reset)
+        except EmailServiceUnavailable:
+            logger.warning("Password reset email is not configured or failed")
+            if os.environ.get("APP_ENV", os.environ.get("ENV", "")).lower() not in {"prod", "production"}:
+                dev_reset_url = _password_reset_url(request, reset["token"])
+
+    return _auth_template(
+        request,
+        active_tab="forgot",
+        success_message="Если аккаунт существует, мы отправили ссылку для восстановления.",
+        values=values,
+        dev_reset_url=dev_reset_url,
+    )
+
+
+@app.post("/auth/reset-password")
+async def auth_reset_password(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    # auth reset password
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        user = auth_services.PasswordResetService.reset(
+            token=token,
+            password=password,
+            confirm_password=confirm_password,
+            key=auth_services.client_key(request, "reset"),
+        )
+    except auth_services.AuthError as exc:
+        return _auth_template(
+            request,
+            error=exc.message,
+            active_tab="reset" if exc.code not in {"invalid_reset_token", "expired_reset_token", "used_reset_token"} else "forgot",
+            field=exc.field,
+            reset_token=token,
+            status_code=exc.status_code,
+        )
+
+    sid = auth_services.SessionService.create(user["id"])
+    response = RedirectResponse("/dashboard?success=password_reset", status_code=302)
     _set_session_cookie(response, request, sid)
     return response
 
 
 @app.post("/auth/logout")
 async def auth_logout(request: Request):
+    # auth logout
     sid = request.cookies.get("sid")
-    if sid:
-        db.delete_session(sid)
+    auth_services.SessionService.delete(sid)
     response = RedirectResponse("/", status_code=302)
     response.delete_cookie("sid")
     return response
@@ -1070,6 +1435,7 @@ async def auth_logout(request: Request):
 
 @app.post("/auth/send-email-verification")
 async def auth_send_email_verification(request: Request):
+    # auth send email verification
     user = _require_auth(request)
     if not user:
         return _verification_json("verification_failed", status_code=401)
@@ -1090,11 +1456,13 @@ async def auth_send_email_verification(request: Request):
 
 @app.post("/auth/resend-email-verification")
 async def auth_resend_email_verification(request: Request):
+    # auth resend email verification
     return await auth_send_email_verification(request)
 
 
 @app.get("/auth/verify-email")
 async def auth_verify_email(request: Request):
+    # auth verify email
     if _verify_attempt_limited(request):
         return RedirectResponse("/auth?error=invalid_token", status_code=302)
 
@@ -1108,11 +1476,8 @@ async def auth_verify_email(request: Request):
         logger.warning("Email verification failed while marking user verified")
         return RedirectResponse("/auth?error=verification_failed", status_code=302)
 
-    sid = db.create_session(user["id"])
-    if int(user.get("site_slots") or 0):
-        dest = "/dashboard?email_success=email_verified"
-    else:
-        dest = "/payment?reason=welcome&email_success=email_verified"
+    sid = auth_services.SessionService.create(user["id"])
+    dest = "/dashboard?email_success=email_verified"
     response = RedirectResponse(dest, status_code=302)
     _set_session_cookie(response, request, sid)
     return response
@@ -1120,21 +1485,64 @@ async def auth_verify_email(request: Request):
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
+    # dashboard
+    return await dashboard_view(request, "overview")
+
+
+async def dashboard_view(request: Request, view: str, **extra):
+    # dashboard view
     user = _require_auth(request)
-    if blocked := _require_paid(user):
-        return blocked
-    sites = db.get_user_sites(user["id"])
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    context = services.build_dashboard_context(user)
+    context["verification_notice"] = _verification_notice(request, context["user"])
+    context["dashboard_view"] = view
+    context.update(extra)
     return templates.TemplateResponse(request, "dashboard.html", {
-        "user": user,
-        "sites": sites,
-        "verification_notice": _verification_notice(request, user),
+        **context,
     })
+
+
+@app.get("/dashboard/sites", response_class=HTMLResponse)
+async def dashboard_sites(request: Request):
+    # dashboard sites
+    return RedirectResponse("/dashboard", status_code=302)
+
+
+@app.get("/dashboard/sites/{site_id}", response_class=HTMLResponse)
+async def dashboard_site_workspace(site_id: int, request: Request):
+    # dashboard site workspace
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    context = services.build_site_workspace_context(user, site_id)
+    if not context:
+        return RedirectResponse("/dashboard?missing=site", status_code=302)
+    context["verification_notice"] = _verification_notice(request, context["user"])
+    context["dashboard_view"] = "site"
+    return templates.TemplateResponse(request, "dashboard.html", context)
+
+
+@app.get("/dashboard/billing", response_class=HTMLResponse)
+async def dashboard_billing(request: Request):
+    # dashboard billing
+    slot_pkg = next(p for p in PAYMENT_PACKAGES if p["type"] == "slot")
+    credit_pkgs = [p for p in PAYMENT_PACKAGES if p["type"] == "credits"]
+    return await dashboard_view(request, "billing", slot_pkg=slot_pkg, credit_pkgs=credit_pkgs)
+
+
+
 
 
 @app.get("/site/{slug}", response_class=HTMLResponse)
 async def serve_site(slug: str):
-    # Sanitise slug to prevent path traversal
+    # sanitise slug to prevent path traversal
     slug = re.sub(r'[^a-zA-Z0-9_-]', '', slug)
+    site = db.get_site_by_slug(slug)
+    if site:
+        site = services.SupportService.refresh_site(site["id"]) or site
+        if not services.is_support_public(site.get("support_status")):
+            return HTMLResponse(services.maintenance_page(), status_code=503)
     path = GENERATED_DIR / f"{slug}.html"
     if not path.exists():
         return HTMLResponse("<h1>Сайт не найден</h1>", status_code=404)
@@ -1143,6 +1551,7 @@ async def serve_site(slug: str):
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
+    # admin page
     user = _require_auth(request)
     if not user or user.get("phone") != ADMIN_PHONE:
         return HTMLResponse("<h1>403 Forbidden</h1>", status_code=403)
@@ -1151,6 +1560,7 @@ async def admin_page(request: Request):
 
 @app.get("/admin/api/stats")
 async def admin_api_stats(request: Request):
+    # admin api stats
     user = _require_auth(request)
     if not user or user.get("phone") != ADMIN_PHONE:
         return JSONResponse({"error": "forbidden"}, status_code=403)
@@ -1159,6 +1569,7 @@ async def admin_api_stats(request: Request):
 
 @app.get("/admin/api/users")
 async def admin_api_users(request: Request):
+    # admin api users
     user = _require_auth(request)
     if not user or user.get("phone") != ADMIN_PHONE:
         return JSONResponse({"error": "forbidden"}, status_code=403)
@@ -1167,6 +1578,7 @@ async def admin_api_users(request: Request):
 
 @app.get("/admin/api/user/{uid}")
 async def admin_api_user(uid: int, request: Request):
+    # admin api user
     user = _require_auth(request)
     if not user or user.get("phone") != ADMIN_PHONE:
         return JSONResponse({"error": "forbidden"}, status_code=403)
@@ -1178,6 +1590,7 @@ async def admin_api_user(uid: int, request: Request):
 
 @app.post("/admin/api/user/{uid}/add-tokens")
 async def admin_add_tokens(uid: int, request: Request):
+    # admin add tokens
     admin = _require_auth(request)
     if not admin or admin.get("phone") != ADMIN_PHONE:
         return JSONResponse({"error": "forbidden"}, status_code=403)
@@ -1187,14 +1600,14 @@ async def admin_add_tokens(uid: int, request: Request):
         return JSONResponse({"error": "amount must be > 0"}, status_code=400)
     db.add_tokens(uid, amount, "admin_grant")
     updated = db.get_user_by_id(uid)
-    return JSONResponse({"ok": True, "tokens": updated["tokens"]})
+    return JSONResponse({"ok": True, "tokens": updated["tokens"], "dev_credits": updated["dev_credits"]})
 
 
 # ── Upload photo ──────────────────────────────────────────────────────────────
 
 @app.post("/upload-photo")
 async def upload_photo(file: UploadFile = File(...)):
-    """Сохраняет фото на диск, возвращает URL — base64 НЕ используем чтобы не раздувать промпт."""
+    # save photo to disk and return url
     content = await file.read()
 
     try:
@@ -1223,24 +1636,162 @@ async def upload_photo(file: UploadFile = File(...)):
 
 @app.get("/start")
 async def start(request: Request):
+    # start
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    onboarding = services.OnboardingService.current(user["id"])
     return JSONResponse({
         "message": "Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?",
-        "history": [],
+        "history": onboarding["session"].get("history") if onboarding.get("session") else [],
+        "session": onboarding.get("session"),
+        "summary": onboarding.get("summary", []),
+        "progress": onboarding.get("progress", 0),
         "done": False,
     })
 
 
+def _generate_site_from_session(user: dict, session: dict) -> dict:
+    # generate site from session
+    if _dev_credits(user) < 1:
+        return {"ok": False, "status_code": 402, "error": "Недостаточно Development Credits для генерации сайта"}
+
+    collected = session.get("collected") or {}
+    history = session.get("history") or []
+    photo_urls = session.get("photo_urls") or []
+    acc_chat_in = int(session.get("chat_in") or 0)
+    acc_chat_out = int(session.get("chat_out") or 0)
+    acc_chat_cr = int(session.get("chat_cr") or 0)
+    vibe = collected.get("vibe") or ""
+    data = {
+        "name": collected.get("name") or "Бизнес",
+        "services": collected.get("services") or "",
+        "city": collected.get("city") or "",
+        "vibe": vibe,
+        "extra": "",
+        "photo_urls": photo_urls,
+        "ref_url": vibe if _is_url(vibe) else "",
+        "chat_history": history,
+    }
+
+    if not db.mark_onboarding_generating(session["id"], user["id"]):
+        fresh_session = db.get_onboarding_session(session["id"], user["id"])
+        if fresh_session and fresh_session.get("status") == "completed" and fresh_session.get("generated_site_id"):
+            site = db.get_site_by_id(fresh_session["generated_site_id"])
+            if site:
+                return {
+                    "ok": True,
+                    "site": site,
+                    "site_url": f"/site/{site['slug']}",
+                    "workspace_url": f"/dashboard/sites/{site['id']}",
+                    "already_done": True,
+                }
+        return {"ok": False, "status_code": 409, "error": "Генерация уже запущена. Обновите страницу через несколько секунд."}
+
+    try:
+        gen = _ai_generate(data)
+        gen_in = gen["input_tokens"]
+        gen_out = gen["output_tokens"]
+        gen_cr = gen["cache_read_tokens"]
+        gen_cc = gen["cache_create_tokens"]
+
+        total_in = acc_chat_in + gen_in
+        total_out = acc_chat_out + gen_out
+        total_cr = acc_chat_cr + gen_cr
+        cost = _calc_cost(total_in, total_out, total_cr, gen_cc)
+        our_tokens = _tokens_to_ours(total_in, total_out)
+
+        fresh_user = db.get_user_by_id(user["id"]) or user
+        if _dev_credits(fresh_user) < our_tokens:
+            db.fail_onboarding_session(session["id"], user["id"], "Недостаточно Development Credits")
+            return {"ok": False, "status_code": 402, "error": "Недостаточно Development Credits для генерации сайта"}
+
+        name = data["name"]
+        clean_name = re.sub(r'^я\s+', '', name.lower().strip())
+        slug = _slugify(clean_name.split(',')[0].strip())
+        if db.get_site_by_slug(slug):
+            slug = f"{slug}-{uuid.uuid4().hex[:4]}"
+
+        (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+        site = db.create_site(
+            user_id=user["id"],
+            slug=slug,
+            title=name,
+            data=data,
+            html_path=str(GENERATED_DIR / f"{slug}.html"),
+            tokens_used=our_tokens,
+            chat_in=acc_chat_in,
+            chat_out=acc_chat_out,
+            gen_in=gen_in,
+            gen_out=gen_out,
+            cache_read=total_cr,
+            cost_usd=cost,
+        )
+
+        deducted = db.deduct_tokens(
+            user_id=user["id"],
+            amount=our_tokens,
+            reason=f"site_generate:{slug}",
+            site_id=site["id"] if site else None,
+            claude_in=total_in,
+            claude_out=total_out,
+            cache_read=total_cr,
+            cost_usd=cost,
+        )
+        if not deducted:
+            db.delete_site(site["id"], user["id"])
+            html_file = GENERATED_DIR / f"{slug}.html"
+            if html_file.exists():
+                html_file.unlink()
+            db.fail_onboarding_session(session["id"], user["id"], "Баланс изменился")
+            return {"ok": False, "status_code": 409, "error": "Баланс изменился. Пополните Development Credits и попробуйте ещё раз."}
+
+        services.VersionService.create_snapshot(site["id"], gen["html"], data, "site_generate")
+        db.complete_onboarding_session(session["id"], user["id"], site["id"])
+        db.create_notification(
+            user["id"],
+            "site_created",
+            "Бизнес-страница готова",
+            f"Страница «{site['title']}» создана и доступна для правок.",
+            site["id"],
+        )
+        updated_user = db.get_user_by_id(user["id"]) or user
+        _save_cost({
+            "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "client": name, "slug": slug, "user_id": user["id"],
+            "style": data["ref_url"] or vibe or "ai-chat",
+            "chat_in": acc_chat_in, "chat_out": acc_chat_out,
+            "gen_in": gen_in, "gen_out": gen_out,
+            "cache_read_tokens": total_cr, "cache_create_tokens": gen_cc,
+            "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
+            "model": BEDROCK_MODEL,
+        })
+        return {
+            "ok": True,
+            "site": site,
+            "site_url": f"/site/{slug}",
+            "workspace_url": f"/dashboard/sites/{site['id']}",
+            "cost_usd": round(cost, 6),
+            "tokens_spent": our_tokens,
+            "tokens_left": _dev_credits(updated_user),
+            "dev_credits_left": _dev_credits(updated_user),
+        }
+    except Exception as exc:
+        logger.exception("Onboarding generation failed")
+        db.fail_onboarding_session(session["id"], user["id"], "Не удалось создать сайт")
+        return {"ok": False, "status_code": 500, "error": f"Не удалось создать сайт: {exc}"}
+
+
 @app.post("/chat")
 async def chat(request: Request):
+    # chat
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
 
     body           = await request.json()
     message        = body.get("message", "").strip()
+    session_id     = body.get("session_id")
     history        = body.get("history", [])
     photo_urls     = body.get("photo_urls", [])
     # Accumulated chat tokens from previous turns (client sends back)
@@ -1267,107 +1818,109 @@ async def chat(request: Request):
     history.append({"role": "assistant", "content": reply})
 
     if not ready:
+        session = db.upsert_onboarding_session(
+            user["id"],
+            session_id,
+            status="draft",
+            history=history,
+            collected=collected,
+            photo_urls=photo_urls,
+            chat_in=acc_chat_in,
+            chat_out=acc_chat_out,
+            chat_cr=acc_chat_cr,
+        )
+        presented = services.OnboardingService.present(session)
         return JSONResponse({
             "message":  reply,
             "history":  history,
             "done":     False,
+            "session_id": session["id"],
+            "collected": collected,
+            "summary": presented["summary"],
+            "progress": presented["progress"],
             "chat_in":  acc_chat_in,
             "chat_out": acc_chat_out,
             "chat_cr":  acc_chat_cr,
         })
 
-    # ── Ready to generate ──────────────────────────────────────────────────
-    if user["tokens"] < 1:
-        return JSONResponse({"error": "Недостаточно токенов для генерации сайта"}, status_code=402)
-
-    vibe = collected.get("vibe") or ""
-    data = {
-        "name":         collected.get("name") or "Бизнес",
-        "services":     collected.get("services") or "",
-        "city":         collected.get("city") or "",
-        "vibe":         vibe,
-        "extra":        "",
-        "photo_urls":   photo_urls,
-        "ref_url":      vibe if _is_url(vibe) else "",
-        "chat_history": history,
-    }
-
-    gen = _ai_generate(data)
-
-    gen_in  = gen["input_tokens"]
-    gen_out = gen["output_tokens"]
-    gen_cr  = gen["cache_read_tokens"]
-    gen_cc  = gen["cache_create_tokens"]
-
-    # Total cost = chat turns + generation
-    total_in  = acc_chat_in  + gen_in
-    total_out = acc_chat_out + gen_out
-    total_cr  = acc_chat_cr  + gen_cr
-    cost = _calc_cost(total_in, total_out, total_cr, gen_cc)
-    our_tokens = _tokens_to_ours(total_in, total_out)
-
-    name = data["name"]
-    clean_name = re.sub(r'^я\s+', '', name.lower().strip())
-    slug = _slugify(clean_name.split(',')[0].strip())
-    existing = db.get_site_by_slug(slug)
-    if existing and existing.get("user_id") != user["id"]:
-        slug = f"{slug}-{uuid.uuid4().hex[:4]}"
-
-    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
-
-    site = db.create_site(
-        user_id=user["id"],
-        slug=slug,
-        title=name,
-        data=data,
-        html_path=str(GENERATED_DIR / f"{slug}.html"),
-        tokens_used=our_tokens,
+    session = db.upsert_onboarding_session(
+        user["id"],
+        session_id,
+        status="ready",
+        history=history,
+        collected=collected,
+        photo_urls=photo_urls,
         chat_in=acc_chat_in,
         chat_out=acc_chat_out,
-        gen_in=gen_in,
-        gen_out=gen_out,
-        cache_read=total_cr,
-        cost_usd=cost,
+        chat_cr=acc_chat_cr,
     )
-
-    db.deduct_tokens(
-        user_id=user["id"],
-        amount=our_tokens,
-        reason=f"site_generate:{slug}",
-        site_id=site["id"] if site else None,
-        claude_in=total_in,
-        claude_out=total_out,
-        cache_read=total_cr,
-        cost_usd=cost,
-    )
-
-    _save_cost({
-        "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "client": name, "slug": slug, "user_id": user["id"],
-        "style": data["ref_url"] or vibe or "ai-chat",
-        "chat_in": acc_chat_in, "chat_out": acc_chat_out,
-        "gen_in": gen_in, "gen_out": gen_out,
-        "cache_read_tokens": total_cr, "cache_create_tokens": gen_cc,
-        "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
-        "model": BEDROCK_MODEL,
-    })
-
+    presented = services.OnboardingService.present(session)
     return JSONResponse({
         "message":      reply,
         "history":      history,
-        "done":         True,
-        "site_url":     f"/site/{slug}",
-        "cost_usd":     round(cost, 6),
-        "tokens_spent": our_tokens,
-        "tokens_left":  user["tokens"] - our_tokens,
+        "done":         False,
+        "ready":        True,
+        "confirm_required": True,
+        "session_id":   session["id"],
+        "collected":    collected,
+        "summary":      presented["summary"],
+        "progress":     presented["progress"],
+        "chat_in":      acc_chat_in,
+        "chat_out":     acc_chat_out,
+        "chat_cr":      acc_chat_cr,
     })
+
+
+@app.get("/api/onboarding/session")
+async def api_onboarding_session(request: Request):
+    # api onboarding session
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, **services.OnboardingService.current(user["id"])})
+
+
+@app.post("/api/onboarding/session")
+async def api_onboarding_autosave(request: Request):
+    # api onboarding autosave
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    payload = await request.json()
+    return JSONResponse({"ok": True, **services.OnboardingService.autosave(user["id"], payload)})
+
+
+@app.post("/api/onboarding/reset")
+async def api_onboarding_reset(request: Request):
+    # api onboarding reset
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, **services.OnboardingService.reset(user["id"])})
+
+
+@app.post("/api/onboarding/generate")
+async def api_onboarding_generate(request: Request):
+    # api onboarding generate
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    body = await request.json()
+    session = db.get_onboarding_session(int(body.get("session_id") or 0), user["id"])
+    if not session:
+        return JSONResponse({"error": "Черновик не найден"}, status_code=404)
+    if session.get("status") not in {"ready", "failed", "completed"}:
+        return JSONResponse({"error": "Сначала завершите ответы и подтвердите запуск."}, status_code=400)
+    result = _generate_site_from_session(user, session)
+    status_code = 200 if result.get("ok") else int(result.get("status_code") or 400)
+    return JSONResponse(result, status_code=status_code)
 
 
 # ── Site edit ─────────────────────────────────────────────────────────────────
 
 @app.post("/site/{slug}/edit")
 async def site_edit(slug: str, request: Request):
-    """Edit chat + generation. First clarifies request, then generates when ready."""
+    # handle ai site edit and generation flow
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
@@ -1376,6 +1929,9 @@ async def site_edit(slug: str, request: Request):
     site = db.get_site_by_slug(slug)
     if not site or site["user_id"] != user["id"]:
         return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    site = services.SupportService.refresh_site(site["id"]) or site
+    if not services.is_support_operational(site.get("support_status")):
+        return JSONResponse({"error": "Поддержка сайта не активна. Оплатите поддержку, чтобы редактировать сайт."}, status_code=402)
 
     body           = await request.json()
     message        = body.get("message", "").strip()
@@ -1428,8 +1984,12 @@ async def site_edit(slug: str, request: Request):
         })
 
     # Ready — generate
-    if user["tokens"] < 1:
-        return JSONResponse({"error": "Недостаточно токенов"}, status_code=402)
+    if _dev_credits(user) < 1:
+        return JSONResponse({"error": "Недостаточно Development Credits"}, status_code=402)
+
+    business_check = services.PromotionService.validate_business_change(site, edit_summary)
+    if not business_check.get("ok"):
+        return JSONResponse({"error": business_check["message"]}, status_code=400)
 
     data = site.get("data") or {}
     if isinstance(data, str):
@@ -1457,27 +2017,41 @@ async def site_edit(slug: str, request: Request):
     cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
     our_tokens = _tokens_to_ours(gen_in, gen_out)
 
-    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+    fresh_user = db.get_user_by_id(user["id"]) or user
+    if _dev_credits(fresh_user) < our_tokens:
+        return JSONResponse({"error": "Недостаточно Development Credits"}, status_code=402)
 
-    data_to_save = {**data, "chat_history": combined_history}
-    db.update_site_data(site["id"], data_to_save)
-    db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
-    db.deduct_tokens(
+    if prev_html:
+        services.VersionService.create_snapshot(site["id"], prev_html, site.get("data") or {}, "before_site_edit")
+    deducted = db.deduct_tokens(
         user_id=user["id"], amount=our_tokens,
         reason=f"site_edit:{slug}",
         site_id=site["id"],
         claude_in=gen_in, claude_out=gen_out,
         cache_read=gen_cr, cost_usd=cost,
     )
+    if not deducted:
+        return JSONResponse({"error": "Баланс изменился. Пополните Development Credits и попробуйте ещё раз."}, status_code=409)
+
+    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+
+    data_to_save = {**data, "chat_history": combined_history}
+    db.update_site_data(site["id"], data_to_save)
+    db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
+    services.VersionService.create_snapshot(site["id"], gen["html"], data_to_save, "site_edit")
+    services.CampaignService.site_changed(site["id"], "site_edit")
+    updated_user = db.get_user_by_id(user["id"]) or user
 
     return JSONResponse({
         "done":         True,
         "ok":           True,
         "message":      reply,
         "site_url":     f"/site/{slug}",
+        "workspace_url": f"/dashboard/sites/{site['id']}",
         "edit_history": edit_history,
         "tokens_spent": our_tokens,
-        "tokens_left":  user["tokens"] - our_tokens,
+        "tokens_left":  _dev_credits(updated_user),
+        "dev_credits_left": _dev_credits(updated_user),
     })
 
 
@@ -1485,31 +2059,75 @@ async def site_edit(slug: str, request: Request):
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
+    # profile page
     user = _require_auth(request)
     if not user:
         return RedirectResponse("/auth", status_code=302)
-    log = db.get_token_log(user["id"])
+    log = db.get_dev_credit_log(user["id"])
+    promo_log = db.get_promo_credit_log(user["id"])
     sites = db.get_user_sites(user["id"])
-    return templates.TemplateResponse(request, "profile.html", {
+    csrf_token = auth_services.CsrfService.generate()
+    response = templates.TemplateResponse(request, "profile.html", {
         "user": user,
         "log": log,
+        "promo_log": promo_log,
         "sites_count": len(sites),
         "verification_notice": _verification_notice(request, user),
+        "csrf_token": csrf_token,
     })
+    _set_auth_csrf_cookie(response, request, csrf_token)
+    return response
 
 
 @app.post("/profile/update")
-async def profile_update(request: Request, name: str = Form(...), email: str = Form("")):
+async def profile_update(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(""),
+    avatar_url: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    # profile update
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-    db.update_user_name(user["id"], name)
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        safe_name = auth_services.validate_name(name)
+    except auth_services.AuthError:
+        return RedirectResponse("/profile?email_error=verification_failed", status_code=302)
+    db.update_user_name(user["id"], safe_name)
 
-    new_email = db.normalize_email(email)
-    current_email = db.normalize_email(user.get("email"))
+    if avatar_url:
+        db.update_user_avatar(user["id"], avatar_url)
+
+@app.post("/profile/update-password")
+async def profile_update_password(
+    request: Request,
+    password: str = Form(...),
+    confirm_password: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    # profile update password
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    try:
+        _verify_auth_csrf(request, csrf_token)
+        auth_services.validate_password(password, confirm_password, email=user.get("email"), name=user.get("name"))
+    except auth_services.AuthError as e:
+        return RedirectResponse(f"/profile?password_error={e.code}", status_code=302)
+
+    db.update_user_password(user["id"], password)
+    return RedirectResponse("/profile?password_success=updated", status_code=302)
+
+
+    try:
+        new_email = auth_services.validate_email(email) if (email or "").strip() else ""
+    except auth_services.AuthError:
+        return RedirectResponse("/profile?email_error=invalid_email", status_code=302)
+    current_email = auth_services.normalize_email(user.get("email"))
     if new_email and new_email != current_email:
-        if not _valid_email(new_email):
-            return RedirectResponse("/profile?email_error=invalid_email", status_code=302)
         updated = db.update_user_email_for_verification(user["id"], new_email)
         if not updated:
             return RedirectResponse("/profile?email_error=account_conflict", status_code=302)
@@ -1523,6 +2141,7 @@ async def profile_update(request: Request, name: str = Form(...), email: str = F
 
 @app.post("/site/{slug}/delete")
 async def site_delete(slug: str, request: Request):
+    # site delete
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
@@ -1538,13 +2157,201 @@ async def site_delete(slug: str, request: Request):
     return RedirectResponse("/dashboard", status_code=302)
 
 
-@app.get("/payment", response_class=HTMLResponse)
-async def payment_page(request: Request):
+def _owned_site(slug: str, user: dict) -> dict | None:
+    # owned site
+    slug = re.sub(r"[^a-zA-Z0-9_-]", "", slug)
+    site = db.get_site_by_slug(slug)
+    if not site or site["user_id"] != user["id"]:
+        return None
+    return site
+
+
+@app.post("/api/billing/promo-credits/purchase")
+async def api_purchase_promo_credits(request: Request):
+    # api purchase promo credits
     user = _require_auth(request)
     if not user:
-        return RedirectResponse("/auth", status_code=302)
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    body = await request.json()
+    result = services.CreditsService.purchase_promo_credits(user["id"], body.get("credits"))
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.get("/api/billing/credit-logs")
+async def api_credit_logs(request: Request):
+    # api credit logs
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse(services.CreditsService.logs(user["id"]))
+
+
+@app.get("/api/sites/{slug}/support")
+async def api_support_status(slug: str, request: Request):
+    # api support status
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    site = services.SupportService.refresh_site(site["id"]) or site
+    return JSONResponse({
+        "ok": True,
+        "status": site.get("support_status"),
+        "support_paid_until": site.get("support_paid_until"),
+        "invoice": services.SupportService.get_open_invoice(site["id"]),
+    })
+
+
+@app.post("/api/sites/{slug}/support/pay")
+async def api_support_pay(slug: str, request: Request):
+    # api support pay
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    result = services.SupportService.pay_invoice(user["id"], site["id"])
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.post("/api/sites/{slug}/promotion/setup")
+async def api_promotion_setup(slug: str, request: Request):
+    # api promotion setup
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    result = services.PromotionService.setup(user["id"], site["id"])
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.post("/api/sites/{slug}/promotion/forecast")
+async def api_promotion_forecast(slug: str, request: Request):
+    # api promotion forecast
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    body = await request.json()
+    try:
+        credits = int(body.get("credits") or 0)
+        duration_hours = int(body.get("duration_hours") or 0)
+    except (TypeError, ValueError):
+        return JSONResponse({"ok": False, "error": "invalid_campaign", "message": "Введите корректный бюджет и длительность."}, status_code=400)
+    result = services.CampaignService.forecast(
+        user["id"],
+        site["id"],
+        credits,
+        duration_hours,
+    )
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.post("/api/sites/{slug}/promotion/campaigns")
+async def api_campaign_launch(slug: str, request: Request):
+    # api campaign launch
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    body = await request.json()
+    try:
+        credits = int(body.get("credits") or 0)
+        duration_hours = int(body.get("duration_hours") or 0)
+    except (TypeError, ValueError):
+        return JSONResponse({"ok": False, "error": "invalid_campaign", "message": "Введите корректный бюджет и длительность."}, status_code=400)
+    result = services.CampaignService.launch(
+        user["id"],
+        site["id"],
+        credits,
+        duration_hours,
+    )
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.get("/api/sites/{slug}/promotion/campaigns")
+async def api_campaign_history(slug: str, request: Request):
+    # api campaign history
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    return JSONResponse({"ok": True, "campaigns": services.CampaignService.history(site["id"])})
+
+
+@app.get("/api/sites/{slug}/promotion/campaigns/{campaign_id}")
+async def api_campaign_status(slug: str, campaign_id: int, request: Request):
+    # api campaign status
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    campaigns = services.CampaignService.history(site["id"])
+    campaign = next((c for c in campaigns if int(c["id"]) == int(campaign_id)), None)
+    if not campaign:
+        return JSONResponse({"error": "Кампания не найдена"}, status_code=404)
+    return JSONResponse({"ok": True, "campaign": campaign})
+
+
+@app.post("/api/sites/{slug}/analytics/restore")
+async def api_restore_analytics(slug: str, request: Request):
+    # api restore analytics
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    result = services.AnalyticsService.restore(user["id"], site["id"])
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.get("/api/sites/{slug}/versions")
+async def api_site_versions(slug: str, request: Request):
+    # api site versions
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    return JSONResponse({"ok": True, "versions": services.VersionService.list_versions(user["id"], site["id"])})
+
+
+@app.post("/api/sites/{slug}/versions/{version_id}/restore")
+async def api_restore_version(slug: str, version_id: int, request: Request):
+    # api restore version
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+    result = services.VersionService.restore(user["id"], site["id"], version_id)
+    if result.get("ok"):
+        (GENERATED_DIR / f"{site['slug']}.html").write_text(result["html"], encoding="utf-8")
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+
+@app.get("/payment", response_class=HTMLResponse)
+async def payment_page(request: Request):
+    # payment page
+    user = _require_auth(request)
     reason = request.query_params.get("reason", "")
-    sites  = db.get_user_sites(user["id"])
+    sites  = db.get_user_sites(user["id"]) if user else []
     slot_pkg    = next(p for p in PAYMENT_PACKAGES if p["type"] == "slot")
     credit_pkgs = [p for p in PAYMENT_PACKAGES if p["type"] == "credits"]
     return templates.TemplateResponse(request, "payment.html", {
@@ -1553,16 +2360,16 @@ async def payment_page(request: Request):
         "sites_count": len(sites),
         "slot_pkg":    slot_pkg,
         "credit_pkgs": credit_pkgs,
-        "verification_notice": _verification_notice(request, user),
+        "promo_min_purchase": PROMO_MIN_PURCHASE,
+        "promo_credit_tenge": PROMO_CREDIT_TENGE,
+        "verification_notice": _verification_notice(request, user) if user else {},
     })
 
 
 @app.post("/payment/create")
 async def payment_create(request: Request):
+    # payment create
     user = _require_auth(request)
-    if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-
     body = await request.json()
     catalog_item_id = body.get("catalog_item_id")
     phone = body.get("phone", "").strip()
@@ -1574,6 +2381,16 @@ async def payment_create(request: Request):
     phone_clean = re.sub(r"[^\d]", "", phone)
     if len(phone_clean) < 10:
         return JSONResponse({"error": "Введите номер телефона Kaspi"}, status_code=400)
+
+    # Guest auto-login/auto-create
+    is_new_session = False
+    if not user:
+        user = db.get_user_by_phone(phone_clean)
+        if not user:
+            user = db.create_user(phone=phone_clean, password="")
+            if not user:
+                return JSONResponse({"error": "Ошибка при создании аккаунта"}, status_code=500)
+        is_new_session = True
 
     order_id = uuid.uuid4().hex[:12].upper()
 
@@ -1617,20 +2434,33 @@ async def payment_create(request: Request):
 
 @app.get("/payment/status/{order_id}")
 async def payment_status(order_id: str, request: Request):
-    user = _require_auth(request)
-    if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-
+    # payment status
     order_id = re.sub(r"[^A-Za-z0-9]", "", order_id)
     payment = db.get_payment_by_order(order_id)
-    if not payment or payment["user_id"] != user["id"]:
+    if not payment:
         return JSONResponse({"error": "Не найдено"}, status_code=404)
 
-    return JSONResponse({"status": payment["status"], "tokens": payment["tokens"]})
+    user = _require_auth(request)
+    if user and payment["user_id"] != user["id"]:
+        return JSONResponse({"error": "Не найдено"}, status_code=404)
+
+    response = JSONResponse({
+        "status": payment["status"],
+        "tokens": payment["tokens"],
+        "dev_credits": payment.get("dev_credits") or payment["tokens"],
+        "promo_credits": payment.get("promo_credits") or 0,
+    })
+
+    if payment["status"] == "paid" and not user:
+        sid = auth_services.SessionService.create(payment["user_id"])
+        _set_session_cookie(response, request, sid)
+
+    return response
 
 
 @app.post("/payment/webhook")
 async def payment_webhook(request: Request):
+    # payment webhook
     body_bytes = await request.body()
 
     # Verify HMAC signature from kaspi-pos (header: X-Apipay-Signature: sha256=<hex>)

@@ -2,892 +2,427 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lendings.kz — Сайт-визитка за 5 минут</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>lendings.kz — Бизнес-страницы и продвижение</title>
 <style>
-/* ─── RESET & BASE ─── */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-:root {
-  --bg:        #0f0f0f;
-  --bg2:       #141414;
-  --bg3:       #1a1a1a;
-  --accent:    #7c5cff;
-  --accent2:   #a084ff;
-  --accent-glow: rgba(124, 92, 255, 0.25);
-  --accent-dim:  rgba(124, 92, 255, 0.12);
-  --text:      #f0f0f0;
-  --text2:     #999;
-  --text3:     #555;
-  --border:    rgba(255,255,255,0.07);
-  --border2:   rgba(124, 92, 255, 0.3);
-  --serif:     'Playfair Display', Georgia, serif;
-  --sans:      'Manrope', sans-serif;
-  --radius:    16px;
-  --radius-lg: 24px;
-}
-
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-weight: 400;
-  line-height: 1.6;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ─── NOISE TEXTURE OVERLAY ─── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity: 0.025;
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* ─── SCROLL ANIMATIONS ─── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(32px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes slideRight {
-  from { opacity: 0; transform: translateX(-24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50%       { opacity: 0.8; transform: scale(1.08); }
-}
-@keyframes borderSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes countUp {
-  from { opacity: 0; transform: translateY(12px) scale(0.95); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.reveal-delay-1 { transition-delay: 0.1s; }
-.reveal-delay-2 { transition-delay: 0.2s; }
-.reveal-delay-3 { transition-delay: 0.3s; }
-.reveal-delay-4 { transition-delay: 0.4s; }
-
-/* ─── NAV ─── */
-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  padding: 18px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(15, 15, 15, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border);
-  animation: fadeIn 0.6s ease both;
-}
-
-.nav-logo {
-  font-family: var(--sans);
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  text-decoration: none;
-}
-.nav-logo .dot { color: var(--accent); }
-
-.nav-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 0.88rem;
-  padding: 10px 20px;
-  border-radius: 100px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  border: none;
-  letter-spacing: -0.01em;
-}
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 0 24px var(--accent-glow);
-}
-.btn-primary:hover {
-  background: var(--accent2);
-  box-shadow: 0 0 36px rgba(124, 92, 255, 0.45);
-  transform: translateY(-1px);
-}
-.btn-ghost {
-  background: transparent;
-  color: var(--text2);
-  border: 1px solid var(--border);
-}
-.btn-ghost:hover {
-  color: var(--text);
-  border-color: rgba(255,255,255,0.2);
-  background: var(--bg3);
-}
-
-/* ─── HERO ─── */
-.hero {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 120px 24px 80px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Ambient glow blob */
-.hero-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -55%);
-  width: min(700px, 130vw);
-  height: min(700px, 130vw);
-  background: radial-gradient(ellipse at center,
-    rgba(124, 92, 255, 0.18) 0%,
-    rgba(124, 92, 255, 0.06) 40%,
-    transparent 70%);
-  border-radius: 50%;
-  animation: glowPulse 6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Grid lines */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
-  pointer-events: none;
-}
-
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--accent-dim);
-  border: 1px solid var(--border2);
-  border-radius: 100px;
-  padding: 6px 16px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--accent2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 28px;
-  animation: fadeUp 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.hero-eyebrow::before {
-  content: '';
-  width: 6px; height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--accent);
-}
-
-.hero-title {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: clamp(2.8rem, 8vw, 6rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  max-width: 780px;
-  margin-bottom: 12px;
-  animation: fadeUp 0.7s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.hero-title em {
-  font-style: italic;
-  color: var(--accent2);
-  position: relative;
-}
-.hero-title em::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), transparent);
-  border-radius: 2px;
-}
-
-.hero-sub {
-  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
-  color: var(--text2);
-  font-weight: 400;
-  max-width: 440px;
-  margin: 0 auto 40px;
-  line-height: 1.7;
-  animation: fadeUp 0.7s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  animation: fadeUp 0.7s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.btn-hero {
-  padding: 14px 28px;
-  font-size: 1rem;
-}
-
-.hero-badge {
-  margin-top: 56px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  color: var(--text3);
-  font-size: 0.8rem;
-  font-weight: 500;
-  animation: fadeUp 0.7s 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.hero-badge-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-}
-.hero-stat strong {
-  display: block;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text);
-  font-family: var(--serif);
-  font-style: italic;
-}
-
-/* ─── SECTION COMMONS ─── */
-section {
-  padding: 96px 24px;
-  max-width: 1040px;
-  margin: 0 auto;
-}
-
-.section-label {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 12px;
-}
-
-.section-title {
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  margin-bottom: 16px;
-}
-
-.section-sub {
-  font-size: 1rem;
-  color: var(--text2);
-  max-width: 480px;
-  line-height: 1.7;
-}
-
-/* ─── HOW IT WORKS ─── */
-.how-section {
-  padding-top: 80px;
-  padding-bottom: 80px;
-}
-.how-section > .section-label,
-.how-section > .section-title,
-.how-section > .section-sub {
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-}
-.how-section > .section-label { display: block; }
-
-.steps {
-  margin-top: 64px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2px;
-  position: relative;
-}
-
-@media (min-width: 768px) {
-  .steps {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+  :root{
+    --bg:#f6f7fb;--ink:#141722;--muted:#687286;--soft:#8b95a8;
+    --card:rgba(255,255,255,.9);--line:#e5e9f2;--line-strong:#d7deea;
+    --brand:#4f6df5;--brand-dark:#314dd2;--green:#21b889;--red:#e5485d;
+    --shadow:0 24px 80px rgba(28,39,73,.16);--radius:20px;
+    --input-bg:#fbfcff;--grid-color:rgba(79,109,245,.06);
+    --bg-gradient:linear-gradient(180deg,#fff 0,#f6f7fb 52%,#eef2fb 100%);
+    --flow-active: #ffffff; --flow-idle: rgba(255,255,255,0.6);
+    --flow-num-active: #eaf1ff; --flow-num-idle: #f0f4fb;
+    --flow-title-active: #152033; --flow-title-idle: #7b8495;
   }
-}
-
-.step {
-  position: relative;
-  padding: 40px 32px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  transition: border-color 0.3s, background 0.3s;
-}
-.step:first-child { border-radius: var(--radius) var(--radius) 0 0; }
-.step:last-child  { border-radius: 0 0 var(--radius) var(--radius); }
-
-@media (min-width: 768px) {
-  .step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-  .step:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
-  .step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 50%; right: -1px;
-    width: 1px; height: 60%;
-    transform: translateY(-50%);
-    background: var(--border);
+  [data-theme="dark"]{
+    --bg:#06060a;--ink:#f8fafc;--muted:#94a3b8;--soft:#64748b;
+    --card:rgba(15,15,22,.85);--line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.12);
+    --brand:#8b5cf6;--brand-dark:#7c3aed;--green:#10b981;--red:#ef4444;
+    --shadow:0 32px 100px rgba(0,0,0,.8);--input-bg:#0f0f16;
+    --grid-color:rgba(139,92,246,.05);
+    --bg-gradient:radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+    --flow-active: #1e1e2e; --flow-idle: rgba(30,30,46,0.4);
+    --flow-num-active: #2d2d3f; --flow-num-idle: #161621;
+    --flow-title-active: #f8fafc; --flow-title-idle: #64748b;
   }
-}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+  body{min-height:100vh;font-family:'Sora',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg-gradient);overflow-x:hidden;transition:background .5s cubic-bezier(0.4, 0, 0.2, 1), color .5s cubic-bezier(0.4, 0, 0.2, 1)}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:
+    linear-gradient(var(--grid-color) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+    background-size:42px 42px;mask-image:linear-gradient(180deg,#000 0,transparent 70%);z-index:0;transition:opacity .5s}
+  button,input,a{font-family:inherit}
+  a{text-decoration:none}
+  
+  .topline{position:fixed;top:24px;left:24px;display:flex;align-items:center;height:40px;z-index:100;animation:slideDown .3s ease-out both}
+  .logo{font-weight:800;letter-spacing:-.04em;font-size:1.05rem;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;height:40px;transition:color .5s}.logo span{color:var(--brand);transition:color .5s}
+  
+  .controls{position:fixed;top:24px;right:24px;z-index:100;display:flex;align-items:center;gap:12px;animation:slideDown .3s ease-out both}
+  .theme-toggle, .lang-toggle{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .5s,border-color .5s,transform .3s;backdrop-filter:blur(14px);font-size:.7rem;font-weight:800}
+  .theme-toggle:hover, .lang-toggle:hover{transform:scale(1.05);border-color:var(--brand)}
+  .theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
+  [data-theme="dark"] .theme-toggle svg{transform:rotate(360deg)}
+  .sun{display:block}[data-theme="dark"] .sun{display:none}
+  .moon{display:none}[data-theme="dark"] .moon{display:block}
+  
+  .nav-btn{height:40px;padding:0 18px;border-radius:12px;font-size:.8rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s,background .2s,box-shadow .2s;cursor:pointer}
+  .nav-btn.primary{background:var(--brand);color:#fff;border:0;box-shadow:0 8px 18px rgba(79,109,245,.2)}
+  .nav-btn.primary:hover{transform:translateY(-1px);background:var(--brand-dark)}
+  .nav-btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(14px)}
+  .nav-btn.ghost:hover{border-color:var(--brand);transform:scale(1.02)}
 
-.step:hover {
-  background: #161616;
-  border-color: var(--border2);
-  z-index: 1;
-}
+  .shell{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;max-width:1040px;margin:0 auto;padding:140px 24px 40px}
+  
+  .hero{text-align:center;max-width:760px;margin-bottom:100px;animation:slideUp .4s ease-out .06s both}
+  .eyebrow{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 11px;color:var(--brand);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:24px;backdrop-filter:blur(10px)}
+  h1{font-size:clamp(2.5rem, 6vw, 4rem);line-height:1.05;letter-spacing:-.065em;margin-bottom:20px;color:var(--ink);transition:color .5s}
+  h1 em{font-style:normal;color:var(--brand)}
+  .lead{font-size:1.05rem;line-height:1.7;color:var(--muted);max-width:560px;margin:0 auto 40px;transition:color .5s}
+  
+  .hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{height:52px;padding:0 28px;border-radius:14px;font-size:.95rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s,background .2s,box-shadow .2s;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff;border:0;box-shadow:0 14px 32px rgba(79,109,245,.25)}
+  .btn.primary:hover{transform:translateY(-2px);background:var(--brand-dark)}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(14px)}
+  .btn.ghost:hover{border-color:var(--brand);transform:translateY(-2px);box-shadow:0 12px 24px rgba(0,0,0,.06)}
 
-.step-num {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: var(--accent-dim);
-  line-height: 1;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, var(--accent) 0%, transparent 80%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: brightness(1.4);
-}
+  .stats{display:flex;gap:32px;justify-content:center;margin-top:60px;flex-wrap:wrap}
+  .stat-item{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .stat-val{font-size:1.4rem;font-weight:800;color:var(--ink);letter-spacing:-.03em}
+  .stat-lbl{font-size:.8rem;color:var(--muted);font-weight:600}
+  
+  .section{width:100%;padding:60px 0;animation:fadeIn .6s ease-out both;animation-timeline:view();animation-range:entry 10% cover 30%}
+  .section-head{text-align:center;margin-bottom:50px}
+  h2{font-size:clamp(1.8rem, 4vw, 2.5rem);font-weight:800;letter-spacing:-.04em;color:var(--ink);margin-bottom:14px}
+  .section-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto}
 
-.step-icon {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  background: var(--accent-dim);
-  border: 1px solid var(--border2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-  font-size: 1.3rem;
-}
+  .grid{display:grid;gap:24px}
+  .grid-2{grid-template-columns:repeat(auto-fit, minmax(300px, 1fr))}
+  .grid-3{grid-template-columns:repeat(auto-fit, minmax(320px, 1fr))}
+  .grid-4{grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))}
+  
+  .card{background:var(--card);border:1px solid var(--line-strong);box-shadow:var(--shadow);border-radius:var(--radius);padding:32px;backdrop-filter:blur(24px);transition:background .5s,border-color .5s,box-shadow .5s,transform .3s}
+  .card:hover{transform:translateY(-4px);border-color:var(--brand)}
+  
+  .step-num{font-size:2.5rem;font-weight:800;color:var(--line-strong);line-height:1;margin-bottom:20px;transition:color .5s}
+  .card:hover .step-num{color:var(--brand)}
+  .card-icon{width:48px;height:48px;border-radius:14px;background:var(--input-bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:20px;transition:border-color .5s, background .5s}
+  .card-icon svg{width:24px;height:24px;color:var(--brand);transition:transform .3s}
+  .card:hover .card-icon{border-color:var(--brand);background:var(--card)}
+  .card:hover .card-icon svg{transform:scale(1.1)}
+  .card-title{font-size:1.15rem;font-weight:800;color:var(--ink);margin-bottom:10px;letter-spacing:-.03em}
+  .card-desc{font-size:.9rem;line-height:1.6;color:var(--muted)}
+  
+  .pricing-card{max-width:440px;margin:0 auto;text-align:center;padding:48px 32px}
+  .price{font-size:3.5rem;font-weight:800;color:var(--ink);letter-spacing:-.04em;line-height:1;margin-bottom:6px}
+  .price span{font-size:.9rem;color:var(--muted);font-weight:600;margin-left:8px;vertical-align:middle;letter-spacing:normal}
+  .price-sub{font-size:.9rem;color:var(--muted);margin-bottom:32px}
+  .features-list{list-style:none;display:grid;grid-template-columns:24px minmax(100px, 160px) 1fr;gap:16px 12px;margin-bottom:40px;text-align:left;align-items:start;font-size:.92rem;line-height:1.4}
+  .features-list li{display:contents}
+  .features-list li::before{content:"✓";color:var(--brand);font-weight:800;font-size:1rem;background:var(--input-bg);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;align-self:start;margin-top:1px}
+  .features-list li strong{color:var(--ink);font-weight:700;padding-top:2px;overflow-wrap:anywhere}
+  .features-list li span{color:var(--muted);padding-top:2px;overflow-wrap:anywhere}
+  @media(max-width:500px){
+    .features-list{grid-template-columns:24px auto}
+    .features-list li strong{grid-column:2/-1}
+    .features-list li span{grid-column:2/-1;margin-top:-12px}
+  }
+  .btn-full{width:100%}
 
-.step-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-}
+  footer{width:100%;border-top:1px solid var(--line);padding:40px 24px 20px;margin-top:60px;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center}
+  .footer-links{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+  .footer-links a{color:var(--muted);font-size:.85rem;font-weight:600;transition:color .2s}
+  .footer-links a:hover{color:var(--ink)}
+  .copyright{color:var(--soft);font-size:.8rem}
 
-.step-desc {
-  font-size: 0.88rem;
-  color: var(--text2);
-  line-height: 1.65;
-}
-
-/* ─── FEATURES ─── */
-.features-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 56px;
-}
-
-@media (min-width: 480px) {
-  .features-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (min-width: 900px) {
-  .features-grid { grid-template-columns: repeat(4, 1fr); }
-}
-
-.feature-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px 24px;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 0.3s,
-              box-shadow 0.3s;
-}
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.feature-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(124, 92, 255, 0.2);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 32px rgba(124,92,255,0.08);
-}
-.feature-card:hover::before { opacity: 1; }
-
-.feature-icon {
-  width: 48px; height: 48px;
-  border-radius: 14px;
-  background: var(--accent-dim);
-  border: 1px solid var(--border2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  margin-bottom: 20px;
-}
-
-.feature-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-}
-
-.feature-desc {
-  font-size: 0.84rem;
-  color: var(--text2);
-  line-height: 1.6;
-}
-
-/* ─── PRICING ─── */
-.pricing-section {
-  padding-top: 80px;
-  padding-bottom: 80px;
-}
-.pricing-section > .section-label,
-.pricing-section > .section-title,
-.pricing-section > .section-sub {
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-}
-.pricing-section > .section-label { display: block; }
-
-.pricing-wrapper {
-  margin-top: 56px;
-  display: flex;
-  justify-content: center;
-}
-
-.pricing-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-lg);
-  padding: 48px 40px;
-  width: 100%;
-  max-width: 480px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0 80px rgba(124, 92, 255, 0.12),
-              0 32px 64px rgba(0,0,0,0.5);
-}
-
-/* Decorative corner */
-.pricing-card::before {
-  content: '';
-  position: absolute;
-  top: -60px; right: -60px;
-  width: 200px; height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,92,255,0.15), transparent 70%);
-  pointer-events: none;
-}
-.pricing-card::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-}
-
-.pricing-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(124,92,255,0.15);
-  border: 1px solid var(--border2);
-  border-radius: 100px;
-  padding: 5px 14px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 28px;
-}
-
-.pricing-price {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: clamp(3rem, 8vw, 4.5rem);
-  line-height: 1;
-  color: var(--text);
-  letter-spacing: -0.03em;
-  margin-bottom: 4px;
-}
-.pricing-price span {
-  font-size: 0.45em;
-  color: var(--text2);
-  font-weight: 400;
-  font-style: italic;
-  margin-left: 4px;
-}
-
-.pricing-time {
-  font-size: 0.85rem;
-  color: var(--text2);
-  margin-bottom: 36px;
-}
-
-.pricing-divider {
-  height: 1px;
-  background: var(--border);
-  margin-bottom: 32px;
-}
-
-.pricing-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 40px;
-}
-.pricing-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 0.92rem;
-  color: var(--text2);
-  line-height: 1.5;
-}
-.pricing-list li::before {
-  content: '';
-  flex-shrink: 0;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  background: var(--accent-dim);
-  border: 1px solid var(--border2);
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3.5L3.8 6.5L9 1' stroke='%237c5cff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  margin-top: 2px;
-}
-.pricing-list li strong { color: var(--text); font-weight: 500; }
-
-.btn-pricing {
-  width: 100%;
-  justify-content: center;
-  padding: 16px;
-  font-size: 1rem;
-  border-radius: var(--radius);
-}
-
-/* ─── FOOTER ─── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 40px 24px;
-  text-align: center;
-}
-.footer-logo {
-  font-family: var(--sans);
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  margin-bottom: 10px;
-}
-.footer-logo .dot { color: var(--accent); }
-
-.footer-sub {
-  font-size: 0.82rem;
-  color: var(--text3);
-  margin-bottom: 24px;
-}
-
-.footer-links {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.footer-links a {
-  font-size: 0.82rem;
-  color: var(--text3);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-.footer-links a:hover { color: var(--text2); }
-
-.footer-copy {
-  margin-top: 24px;
-  font-size: 0.75rem;
-  color: var(--text3);
-}
-
-/* ─── SECTION DIVIDER ─── */
-.section-sep {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-.section-sep hr {
-  border: none;
-  border-top: 1px solid var(--border);
-}
-
-/* ─── SCROLL ANIMATION STATES ─── */
-@keyframes revealUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── RESPONSIVE TWEAKS ─── */
-@media (max-width: 480px) {
-  .hero-badge { flex-direction: column; gap: 12px; }
-  .hero-badge-divider { width: 40px; height: 1px; }
-  nav { padding: 14px 18px; }
-  section { padding: 72px 18px; }
-  .pricing-card { padding: 36px 24px; }
-}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  
+  @media(prefers-reduced-motion:reduce){
+    .topline,.controls,.hero,.section{animation:none;opacity:1}
+  }
+  @media(max-width:768px){
+    body{background:#f7f8fc}
+    .shell{padding:100px 20px 60px}
+    .topline{top:18px;left:18px}
+    .controls{top:18px;right:18px}
+    .nav-btn.ghost{display:none}
+    h1{font-size:2.2rem}
+    .hero{margin-bottom:60px}
+    .stats{gap:20px;flex-direction:column}
+    .pricing-card{padding:32px 24px}
+  }
+  /* Unified smooth transitions for simultaneous theme change */
+  html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+    transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
 </style>
 </head>
-
 <body>
 
-<!-- ─── NAV ─── -->
-<nav>
-  <a href="/" class="nav-logo">lendings<span class="dot">.</span>kz</a>
-  <div class="nav-actions">
-    <a href="/auth" class="btn btn-ghost">Войти</a>
-    <a href="/create" class="btn btn-primary">Создать сайт →</a>
-  </div>
-</nav>
+<script>
+  (function(){
+    const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+    const l = localStorage.getItem('lang') || 'ru';
+    document.documentElement.setAttribute('lang', l);
+  })();
+</script>
 
+<div class="topline">
+  <a href="/" class="logo">lendings<span>.kz</span></a>
+</div>
 
-<!-- ─── HERO ─── -->
-<section class="hero">
-  <div class="hero-glow"></div>
+<div class="controls">
+  <button class="lang-toggle" id="langToggle" onclick="toggleLang()" aria-label="Сменить язык">RU</button>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Сменить тему">
+    <svg viewBox="0 0 24 24" class="sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg viewBox="0 0 24 24" class="moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  {% if user %}
+    <a href="/dashboard" class="nav-btn ghost" data-i18n="dashboard">Кабинет</a>
+  {% else %}
+    <a href="/auth" class="nav-btn ghost" data-i18n="login">Войти</a>
+  {% endif %}
+</div>
 
-  <div class="hero-eyebrow">Powered by AI</div>
-
-  <h1 class="hero-title">
-    Сайт-визитка<br>
-    за <em>5 минут</em>
-  </h1>
-
-  <p class="hero-sub">
-    Просто ответьте на несколько вопросов в чате — искусственный интеллект соберёт ваш сайт и сразу выдаст ссылку.
-  </p>
-
-  <div class="hero-actions">
-    <a href="/create" class="btn btn-primary btn-hero">Создать сайт →</a>
-    <a href="/auth" class="btn btn-ghost btn-hero">Войти</a>
-  </div>
-
-  <div class="hero-badge">
-    <div class="hero-stat">
-      <strong>5 000 ₸</strong>
-      фиксированная цена
+<main class="shell">
+  
+  <section class="hero">
+    <div class="eyebrow" data-i18n="poweredBy">Powered by AI</div>
+    <h1 data-i18n="heroTitle">Сайт для вашего бизнеса <em>за минуты</em></h1>
+    <p class="lead" data-i18n="heroSub">Просто ответьте на несколько вопросов в чате — искусственный интеллект соберёт ваш сайт и сразу выдаст ссылку.</p>
+    
+    <div class="hero-actions">
+      <a href="{{ '/dashboard' if user else '/auth' }}" class="btn primary" data-i18n="createPageBtn">Создать страницу →</a>
     </div>
-    <div class="hero-badge-divider"></div>
-    <div class="hero-stat">
-      <strong>10 мин</strong>
-      от старта до сайта
+    
+    <div class="stats">
+      <div class="stat-item"><div class="stat-val">5 000 ₸</div><div class="stat-lbl" data-i18n="stat1">стартовый пакет</div></div>
+      <div class="stat-item"><div class="stat-val">10 мин</div><div class="stat-lbl" data-i18n="stat2">от старта до страницы</div></div>
+      <div class="stat-item"><div class="stat-val" data-i18n="ai">ИИ</div><div class="stat-lbl" data-i18n="stat3">улучшения и запуск</div></div>
     </div>
-    <div class="hero-badge-divider"></div>
-    <div class="hero-stat">
-      <strong>ИИ</strong>
-      генерация дизайна
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow" data-i18n="howItWorks">Как это работает</div>
+      <h2 data-i18n="howTitle">Шесть шагов до первых клиентов</h2>
+      <p class="section-sub" data-i18n="howSub">Мы автоматизировали всё: от дизайна до настройки рекламы в Instagram и Google.</p>
     </div>
-  </div>
-</section>
-
-
-<div class="section-sep"><hr></div>
-
-
-<!-- ─── HOW IT WORKS ─── -->
-<section class="how-section">
-  <span class="section-label reveal">Как это работает</span>
-  <h2 class="section-title reveal reveal-delay-1">Три шага до готового сайта</h2>
-  <p class="section-sub reveal reveal-delay-2">Никакого конструктора, никакого кода — только чат с AI.</p>
-
-  <div class="steps">
-    <div class="step reveal reveal-delay-1">
-      <div class="step-num">01</div>
-      <div class="step-icon">💬</div>
-      <h3 class="step-title">Отвечаешь на вопросы</h3>
-      <p class="step-desc">AI спрашивает о вашем бизнесе, стиле, контактах и фотографиях. Всё через удобный чат.</p>
-    </div>
-    <div class="step reveal reveal-delay-2">
-      <div class="step-num">02</div>
-      <div class="step-icon">⚡</div>
-      <h3 class="step-title">AI генерирует сайт</h3>
-      <p class="step-desc">Нейросеть собирает уникальный дизайн под ваш бизнес — менее чем за минуту.</p>
-    </div>
-    <div class="step reveal reveal-delay-3">
-      <div class="step-num">03</div>
-      <div class="step-icon">🔗</div>
-      <h3 class="step-title">Получаешь ссылку</h3>
-      <p class="step-desc">Готовый сайт доступен по вашему адресу прямо сейчас. Поделитесь с клиентами.</p>
-    </div>
-  </div>
-</section>
-
-
-<div class="section-sep"><hr></div>
-
-
-<!-- ─── FEATURES ─── -->
-<section>
-  <span class="section-label reveal">Возможности</span>
-  <h2 class="section-title reveal reveal-delay-1">Всё что нужно малому бизнесу</h2>
-  <p class="section-sub reveal reveal-delay-2">Без лишнего — только то, что реально приводит клиентов.</p>
-
-  <div class="features-grid">
-    <div class="feature-card reveal reveal-delay-1">
-      <div class="feature-icon">🎨</div>
-      <h3 class="feature-title">Любой стиль</h3>
-      <p class="feature-desc">Строгий и деловой, яркий и модный — AI подберёт оформление под вашу нишу.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-2">
-      <div class="feature-icon">📸</div>
-      <h3 class="feature-title">Фото работ</h3>
-      <p class="feature-desc">Загружайте фотографии своих работ или товаров — они сразу появятся на сайте.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-3">
-      <div class="feature-icon">💚</div>
-      <h3 class="feature-title">WhatsApp кнопка</h3>
-      <p class="feature-desc">Кнопка «Написать в WhatsApp» автоматически добавляется на каждый сайт.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-4">
-      <div class="feature-icon">🚀</div>
-      <h3 class="feature-title">Готово за минуты</h3>
-      <p class="feature-desc">Никаких ожиданий и переговоров. Оплатили — получили сайт.</p>
-    </div>
-  </div>
-</section>
-
-
-<div class="section-sep"><hr></div>
-
-
-<!-- ─── PRICING ─── -->
-<section class="pricing-section">
-  <span class="section-label reveal">Цена</span>
-  <h2 class="section-title reveal reveal-delay-1">Одна цена. Всё включено.</h2>
-  <p class="section-sub reveal reveal-delay-2">Никаких скрытых платежей и ежемесячных подписок за создание.</p>
-
-  <div class="pricing-wrapper">
-    <div class="pricing-card reveal reveal-delay-2">
-      <div class="pricing-tag">✦ Полный пакет</div>
-
-      <div class="pricing-price">
-        5 000 ₸<span>разово</span>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="step-num">01</div>
+        <div class="card-title" data-i18n="step1Title">Отвечаете на вопросы</div>
+        <div class="card-desc" data-i18n="step1Desc">AI спрашивает о вашем бизнесе, услугах и стиле. Всё через удобный chat.</div>
       </div>
-      <p class="pricing-time">Сайт готов за 10 минут</p>
-
-      <div class="pricing-divider"></div>
-
-      <ul class="pricing-list">
-        <li><strong>Уникальный дизайн</strong> — создан AI специально под вас</li>
-        <li><strong>Мобильная версия</strong> — отлично смотрится на любом устройстве</li>
-        <li><strong>Фотогалерея</strong> — покажите свои работы</li>
-        <li><strong>WhatsApp кнопка</strong> — клиенты сразу пишут вам</li>
-        <li><strong>Имя и контакты</strong> — адрес, телефон, соцсети</li>
-        <li><strong>Публичная ссылка</strong> — делитесь в Instagram, Telegram</li>
-        <li><strong>Без кода и дизайнеров</strong> — справится каждый</li>
-      </ul>
-
-      <a href="/create" class="btn btn-primary btn-pricing">Создать мой сайт →</a>
+      <div class="card">
+        <div class="step-num">02</div>
+        <div class="card-title" data-i18n="step2Title">AI собирает сайт</div>
+        <div class="card-desc" data-i18n="step2Desc">Нейросеть готовит полноценную страницу под вашу нишу меньше чем за минуту.</div>
+      </div>
+      <div class="card">
+        <div class="step-num">03</div>
+        <div class="card-title" data-i18n="step3Title">Улучшаете детали</div>
+        <div class="card-desc" data-i18n="step3Desc">Просите AI поправить текст, цены или добавить фото. Первая правка — бесплатно.</div>
+      </div>
+      <div class="card">
+        <div class="step-num">04</div>
+        <div class="card-title" data-i18n="step4Title">Настраиваете продвижение</div>
+        <div class="card-desc" data-i18n="step4Desc">AI подбирает каналы (Instagram, Google, 2GIS) и готовит стратегию под ключ.</div>
+      </div>
+      <div class="card">
+        <div class="step-num">05</div>
+        <div class="card-title" data-i18n="step5Title">Запускаете рекламу</div>
+        <div class="card-desc" data-i18n="step5Desc">Выбираете бюджет и срок — AI сам распределяет средства для лучшего результата.</div>
+      </div>
+      <div class="card">
+        <div class="step-num">06</div>
+        <div class="card-title" data-i18n="step6Title">Получаете клиентов</div>
+        <div class="card-desc" data-i18n="step6Desc">Следите за кликами в WhatsApp и Instagram прямо в личном кабинете.</div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow" data-i18n="features">Возможности</div>
+      <h2 data-i18n="featTitle">Технологии для вашего роста</h2>
+      <p class="section-sub" data-i18n="featSub">Мы объединили возможности ИИ и мощные инструменты маркетинга в одном простом интерфейсе.</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="card">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        </div>
+        <div class="card-title" data-i18n="f1Title">Интеллектуальный дизайн</div>
+        <div class="card-desc" data-i18n="f1Desc">AI создаёт уникальный стиль под вашу нишу, а не просто подставляет текст в шаблон.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="card-title" data-i18n="f2Title">Реклама одной кнопкой</div>
+        <div class="card-desc" data-i18n="f2Desc">Запускайте продвижение в Instagram и Google без открытия сложных рекламных кабинетов.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        </div>
+        <div class="card-title" data-i18n="f3Title">Прозрачная аналитика</div>
+        <div class="card-desc" data-i18n="f3Desc">Видьте каждое нажатие на WhatsApp или Instagram — знайте точно, сколько клиентов пришло.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        </div>
+        <div class="card-title" data-i18n="f4Title">Контроль версий</div>
+        <div class="card-desc" data-i18n="f4Desc">Мы храним историю изменений. Вы можете вернуться к любой из 10 последних версий сайта в один клик.</div>
+      </div>
+    </div>
+  </section>
 
-<!-- ─── FOOTER ─── -->
-<footer>
-  <div class="footer-logo">lendings<span class="dot">.</span>kz</div>
-  <p class="footer-sub">AI-конструктор сайтов-визиток для малого бизнеса Казахстана</p>
-  <div class="footer-links">
-    <a href="/create">Создать сайт</a>
-    <a href="/auth">Войти</a>
-    <a href="mailto:hello@lendings.kz">Связаться</a>
-  </div>
-  <p class="footer-copy">© 2025 lendings.kz — Все права защищены</p>
-</footer>
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow" data-i18n="pricing">Цена</div>
+      <h2 data-i18n="priceTitle">Стартовая страница и поддержка</h2>
+    </div>
+    <div class="card pricing-card">
+      <div class="eyebrow" data-i18n="fullPackage">✦ ПОЛНЫЙ ПАКЕТ</div>
+      <div class="price">5 000 ₸<span data-i18n="once">разово</span></div>
+      <div class="price-sub" data-i18n="priceSub">Страница готова за 10 минут</div>
+      <ul class="features-list">
+        <li><strong data-i18n="p1s">Уникальный дизайн</strong> <span data-i18n="p1d">— создан AI специально под вас</span></li>
+        <li><strong data-i18n="p2s">Мобильная версия</strong> <span data-i18n="p2d">— отлично смотрится на любом устройстве</span></li>
+        <li><strong data-i18n="p3s">Фотогалерея</strong> <span data-i18n="p3d">— покажите свои работы</span></li>
+        <li><strong data-i18n="p4s">WhatsApp кнопка</strong> <span data-i18n="p4d">— клиенты сразу пишут вам</span></li>
+        <li><strong data-i18n="p5s">Имя и контакты</strong> <span data-i18n="p5d">— адрес, телефон, соцсети</span></li>
+        <li><strong data-i18n="p6s">Публичная ссылка</strong> <span data-i18n="p6d">— делитесь в Instagram, Telegram</span></li>
+        <li><strong data-i18n="p7s">Без кода и дизайнеров</strong> <span data-i18n="p7d">— справится каждый</span></li>
+      </ul>
+      <a href="{{ '/dashboard' if user else '/auth' }}" class="btn primary btn-full" data-i18n="createPageBtn">Создать страницу →</a>
+    </div>
+  </section>
 
+  <footer>
+    <div class="footer-links">
+      <a href="{{ '/dashboard' if user else '/auth' }}" data-i18n="createPage">Создать страницу</a>
+      {% if not user %}
+      <a href="/auth" data-i18n="login">Войти</a>
+      {% else %}
+      <a href="/dashboard" data-i18n="dashboard">Кабинет</a>
+      {% endif %}
+      <a href="mailto:hello@lendings.kz" data-i18n="contact">Связаться</a>
+    </div>
+    <div class="copyright" data-i18n="rights">© 2026 lendings.kz — Все права защищены</div>
+  </footer>
+
+</main>
 
 <script>
-// Minimal vanilla JS for scroll-triggered reveal
-(function () {
-  var els = document.querySelectorAll('.reveal');
-  if (!els.length) return;
+const I18N = {
+  ru: {
+    login: "Войти", dashboard: "Кабинет", createPage: "Создать", createPageBtn: "Создать страницу →", loginBtn: "Войти",
+    heroTitle: "Сайт для вашего бизнеса <em>за минуты</em>",
+    heroSub: "Просто ответьте на несколько вопросов в чате — искусственный интеллект соберёт ваш сайт и сразу выдаст ссылку.",
+    stat1: "стартовый пакет", stat2: "от старта до страницы", stat3: "улучшения и запуск",
+    howItWorks: "Как это работает", howTitle: "Шесть шагов до первых клиентов", howSub: "Мы автоматизировали всё: от дизайна до настройки рекламы в Instagram и Google.",
+    step1Title: "Отвечаете на вопросы", step1Desc: "AI спрашивает о вашем бизнесе, услугах и стиле. Всё через удобный чат.",
+    step2Title: "AI собирает сайт", step2Desc: "Нейросеть готовит полноценную страницу под вашу нишу меньше чем за минуту.",
+    step3Title: "Улучшаете детали", step3Desc: "Просите AI поправить текст, цены или добавить фото. Первая правка — бесплатно.",
+    step4Title: "Настраиваете продвижение", step4Desc: "AI подбирает каналы (Instagram, Google, 2GIS) и готовит стратегию под ключ.",
+    step5Title: "Запускаете рекламу", step5Desc: "Выбираете бюджет и срок — AI сам распределяет средства для лучшего результата.",
+    step6Title: "Получаете клиентов", step6Desc: "Следите за кликами в WhatsApp и Instagram прямо в личном кабинете.",
+    features: "Возможности", featTitle: "Технологии для вашего роста", featSub: "Мы объединили возможности ИИ и мощные инструменты маркетинга в одном простом интерфейсе.",
+    f1Title: "Интеллектуальный дизайн", f1Desc: "AI создаёт уникальный стиль под вашу нишу, а не просто подставляет текст в шаблон.",
+    f2Title: "Реклама одной кнопкой", f2Desc: "Запускайте продвижение в Instagram и Google без открытия сложных рекламных кабинетов.",
+    f3Title: "Прозрачная аналитика", f3Desc: "Видьте каждое нажатие на WhatsApp или Instagram — знайте точно, сколько клиентов пришло.",
+    f4Title: "Контроль версий", f4Desc: "Мы храним историю изменений. Вы можете вернуться к любой из 10 последних версий сайта в один клик.",
+    pricing: "Цена", priceTitle: "Стартовый пакет (Слот)", once: "разово", priceSub: "Полный доступ к платформе на 1 проект",
+    poweredBy: "Поддерживается ИИ", ai: "ИИ", fullPackage: "✦ ПОЛНЫЙ ПАКЕТ", contact: "Связаться", rights: "© 2026 lendings.kz — Все права защищены",
+    p1s: "Уникальный дизайн", p1d: "— создан AI специально под вас",
+    p2s: "Мобильная версия", p2d: "— отлично смотрится на любом устройстве",
+    p3s: "Фотогалерея", p3d: "— покажите свои работы",
+    p4s: "WhatsApp кнопка", p4d: "— клиенты сразу пишут вам",
+    p5s: "Имя и контакты", p5d: "— адрес, телефон, соцсети",
+    p6s: "Публичная ссылка", p6d: "— делитесь в Instagram, Telegram",
+    p7s: "Без кода и дизайнеров", p7d: "— справится каждый"
+  },
+  kz: {
+    login: "Кіру", dashboard: "Кабинет", createPage: "Жасау", createPageBtn: "Бетті жасау →", loginBtn: "Кіру",
+    heroTitle: "Бизнес-бетті <em>минуттар ішінде</em> жасаңыз",
+    heroSub: "Чаттағы сұрақтарға жауап беріңіз, бизнес үшін бет алыңыз, оны жақсартыңыз және жарнама кабинеттерінсіз алға жылжытыңыз.",
+    stat1: "бастапқы пакет", stat2: "бастаудан бетке дейін", stat3: "жақсартулар мен іске қосу",
+    howItWorks: "Бұл қалай жұмыс істейді", howTitle: "Алғашқы клиенттерге дейін алты қадам", howSub: "Біз бәрін автоматтандырдық: дизайндан бастап Instagram мен Google-дағы жарнамаға дейін.",
+    step1Title: "Сұрақтарға жауап бересіз", step1Desc: "AI сіздің бизнесіңіз, қызметтеріңіз бен стиліңіз туралы сұрайды. Барлығы ыңғайлы чат арқылы.",
+    step2Title: "AI сайтты жинайды", step2Desc: "Нейрожелі сіздің салаңызға арналған толыққанды бетті бір минуттан аз уақыт ішінде дайындайды.",
+    step3Title: "Мәліметтерді жақсартасыз", step3Desc: "AI-ден мәтінді, бағаны түзетуді немесе фото қосуды сұраңыз. Алғашқы түзету — тегін.",
+    step4Title: "Жарнаманы баптайсыз", step4Desc: "AI арналарды (Instagram, Google, 2GIS) таңдап, дайын стратегияны дайындайды.",
+    step5Title: "Жарнаманы қосасыз", step5Desc: "Бюджет пен мерзімді таңдайсыз — AI жақсы нәтиже үшін қаражатты өзі бөледі.",
+    step6Title: "Клиенттер аласыз", step6Desc: "WhatsApp пен Instagram-дағы кликтерді тікелей жеке кабинетте бақылаңыз.",
+    features: "Мүмкіндіктер", featTitle: "Сіздің дамуыңызға арналған технологиялар", featSub: "Біз ИИ мүмкіндіктері мен қуатты маркетинг құралдарын бір қарапайым интерфейсте біріктірдік.",
+    f1Title: "Интеллектуалды дизайн", f1Desc: "AI жай ғана мәтінді шаблонға қоймай, сіздің салаңызға сай бірегей стиль жасайды.",
+    f2Title: "Бір батырмамен жарнама", f2Desc: "Күрделі жарнама кабинеттерін ашпай-ақ Instagram және Google-да жылжытуды бастаңыз.",
+    f3Title: "Ашық аналитика", f3Desc: "WhatsApp немесе Instagram-ға әрбір басуды көріңіз — қанша клиент келгенін дәл біліңіз.",
+    f4Title: "Нұсқаларды бақылау", f4Desc: "Біз өзгерістер тарихын сақтаймыз. Сайттың соңғы 10 нұсқасының кез келгеніне бір басу арқылы орала аласыз.",
+    pricing: "Бағасы", priceTitle: "Бастапқы пакет (Слот)", once: "бір рет", priceSub: "Платформаға 1 жобаға толық қол жеткізу",
+    poweredBy: "ЖИ қолдауымен", ai: "ЖИ", fullPackage: "✦ ТОЛЫҚ ПАКЕТ", contact: "Байланысу", rights: "© 2026 lendings.kz — Барлық құқықтар қорғалған",
+    p1s: "Бірегей дизайн", p1d: "— AI арнайы сіз үшін жасаған",
+    p2s: "Мобильді нұсқа", p2d: "— кез келген құрылғыда тамаша көрінеді",
+    p3s: "Фотогалерея", p3d: "— жұмыстарыңызды көрсетіңіз",
+    p4s: "WhatsApp батырмасы", p4d: "— клиенттер сізге бірден жазады",
+    p5s: "Аты және байланыстар", p5d: "— мекенжай, телефон, әлеуметтік желілер",
+    p6s: "Ашық сілтеме", p6d: "— Instagram, Telegram-да бөлісіңіз",
+    p7s: "Кодсыз және дизайнерлерсіз", p7d: "— әркімнің қолынан келеді"
+  },
+  en: {
+    login: "Login", dashboard: "Dashboard", createPage: "Create", createPageBtn: "Create page →", loginBtn: "Login",
+    heroTitle: "Website for your business <em>in minutes</em>",
+    heroSub: "Answer questions in chat, get a business page, improve it, and launch promotion without ad accounts.",
+    stat1: "starter package", stat2: "from start to page", stat3: "improvements and launch",
+    howItWorks: "How it works", howTitle: "Six steps to your first clients", howSub: "We've automated everything: from design to ad setup on Instagram and Google.",
+    step1Title: "Answer questions", step1Desc: "AI asks about your business, services, and style. All via a convenient chat.",
+    step2Title: "AI builds the site", step2Desc: "The neural network prepares a full page for your niche in under a minute.",
+    step3Title: "Improve details", step3Desc: "Ask AI to adjust text, prices, or add photos. The first edit is free.",
+    step4Title: "Setup promotion", step4Desc: "AI selects channels (Instagram, Google, 2GIS) and prepares a turnkey strategy.",
+    step5Title: "Launch ads", step5Desc: "Choose your budget and duration — AI automatically allocates funds for the best results.",
+    step6Title: "Get clients", step6Desc: "Track clicks to WhatsApp and Instagram directly in your dashboard.",
+    features: "Features", featTitle: "Technologies for your growth", featSub: "We've combined AI capabilities and powerful marketing tools in one simple interface.",
+    f1Title: "Intelligent Design", f1Desc: "AI creates a unique style for your niche, rather than just plugging text into a template.",
+    f2Title: "One-click Ads", f2Desc: "Launch promotion on Instagram and Google without opening complex ad dashboards.",
+    f3Title: "Transparent Analytics", f3Desc: "See every click to WhatsApp or Instagram — know exactly how many clients arrived.",
+    f4Title: "Version Control", f4Desc: "We store change history. You can roll back to any of the last 10 site versions in one click.",
+    pricing: "Pricing", priceTitle: "Starter package (Slot)", once: "one-time", priceSub: "Full platform access for 1 project",
+    poweredBy: "POWERED BY AI", ai: "AI", fullPackage: "✦ FULL PACKAGE", contact: "Contact", rights: "© 2026 lendings.kz — All rights reserved",
+    p1s: "Unique design", p1d: "— created by AI especially for you",
+    p2s: "Mobile version", p2d: "— looks great on any device",
+    p3s: "Photo gallery", p3d: "— show your works",
+    p4s: "WhatsApp button", p4d: "— clients text you instantly",
+    p5s: "Name and contacts", p5d: "— address, phone, social networks",
+    p6s: "Public link", p6d: "— share on Instagram, Telegram",
+    p7s: "No code or designers", p7d: "— anyone can handle it"
+  }
+};
 
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        io.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
 
-  els.forEach(function (el) { io.observe(el); });
-})();
+function toggleLang(){
+  const cur = document.documentElement.getAttribute('lang') || 'ru';
+  const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
+  setLang(next);
+}
+
+function setLang(lang){
+  document.documentElement.setAttribute('lang', lang);
+  localStorage.setItem('lang', lang);
+  document.getElementById('langToggle').textContent = lang.toUpperCase();
+  const dict = I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]){
+      el.innerHTML = dict[key];
+    }
+  });
+}
+
+const initialLang = localStorage.getItem('lang') || 'ru';
+setLang(initialLang);
 </script>
 
 </body>

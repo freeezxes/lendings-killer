@@ -2,280 +2,648 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Профиль — lendings.kz</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-  :root {
-    --bg:#0a0a0f; --surface:#111118; --surface2:#16161f; --border:#1e1e2e;
-    --accent:#7c5cff; --accent-glow:#7c5cff33; --text:#f0eeff; --muted:#6b6b8a;
-    --green:#34d896; --red:#ff4f6a; --radius:16px;
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+  :root{
+    --bg:#f5f7fb;--panel:#ffffff;--panel-soft:#f9fbff;--line:#e3e8f2;--line-strong:#d5deed;
+    --text:#172033;--muted:#66758c;--soft:#8c98ab;--brand:#4f6df5;--green:#21b889;
+    --warn:#e7a63a;--red:#e25566;--violet:#7b61ff;--shadow:0 24px 60px rgba(34,48,84,.10);
+    --radius:14px;--sidebar:252px;--header:70px;
+    --bg-gradient:linear-gradient(180deg,#fff 0,#f5f7fb 52%,#eef3fb 100%);
   }
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-  body::before {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background:radial-gradient(ellipse 60% 30% at 15% 10%, #7c5cff14 0%, transparent 60%);
+  [data-theme="dark"] {
+    --bg: #06060a;
+    --panel: rgba(15, 15, 22, 0.85);
+    --panel-soft: #0f0f16;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.12);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --soft: #64748b;
+    --brand: #8b5cf6;
+    --brand-2: #10b981;
+    --warn: #f59e0b;
+    --red: #ef4444;
+    --violet: #8b5cf6;
+    --shadow: 0 32px 100px rgba(0, 0, 0, 0.8);
+    --bg-gradient: radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
   }
+  .sidebar-balances {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .sidebar-balances .balance-pill {
+    flex: 1;
+    justify-content: center;
+    height: 32px;
+    font-size: .7rem;
+    padding: 0 8px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--bg);scroll-behavior:smooth}
+  body{
+    min-height:100vh;font-family:'Sora',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg-gradient);color:var(--text);
+    transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  a{text-decoration:none;color:inherit}button,input{font-family:inherit}
+  .app{min-height:100vh;display:grid;grid-template-columns:var(--sidebar) 1fr}
+  .sidebar{
+    position:sticky;top:0;height:100vh;padding:24px 24px 18px 24px;border-right:1px solid var(--line);
+    background:var(--panel);backdrop-filter:blur(18px);z-index:40;
+    display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .sidebar-footer {
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    margin-top: auto;
+  }
+  .profile-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+  /* Unified smooth transitions for simultaneous theme change */
+  html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+    transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .profile-link:hover {
+    background: var(--panel-soft);
+  }
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--brand);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: .85rem;
+    font-weight: 800;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-info { min-width: 0; }
+  .profile-name {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lang-toggle, .theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    font-weight: 800;
+    transition: .2s;
+  }
+  .lang-toggle:hover, .theme-toggle:hover {
+    border-color: var(--brand);
+    color: var(--text);
+  }
+  .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+  .sun { display: block; }
+  [data-theme="dark"] .sun { display: none; }
+  .moon { display: none; }
+  [data-theme="dark"] .moon { display: block; }
 
-  .header {
-    position:sticky; top:0; z-index:100;
-    background:#0a0a0fee; backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--border);
-    padding:0 20px; height:58px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .logo { font-size:1.05rem; font-weight:700; letter-spacing:-.02em; }
-  .logo span { color:var(--accent); }
-  .back-btn {
-    color:var(--muted); text-decoration:none; font-size:.82rem;
-    display:flex; align-items:center; gap:5px; transition:color .2s;
-  }
-  .back-btn:hover { color:var(--text); }
+  .brand{height:44px;display:flex;align-items:center;padding:0 12px;font-size:1rem;font-weight:800;letter-spacing:-.04em}.brand span{color:var(--brand)}
+  .nav{margin-top:18px;display:grid;gap:6px}.nav a{height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;color:var(--muted);font-size:.84rem;font-weight:700;transition:.18s}
+  .nav a:hover{background:#eef3ff;color:var(--text)}.nav a.active{background:#eaf0ff;color:var(--brand);box-shadow:inset 0 0 0 1px #d9e3ff}
+  .nav-ico{width:22px;text-align:center;color:inherit}
 
-  .content { position:relative; z-index:1; max-width:560px; margin:0 auto; padding:28px 20px 60px; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .main{min-width:0}.topbar{position:sticky;top:0;height:var(--header);display:none;align-items:center;justify-content:space-between;gap:14px;padding:0 28px;border-bottom:1px solid var(--line);background:var(--panel);backdrop-filter:blur(18px);z-index:35}
+  .mobile-menu{display:none;border:1px solid var(--line);background:var(--panel);border-radius:12px;width:42px;height:42px;font-size:1.1rem;color:var(--text);cursor:pointer}
+  .crumb{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);font-weight:800;margin-bottom:4px}.top-title h1{font-size:1.12rem;letter-spacing:-.04em}
+  .top-actions{display:flex;align-items:center;gap:9px}.balance-pill{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:.78rem;color:var(--muted);font-weight:800}.balance-pill strong{color:var(--text)}
+  .avatar-mini{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--violet));color:#fff;display:grid;place-items:center;font-weight:800;overflow:hidden}.avatar-mini img{width:100%;height:100%;object-fit:cover}
+  .btn,.ghost,.soft{border:0;cursor:pointer;border-radius:12px;font-weight:800;transition:.18s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn{min-height:40px;padding:0 15px;background:var(--brand);color:#fff;box-shadow:0 12px 24px rgba(79,109,245,.18)}.btn:hover{transform:translateY(-1px);background:#3959e8}.btn.green{background:var(--green)}.btn.red{background:var(--red)}
+  .ghost,.soft{min-height:38px;padding:0 13px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:.8rem}.ghost:hover,.soft:hover{border-color:var(--line-strong);color:var(--text);transform:translateY(-1px)}
+  .content{max-width:1180px;margin:0 auto;padding:28px 28px 80px}
+  .notice{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff8eb;border:1px solid #f2d49b;color:#865c10;border-radius:14px;padding:12px 14px;margin-bottom:18px;font-size:.82rem;line-height:1.45}
+  .notice.ok{background:#eefbf6;border-color:#c9f0df;color:#176c51}.notice.err{background:#fff1f3;border-color:#ffd0d7;color:#a42d3e}
+  .profile-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(340px,.95fr);gap:16px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .hero{padding:24px;position:relative;overflow:hidden}.hero::after{content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(79,109,245,.16),transparent 68%);pointer-events:none}
+  .profile-row{position:relative;z-index:1;display:flex;gap:16px;align-items:flex-start}.avatar{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#eaf0ff,#e8fbf5);border:1px solid #dce5ff;color:var(--brand);display:grid;place-items:center;font-size:1.6rem;font-weight:800;overflow:hidden;flex:0 0 auto}.avatar img{width:100%;height:100%;object-fit:cover}
+  .profile-main{min-width:0}.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--brand);font-weight:800;margin-bottom:7px}.profile-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.identity{margin-top:6px;color:var(--muted);font-size:.84rem;word-break:break-word}
+  .edit-name-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.18s}.edit-name-btn:hover{color:var(--brand);border-color:#d9e3ff;background:#eef3ff}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat{background:var(--panel-soft);border:1px solid var(--line);border-radius:12px;padding:13px}.stat-num{font-size:1.28rem;font-weight:800;letter-spacing:-.04em}.stat-lbl{font-size:.72rem;color:var(--muted);line-height:1.35;margin-top:3px}
+  .edit-card{margin-top:16px;padding:16px;background:var(--panel-soft);border:1px solid var(--line);border-radius:14px;display:none}.edit-card.show{display:block}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.field{display:grid;gap:7px}.field label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);font-weight:800}.field input{height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--panel);color:var(--text);outline:none}.field input:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(79,109,245,.10)}.field input::placeholder{color:var(--soft)}
+  .section{padding:18px}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.section-title{font-size:1rem;font-weight:800;letter-spacing:-.03em}.muted{font-size:.82rem;color:var(--muted);line-height:1.55}.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.action-card{border:1px solid var(--line);background:var(--panel-soft);border-radius:14px;padding:15px;transition:.18s}.action-card:hover{transform:translateY(-2px);border-color:#d5def2;background:#fff}.action-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;margin-bottom:11px;font-weight:800}.action-icon.blue{background:#eaf0ff;color:var(--brand)}.action-icon.green{background:#e8fbf5;color:var(--green)}.action-icon.red{background:#fff1f3;color:var(--red)}.action-title{font-size:.88rem;font-weight:800;margin-bottom:4px}.action-sub{font-size:.75rem;color:var(--muted);line-height:1.45}
+  .ledger{display:grid;gap:8px}.log-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel-soft);border:1px solid var(--line);border-radius:12px;padding:11px 12px}.log-left{min-width:0}.log-reason{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.log-ts{font-size:.72rem;color:var(--soft);margin-top:3px}.log-delta{font-size:.86rem;font-weight:800;flex:0 0 auto}.log-delta.plus{color:var(--green)}.log-delta.minus{color:var(--red)}.empty-log{text-align:center;color:var(--muted);font-size:.82rem;line-height:1.55;background:var(--panel-soft);border:1px dashed var(--line-strong);border-radius:12px;padding:20px}
+  .danger{padding:18px;background:#fff7f8;border-color:#ffd0d7}.danger .section-title{color:var(--red)}.logout-form{margin-top:14px}
+  @media(max-width:1040px){.profile-grid{grid-template-columns:1fr}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:820px){.app{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;width:min(290px,86vw);transform:translateX(-104%);transition:.22s;box-shadow:20px 0 70px rgba(17,24,39,.18)}.sidebar.show{transform:translateX(0)}.mobile-menu{display:block}.topbar{display:flex;padding:0 14px}.balance-pill.hide-sm{display:none}.content{padding:18px 14px 80px}.profile-row{flex-direction:column}.stats,.form-grid,.actions{grid-template-columns:1fr}.side-card{position:static;margin-top:18px}.section-head{flex-direction:column}.btn,.ghost,.soft{width:auto}}
 
-  /* Avatar + name block */
-  .profile-hero {
-    background:linear-gradient(135deg,#1a1430,#12111c);
-    border:1px solid #7c5cff33; border-radius:calc(var(--radius)+4px);
-    padding:24px; margin-bottom:20px;
-    animation:fadeUp .4s both;
+  [data-theme="dark"] .danger {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.2);
   }
-  .avatar {
-    width:56px; height:56px; border-radius:18px;
-    background:var(--accent-glow); border:2px solid #7c5cff33;
-    display:flex; align-items:center; justify-content:center;
-    font-size:1.4rem; font-weight:700; color:var(--accent);
-    margin-bottom:14px; letter-spacing:-.02em;
+  [data-theme="dark"] .notice {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
   }
-  .profile-name-row { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
-  .profile-name { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
-  .edit-name-btn {
-    background:none; border:none; color:var(--muted); cursor:pointer; padding:4px;
-    transition:color .2s; display:flex; align-items:center;
+  [data-theme="dark"] .notice.ok {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
   }
-  .edit-name-btn:hover { color:var(--text); }
-  .profile-phone { font-size:.82rem; color:var(--muted); margin-bottom:18px; }
-
-  .stats-row { display:flex; gap:12px; }
-  .stat-pill {
-    flex:1; background:var(--surface2); border:1px solid var(--border);
-    border-radius:12px; padding:12px 14px; text-align:center;
+  [data-theme="dark"] .notice.err {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
   }
-  .stat-value { font-size:1.15rem; font-weight:700; letter-spacing:-.02em; margin-bottom:2px; }
-  .stat-value.accent { color:var(--accent); }
-  .stat-label { font-size:.72rem; color:var(--muted); }
-
-  /* Edit name inline */
-  .name-edit-form { display:none; margin-top:12px; }
-  .name-edit-form.show { display:flex; flex-direction:column; gap:8px; }
-  .name-edit-row { display:flex; gap:8px; }
-  .name-input {
-    flex:1; background:var(--surface2); border:1px solid var(--border);
-    color:var(--text); border-radius:10px; padding:10px 14px;
-    font-family:inherit; font-size:.9rem; outline:none; transition:border-color .2s;
+  [data-theme="dark"] .action-card:hover {
+    border-color: var(--brand);
+    background: var(--panel);
   }
-  .name-input:focus { border-color:var(--accent); }
-  .name-save-btn {
-    background:var(--accent); color:#fff; border:none; border-radius:10px;
-    padding:10px 16px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
-    white-space:nowrap; transition:opacity .15s;
+  [data-theme="dark"] .action-icon.blue {
+    background: rgba(139, 92, 246, 0.15);
   }
-  .name-save-btn:hover { opacity:.9; }
-  .profile-notice {
-    margin-top:10px; border-radius:10px; padding:10px 12px;
-    border:1px solid #7c5cff33; background:#7c5cff12;
-    color:var(--muted); font-size:.76rem; line-height:1.5;
+  [data-theme="dark"] .action-icon.green {
+    background: rgba(16, 185, 129, 0.15);
   }
-  .profile-notice.ok { border-color:#34d89633; background:#34d89612; color:var(--green); }
-  .profile-notice.err { border-color:#ff4f6a33; background:#ff4f6a12; color:var(--red); }
-
-  /* Section */
-  .section { margin-bottom:20px; animation:fadeUp .4s .1s both; }
-  .section-title {
-    font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em;
-    color:var(--muted); margin-bottom:12px;
+  [data-theme="dark"] .action-icon.red {
+    background: rgba(239, 68, 68, 0.15);
   }
-
-  /* Token log */
-  .log-list { display:flex; flex-direction:column; gap:1px; }
-  .log-item {
-    background:var(--surface); border:1px solid var(--border);
-    padding:12px 16px; display:flex; align-items:center; gap:12px;
+  [data-theme="dark"] .nav a.active {
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--brand);
+    box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.2);
   }
-  .log-item:first-child { border-radius:var(--radius) var(--radius) 0 0; }
-  .log-item:last-child { border-radius:0 0 var(--radius) var(--radius); }
-  .log-item:only-child { border-radius:var(--radius); }
-  .log-delta {
-    font-size:.9rem; font-weight:700; flex-shrink:0; width:52px; text-align:right;
+  [data-theme="dark"] .nav a:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
   }
-  .log-delta.plus { color:var(--green); }
-  .log-delta.minus { color:var(--red); }
-  .log-reason { font-size:.8rem; color:var(--muted); flex:1; }
-  .log-ts { font-size:.72rem; color:var(--muted2); flex-shrink:0; }
-
-  /* Quick actions */
-  .actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .action-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:16px; text-decoration:none; color:var(--text);
-    display:flex; flex-direction:column; gap:8px;
-    transition:border-color .2s, transform .2s;
+  .settings-container, .notice {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
   }
-  .action-card:hover { border-color:#7c5cff33; transform:translateY(-2px); }
-  .action-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
-  .action-icon.purple { background:#7c5cff22; color:var(--accent); }
-  .action-icon.green { background:#34d89620; color:var(--green); }
-  .action-icon.red { background:#ff4f6a15; color:var(--red); }
-  .action-label { font-size:.85rem; font-weight:600; }
-  .action-sub { font-size:.75rem; color:var(--muted); line-height:1.4; }
-
-  /* Danger zone */
-  .danger-zone {
-    background:#ff4f6a08; border:1px solid #ff4f6a22; border-radius:var(--radius);
-    padding:16px 18px; animation:fadeUp .4s .2s both;
-  }
-  .danger-title { font-size:.82rem; font-weight:600; color:var(--red); margin-bottom:8px; }
-  .danger-sub { font-size:.78rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
-  .btn-logout {
-    background:none; border:1px solid #ff4f6a44; color:var(--red);
-    border-radius:9px; padding:9px 16px; font-family:inherit; font-size:.82rem; font-weight:600;
-    cursor:pointer; transition:all .2s;
-  }
-  .btn-logout:hover { background:#ff4f6a15; }
-
-  .empty-log { font-size:.82rem; color:var(--muted); text-align:center; padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
 </style>
+<script>
+  (function(){
+    const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 </head>
 <body>
-
-<header class="header">
-  <div class="logo">lendings<span>.kz</span></div>
-  <a href="/dashboard" class="back-btn">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Дашборд
-  </a>
-</header>
-
-<main class="content">
-
-  <!-- Profile hero -->
-  <div class="profile-hero">
-    <div class="avatar">{{ (user.name or user.email or user.phone or '?')[:1].upper() }}</div>
-    <div class="profile-name-row">
-      <div class="profile-name" id="displayName">{{ user.name or 'Без имени' }}</div>
-      <button class="edit-name-btn" onclick="toggleEdit()" title="Изменить имя">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
-    </div>
-    <div class="profile-phone">{{ user.phone or user.email or 'Google аккаунт' }}</div>
-    {% if user.email and user.email_verified %}
-    <div class="profile-notice ok">Email подтверждён</div>
-    {% elif user.email %}
-    <div class="profile-notice err">Email не подтверждён. Отправьте письмо повторно из дашборда.</div>
-    {% endif %}
-    {% if verification_notice.success or verification_notice.error %}
-    <div class="profile-notice {{ 'ok' if verification_notice.success else 'err' }}">
-      {{ verification_notice.success or verification_notice.error }}
-    </div>
-    {% endif %}
-
-    <form class="name-edit-form" id="nameEditForm" method="POST" action="/profile/update">
-      <input type="text" name="name" class="name-input" id="nameInput"
-             value="{{ user.name or '' }}" placeholder="Введите имя" maxlength="60">
-      <div class="name-edit-row">
-        <input type="email" name="email" class="name-input"
-               value="{{ user.email or '' }}" placeholder="Email для подтверждения" autocomplete="email">
-        <button type="submit" class="name-save-btn">Сохранить</button>
-      </div>
-    </form>
-
-    <div class="stats-row">
-      <div class="stat-pill">
-        <div class="stat-value accent">{{ user.tokens }}</div>
-        <div class="stat-label">токенов</div>
-      </div>
-      <div class="stat-pill">
-        <div class="stat-value">{{ sites_count }}</div>
-        <div class="stat-label">сайтов</div>
-      </div>
-      <div class="stat-pill">
-        <div class="stat-value">{{ log | selectattr('delta', 'lt', 0) | list | length }}</div>
-        <div class="stat-label">генераций</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick actions -->
-  <div class="section">
-    <div class="section-title">Быстрые действия</div>
-    <div class="actions-grid">
-      <a href="/create" class="action-card">
-        <div class="action-icon purple">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <a class="brand" href="/dashboard" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
+        <div style="display:flex; gap:6px;">
+          <button class="lang-toggle" id="langToggle" onclick="toggleLang()">RU</button>
+          <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle Theme">
+            <svg viewBox="0 0 24 24" class="sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg viewBox="0 0 24 24" class="moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
         </div>
-        <div class="action-label">Новый сайт</div>
-        <div class="action-sub">Создать ещё одну визитку</div>
-      </a>
-      <a href="/payment" class="action-card">
-        <div class="action-icon green">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        </div>
-        <div class="action-label">Пополнить</div>
-        <div class="action-sub">Докупить токены через Kaspi</div>
-      </a>
+      </div>
+      <nav class="nav" style="margin-top:0;">
+        <a href="/dashboard">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          <span data-i18n="nav_dashboard">Dashboard</span>
+        </a>
+        <a href="/dashboard/create">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          <span data-i18n="nav_create">Create Page</span>
+        </a>
+        <a href="/dashboard/billing">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <span data-i18n="nav_billing">Billing</span>
+        </a>
+      </nav>
     </div>
-  </div>
 
-  <!-- Token history -->
-  <div class="section">
-    <div class="section-title">История токенов</div>
-    {% if log %}
-    <div class="log-list">
-      {% for entry in log %}
-      <div class="log-item">
-        <div class="log-delta {{ 'plus' if entry.delta > 0 else 'minus' }}">
-          {{ '+' if entry.delta > 0 else '' }}{{ entry.delta }}
-        </div>
-        <div class="log-reason">
-          {% if 'site_generate' in (entry.reason or '') %}
-            Генерация сайта
-          {% elif 'kaspi_payment' in (entry.reason or '') %}
-            Пополнение через Kaspi
-          {% elif 'initial' in (entry.reason or '') or entry.reason == None %}
-            Приветственные токены
+    <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
+      <div class="balance-pill" title="Development Credits"><span>Dev</span><strong>{{ user.dev_credits or 0 }}</strong></div>
+      <div class="balance-pill" title="Promo Credits"><span>Promo</span><strong>{{ user.promo_credits or 0 }}</strong></div>
+    </div>
+
+    <div class="sidebar-footer" style="margin-top: 0;">
+      <a class="profile-link" href="/profile">
+        <div class="avatar-sm">
+          {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" alt="">
           {% else %}
-            {{ entry.reason }}
+            {{ (user.name or user.email or 'U')[:1]|upper }}
           {% endif %}
         </div>
-        <div class="log-ts">{{ entry.ts[:10] }}</div>
-      </div>
-      {% endfor %}
+        <div class="profile-info">
+          <div class="profile-name">{{ user.name or user.email }}</div>
+          <div class="profile-sub" style="font-size: .68rem; color: var(--muted); margin-top: 2px;" data-i18n="nav_profile">Profile</div>
+        </div>
+      </a>
     </div>
-    {% else %}
-    <div class="empty-log">История операций пока пуста</div>
-    {% endif %}
-  </div>
+  </aside>
 
-  <!-- Danger zone -->
-  <div class="danger-zone">
-    <div class="danger-title">Выход из аккаунта</div>
-    <div class="danger-sub">Сайты и данные сохранятся. Войти можно снова в любое время.</div>
-    <form method="POST" action="/auth/logout">
-      <button type="submit" class="btn-logout">Выйти из аккаунта</button>
-    </form>
-  </div>
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu" onclick="toggleSidebar()">☰</button>
+      <div class="top-title">
+        <h1 data-i18n="profile_settings">Настройки профиля</h1>
+      </div>
+      <div class="top-actions">
+        <a class="ghost" href="/dashboard" data-i18n="nav_dashboard">Dashboard</a>
+      </div>
+    </header>
 
-</main>
+    <main class="content">
+      {% if verification_notice.success or verification_notice.error %}
+      <div class="notice {{ 'ok' if verification_notice.success else 'err' }}">
+        <div>{{ verification_notice.success or verification_notice.error }}</div>
+      </div>
+      {% endif %}
+
+      <div class="panel settings-container">
+
+        <!-- account settings -->
+        <div class="section" style="border-bottom: 1px solid var(--line);">
+          <div class="section-head">
+            <div>
+              <div class="section-title" data-i18n="profile_acc">Аккаунт</div>
+              <div class="muted" data-i18n="profile_basic_desc">Ваши основные данные и настройки профиля.</div>
+            </div>
+          </div>
+
+          <form method="POST" action="/profile/update" id="accountSettingsForm" enctype="multipart/form-data" style="max-width:600px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="avatar_url" id="avatarUrlInput" value="{{ user.avatar_url or '' }}">
+
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:20px;">
+              <div class="avatar" id="avatarPreview" style="width:72px; height:72px; border-radius:20px; font-size:1.6rem; overflow:hidden;">
+                {% if user.avatar_url %}
+                  <img src="{{ user.avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                  {{ (user.name or user.email or user.phone or '?')[:1]|upper }}
+                {% endif %}
+              </div>
+              <div>
+                <button type="button" class="soft" onclick="document.getElementById('avatarInput').click()" data-i18n="profile_change_photo">Изменить фото</button>
+                <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(this)">
+                <div class="muted" style="font-size:0.7rem; margin-top:6px;" data-i18n="profile_photo_desc">JPG, PNG или GIF. Максимум 5MB.</div>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="nameInput" data-i18n="profile_name_lbl">Имя</label>
+                <input type="text" name="name" id="nameInput" value="{{ user.name or '' }}" placeholder="Ваше имя" autocomplete="name" maxlength="80" required>
+              </div>
+              <div class="field">
+                <label data-i18n="profile_email_lbl">Email</label>
+                <input type="email" name="email" value="{{ user.email or '' }}" placeholder="you@example.com" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254">
+              </div>
+            </div>
+            <button type="submit" class="btn" style="margin-top:16px" data-i18n="profile_save_btn">Сохранить изменения</button>
+          </form>
+        </div>
+
+        <!-- security -->
+        <div class="section" style="border-bottom: 1px solid var(--line);">
+          <div class="section-head">
+            <div>
+              <div class="section-title" data-i18n="profile_sec">Безопасность</div>
+              <div class="muted" data-i18n="profile_sec_desc">Обновите свой пароль для входа в систему.</div>
+            </div>
+          </div>
+
+          {% if request.query_params.get('password_error') %}
+          <div class="notice err" style="max-width:600px;">
+            <div>Ошибка: проверьте совпадение паролей и их длину (минимум 8 символов).</div>
+          </div>
+          {% endif %}
+          {% if request.query_params.get('password_success') %}
+          <div class="notice ok" style="max-width:600px;">
+            <div>Пароль успешно обновлен.</div>
+          </div>
+          {% endif %}
+
+          <form method="POST" action="/profile/update-password" style="max-width:600px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="form-grid">
+              <div class="field">
+                <label data-i18n="profile_new_pw_lbl">Новый пароль</label>
+                <input type="password" name="password" placeholder="••••••••" required minlength="8">
+              </div>
+              <div class="field">
+                <label data-i18n="profile_confirm_pw_lbl">Повторите пароль</label>
+                <input type="password" name="confirm_password" placeholder="••••••••" required minlength="8">
+              </div>
+            </div>
+            <button type="submit" class="btn" style="margin-top:16px; background:var(--text); color:var(--panel);" data-i18n="profile_update_pw_btn">Обновить пароль</button>
+          </form>
+        </div>
+
+        <!-- credits history -->
+        <div class="section" style="border-bottom: 1px solid var(--line);">
+          <div class="section-head">
+            <div>
+              <div class="section-title" data-i18n="profile_history">История Credits</div>
+              <div class="muted" data-i18n="profile_history_desc">AI-генерация, правки и транзакции.</div>
+            </div>
+          </div>
+          {% if log %}
+          <div class="ledger" style="max-width:600px;">
+            {% for entry in log %}
+            <div class="log-item">
+              <div class="log-left">
+                <div class="log-reason">
+                  {% if 'site_generate' in (entry.reason or '') %}Создание страницы{% elif 'site_edit' in (entry.reason or '') %}AI-правка страницы{% elif 'version_restore' in (entry.reason or '') %}Восстановление версии{% elif 'credits_purchase' in (entry.reason or '') or 'slot_purchase' in (entry.reason or '') %}Пополнение Credits{% elif 'admin_grant' in (entry.reason or '') %}Ручное начисление{% else %}{{ entry.reason or 'Операция' }}{% endif %}
+                </div>
+                <div class="log-ts">{{ entry.ts[:16] }}</div>
+              </div>
+              <div class="log-delta {{ 'plus' if entry.delta > 0 else 'minus' }}">{{ '+' if entry.delta > 0 else '' }}{{ entry.delta }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-log" style="max-width:600px;" data-i18n="profile_empty_history">История Development Credits пока пуста.</div>
+          {% endif %}
+        </div>
+
+        <!-- logout -->
+        <div class="section danger" style="border-radius: 0 0 var(--radius) var(--radius);">
+          <div class="section-title" data-i18n="profile_danger_logout">Выход из аккаунта</div>
+          <div class="muted" data-i18n="profile_logout_desc">Сайты, черновики и история останутся в аккаунте.</div>
+          <form method="POST" action="/auth/logout" class="logout-form">
+            <button type="submit" class="btn red" data-i18n="profile_logout_btn">Выйти из аккаунта</button>
+          </form>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
 
 <script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('show');
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+const I18N = {
+  ru: {
+    nav_dashboard: 'Панель',
+    nav_create: 'Создать страницу',
+    nav_billing: 'Оплата',
+    nav_profile: 'Профиль',
+    profile_settings: 'Настройки профиля',
+    profile_acc: 'Аккаунт',
+    profile_basic_desc: 'Ваши основные данные и настройки профиля.',
+    profile_change_photo: 'Изменить фото',
+    profile_photo_desc: 'JPG, PNG или GIF. Максимум 5MB.',
+    profile_name_lbl: 'Имя',
+    profile_email_lbl: 'Email',
+    profile_save_btn: 'Сохранить изменения',
+    profile_sec: 'Безопасность',
+    profile_sec_desc: 'Обновите свой пароль для входа в систему.',
+    profile_new_pw_lbl: 'Новый пароль',
+    profile_confirm_pw_lbl: 'Повторите пароль',
+    profile_update_pw_btn: 'Обновить пароль',
+    profile_history: 'История Credits',
+    profile_history_desc: 'AI-генерация, правки и транзакции.',
+    profile_empty_history: 'История Development Credits пока пуста.',
+    profile_danger_logout: 'Выход из аккаунта',
+    profile_logout_desc: 'Сайты, черновики и история останутся в аккаунте.',
+    profile_logout_btn: 'Выйти из аккаунта'
+  },
+  kz: {
+    nav_dashboard: 'Басқару панелі',
+    nav_create: 'Парақша жасау',
+    nav_billing: 'Төлем',
+    nav_profile: 'Профиль',
+    profile_settings: 'Профиль баптаулары',
+    profile_acc: 'Аккаунт',
+    profile_basic_desc: 'Сіздің негізгі деректеріңіз бен профиль баптауларыңыз.',
+    profile_change_photo: 'Суретті өзгерту',
+    profile_photo_desc: 'JPG, PNG немесе GIF. Ең көбі 5MB.',
+    profile_name_lbl: 'Аты',
+    profile_email_lbl: 'Email',
+    profile_save_btn: 'Өзгерістерді сақтау',
+    profile_sec: 'Қауіпсіздік',
+    profile_sec_desc: 'Жүйеге кіру үшін құпия сөзіңізді жаңартыңыз.',
+    profile_new_pw_lbl: 'Жаңа құпия сөз',
+    profile_confirm_pw_lbl: 'Құпия сөзді қайталаңыз',
+    profile_update_pw_btn: 'Құпия сөзді жаңарту',
+    profile_history: 'Development Credits тарихы',
+    profile_history_desc: 'AI-генерация, түзетулер және транзакциялар.',
+    profile_empty_history: 'Development Credits тарихы әлі бос.',
+    profile_danger_logout: 'Аккаунттан шығу',
+    profile_logout_desc: 'Сайттар, шимайлар және тарих аккаунтта қалады.',
+    profile_logout_btn: 'Аккаунттан шығу'
+  },
+  en: {
+    nav_dashboard: 'Dashboard',
+    nav_create: 'Create Page',
+    nav_billing: 'Billing',
+    nav_profile: 'Profile',
+    profile_settings: 'Profile Settings',
+    profile_acc: 'Account',
+    profile_basic_desc: 'Your basic information and profile settings.',
+    profile_change_photo: 'Change Photo',
+    profile_photo_desc: 'JPG, PNG or GIF. Max 5MB.',
+    profile_name_lbl: 'Name',
+    profile_email_lbl: 'Email',
+    profile_save_btn: 'Save Changes',
+    profile_sec: 'Security',
+    profile_sec_desc: 'Update your account login password.',
+    profile_new_pw_lbl: 'New Password',
+    profile_confirm_pw_lbl: 'Confirm Password',
+    profile_update_pw_btn: 'Update Password',
+    profile_history: 'Credits History',
+    profile_history_desc: 'AI generation, edits and transactions.',
+    profile_empty_history: 'Credits history is currently empty.',
+    profile_danger_logout: 'Log Out',
+    profile_logout_desc: 'Sites, drafts and history will remain in your account.',
+    profile_logout_btn: 'Log Out'
+  }
+};
+
+function setLang(lang) {
+  document.documentElement.setAttribute('lang', lang);
+  localStorage.setItem('lang', lang);
+  const btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = lang.toUpperCase();
+
+  const dict = I18N[lang] || I18N.ru;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) el.textContent = dict[key];
+  });
+}
+
+function toggleLang() {
+  const cur = document.documentElement.getAttribute('lang') || 'ru';
+  const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
+  setLang(next);
+}
+
+(function() {
+  const l = localStorage.getItem('lang') || 'ru';
+  setLang(l);
+})();
+
 function toggleEdit() {
   const form = document.getElementById('nameEditForm');
   form.classList.toggle('show');
   if (form.classList.contains('show')) {
     document.getElementById('nameInput').focus();
+  }
+}
+function normalizeProfileValue(value) {
+  try { return String(value || '').normalize('NFKC').trim(); } catch (_) { return ''; }
+}
+const profileInvisibleChars = /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/;
+const profileInvisibleCharsGlobal = /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g;
+function normalizeProfileInput(value) {
+  try { return String(value || '').normalize('NFKC'); } catch (_) { return ''; }
+}
+function sanitizeProfileEmail(value) {
+  return normalizeProfileInput(value)
+    .replace(profileInvisibleCharsGlobal, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Za-z0-9!#$%&'*+/=?^_`{|}~@.-]/g, '')
+    .slice(0, 254)
+    .toLowerCase();
+}
+function guardProfileEmailBeforeInput(input) {
+  input.addEventListener('beforeinput', event => {
+    if (!event.data) return;
+    const clean = sanitizeProfileEmail(event.data);
+    if (clean !== event.data.toLowerCase()) {
+      event.preventDefault();
+      if (clean) document.execCommand('insertText', false, clean);
+    }
+  });
+}
+function sanitizeProfileName(value, trimEnd=false) {
+  let v = normalizeProfileInput(value)
+    .replace(profileInvisibleCharsGlobal, '')
+    .replace(/[‐‑‒–—―]/g, '-')
+    .replace(/[’ʼ`]/g, "'")
+    .replace(/[^A-Za-zА-Яа-яЁё '-]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[ '-]+/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/'{2,}/g, "'");
+  if (trimEnd) v = v.replace(/[ '-]+$/g, '');
+  return v.slice(0, 80);
+}
+function validProfileName(value) {
+  const v = normalizeProfileValue(value).replace(/\s+/g, ' ');
+  return v.length >= 2 && v.length <= 80 && !profileInvisibleChars.test(v) && /^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё '-]*[A-Za-zА-Яа-яЁё]$/.test(v) && !/([ '-])\1/.test(v);
+}
+function validProfileEmail(value) {
+  const v = normalizeProfileValue(value).toLowerCase();
+  if (!v) return true;
+  if (v.length > 254 || /\s/.test(v) || !/^[\x00-\x7F]+$/.test(v)) return false;
+  const parts = v.split('@');
+  if (parts.length !== 2 || parts[0].length > 64) return false;
+  return /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(v);
+}
+document.getElementById('accountSettingsForm')?.addEventListener('submit', event => {
+  const name = event.currentTarget.querySelector('input[name="name"]');
+  const email = event.currentTarget.querySelector('input[name="email"]');
+  name.value = sanitizeProfileName(name.value, true);
+  email.value = sanitizeProfileEmail(email.value);
+  if (!validProfileName(name.value) || !validProfileEmail(email.value)) {
+    event.preventDefault();
+  }
+});
+const profileName = document.querySelector('#accountSettingsForm input[name="name"]');
+const profileEmail = document.querySelector('#accountSettingsForm input[name="email"]');
+profileName?.addEventListener('input', () => {
+  const clean = sanitizeProfileName(profileName.value, false);
+  if (profileName.value !== clean) profileName.value = clean;
+});
+profileName?.addEventListener('blur', () => {
+  profileName.value = sanitizeProfileName(profileName.value, true);
+});
+profileEmail?.addEventListener('input', () => {
+  const clean = sanitizeProfileEmail(profileEmail.value);
+  if (profileEmail.value !== clean) profileEmail.value = clean;
+});
+if (profileEmail) {
+  guardProfileEmailBeforeInput(profileEmail);
+  profileEmail.addEventListener('paste', event => {
+    event.preventDefault();
+    const clean = sanitizeProfileEmail((event.clipboardData || window.clipboardData).getData('text'));
+    document.execCommand('insertText', false, clean);
+  });
+}
+
+async function handleAvatarUpload(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (!file.type.startsWith('image/')) return;
+
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  const btn = input.previousElementSibling;
+  const origText = btn.textContent;
+  btn.textContent = 'Загрузка...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/upload-photo', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+
+    document.getElementById('avatarUrlInput').value = data.url;
+    document.getElementById('avatarPreview').innerHTML = `<img src="${data.url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+  } catch (err) {
+    alert('Ошибка при загрузке фото. Попробуйте еще раз.');
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+    input.value = ''; // reset
   }
 }
 </script>

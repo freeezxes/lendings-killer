@@ -2,337 +2,666 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lendings.kz — Вход</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>lendings.kz — Войти</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-
-  :root {
-    --bg:        #0a0a0f;
-    --surface:   #111118;
-    --border:    #1e1e2e;
-    --border-focus: #7c5cff55;
-    --accent:    #7c5cff;
-    --accent-dim:#5b3fd4;
-    --accent-glow: #7c5cff33;
-    --text:      #f0eeff;
-    --muted:     #6b6b8a;
-    --error:     #ff4f6a;
-    --radius:    16px;
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+  :root{
+    --bg:#f6f7fb;--ink:#141722;--muted:#687286;--soft:#8b95a8;
+    --card:rgba(255,255,255,.9);--line:#e5e9f2;--line-strong:#d7deea;
+    --brand:#4f6df5;--brand-dark:#314dd2;--green:#21b889;--red:#e5485d;
+    --shadow:0 24px 80px rgba(28,39,73,.16);--radius:20px;
+    --input-bg:#fbfcff;--grid-color:rgba(79,109,245,.06);
+    --bg-gradient:linear-gradient(180deg,#fff 0,#f6f7fb 52%,#eef2fb 100%);
+    --flow-active: #ffffff; --flow-idle: rgba(255,255,255,0.6);
+    --flow-num-active: #eaf1ff; --flow-num-idle: #f0f4fb;
+    --flow-title-active: #152033; --flow-title-idle: #7b8495;
   }
-
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
-  html, body {
-    height:100%;
-    font-family: 'Sora', -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    overflow-x: hidden;
+  [data-theme="dark"]{
+    --bg:#06060a;--ink:#f8fafc;--muted:#94a3b8;--soft:#64748b;
+    --card:rgba(15,15,22,.85);--line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.12);
+    --brand:#8b5cf6;--brand-dark:#7c3aed;--green:#10b981;--red:#ef4444;
+    --shadow:0 32px 100px rgba(0,0,0,.8);--input-bg:#0f0f16;
+    --grid-color:rgba(139,92,246,.05);
+    --bg-gradient:radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+    --flow-active: #1e1e2e; --flow-idle: rgba(30,30,46,0.4);
+    --flow-num-active: #2d2d3f; --flow-num-idle: #161621;
+    --flow-title-active: #f8fafc; --flow-title-idle: #64748b;
   }
-
-  /* Ambient background blobs */
-  body::before {
-    content:'';
-    position:fixed; inset:0; pointer-events:none; z-index:0;
-    background:
-      radial-gradient(ellipse 60% 40% at 20% 10%, #7c5cff18 0%, transparent 70%),
-      radial-gradient(ellipse 50% 30% at 80% 90%, #5b3fd410 0%, transparent 70%);
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{min-height:100%;background:var(--bg)}
+  body{min-height:100vh;font-family:'Sora',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg-gradient);overflow-x:hidden;transition:background .5s cubic-bezier(0.4, 0, 0.2, 1), color .5s cubic-bezier(0.4, 0, 0.2, 1)}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:
+    linear-gradient(var(--grid-color) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+    background-size:42px 42px;mask-image:linear-gradient(180deg,#000 0,transparent 70%);z-index:0;transition:opacity .5s}
+  button,input{font-family:inherit}
+  .shell{position:relative;z-index:1;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:48px;align-items:center;max-width:1120px;margin:0 auto;padding:88px 24px 34px}
+  .brand{align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-height:560px;padding:10px 0;animation:slideUp .4s ease-out .06s both}
+  .topline{position:fixed;top:24px;left:24px;display:flex;align-items:center;height:40px;z-index:100;animation:slideDown .3s ease-out both}
+  .logo{font-weight:800;letter-spacing:-.04em;font-size:1.05rem;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;height:40px;transition:color .5s}.logo span{color:var(--brand);transition:color .5s}
+  .back{color:var(--muted);text-decoration:none;font-size:.82rem;font-weight:600;transition:.18s}.back:hover{color:var(--ink)}
+  .controls{position:fixed;top:24px;right:24px;z-index:100;display:flex;gap:8px;animation:slideDown .3s ease-out both}
+  .theme-toggle, .lang-toggle{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .5s,border-color .5s,transform .3s;backdrop-filter:blur(14px);font-size:.7rem;font-weight:800}
+  .theme-toggle:hover, .lang-toggle:hover{transform:scale(1.05);border-color:var(--brand)}
+  .theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
+  [data-theme="dark"] .theme-toggle svg{transform:rotate(360deg)}
+  .sun{display:block}[data-theme="dark"] .sun{display:none}
+  .moon{display:none}[data-theme="dark"] .moon{display:block}
+  .hero-copy{max-width:560px}
+  .eyebrow{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;color:var(--brand);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
+  h1{font-size:3rem;line-height:1.02;letter-spacing:-.065em;margin-bottom:16px}
+  .lead{font-size:1rem;line-height:1.75;color:var(--muted);max-width:520px}
+  .flow{display:grid;gap:12px;margin-top:24px;max-width:520px}
+  .flow-item{position:relative;min-height:70px;display:grid;grid-template-columns:48px 1fr 24px;align-items:center;gap:14px;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px 12px 16px;box-shadow:0 14px 42px rgba(28,39,73,.06);color:var(--muted);animation:flowCard 9s cubic-bezier(.22,1,.36,1) infinite}
+  .flow-item::before{content:"";position:absolute;left:0;right:auto;bottom:0;width:0;height:3px;background:linear-gradient(90deg,var(--brand),#7fb2ff);box-shadow:0 0 18px rgba(79,109,245,.35);animation:flowProgress 9s linear infinite}
+  .flow-item::after{content:"→";font-size:1.4rem;color:var(--soft);justify-self:end;transition:color .28s,transform .28s;animation:flowArrow 9s cubic-bezier(.22,1,.36,1) infinite}
+  .flow-num{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:var(--bg);color:var(--muted);font-size:.86rem;font-weight:800;letter-spacing:-.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);animation:flowNum 9s cubic-bezier(.22,1,.36,1) infinite}
+  .flow-title{font-size:.92rem;font-weight:800;line-height:1.28;letter-spacing:-.03em;animation:flowTitle 9s cubic-bezier(.22,1,.36,1) infinite}
+  .flow-item:nth-child(1),.flow-item:nth-child(1)::before,.flow-item:nth-child(1)::after,.flow-item:nth-child(1) .flow-num,.flow-item:nth-child(1) .flow-title{animation-delay:0s}
+  .flow-item:nth-child(2),.flow-item:nth-child(2)::before,.flow-item:nth-child(2)::after,.flow-item:nth-child(2) .flow-num,.flow-item:nth-child(2) .flow-title{animation-delay:3s}
+  .flow-item:nth-child(3),.flow-item:nth-child(3)::before,.flow-item:nth-child(3)::after,.flow-item:nth-child(3) .flow-num,.flow-item:nth-child(3) .flow-title{animation-delay:6s}
+  @keyframes flowCard{0%,33%{background:var(--flow-active);border-color:var(--line-strong);box-shadow:0 18px 48px rgba(0,0,0,.14);transform:translateY(-1px)}40%,100%{background:var(--flow-idle);border-color:var(--line);box-shadow:0 12px 34px rgba(0,0,0,.045);transform:translateY(0)}}
+  @keyframes flowProgress{0%{width:0;opacity:1}33%{width:58%;opacity:1}34%{width:100%;opacity:0}40%,100%{width:0;opacity:0}}
+  @keyframes flowNum{0%,24%{background:var(--flow-num-active);color:var(--brand);transform:scale(1.04)}30%,100%{background:var(--flow-num-idle);color:var(--muted);transform:scale(1)}}
+  @keyframes flowTitle{0%,24%{color:var(--flow-title-active)}30%,100%{color:var(--flow-title-idle)}}
+  @keyframes flowArrow{0%,24%{color:var(--brand);transform:translateX(2px)}30%,100%{color:#9aa4b6;transform:translateX(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @media(prefers-reduced-motion:reduce){
+    .topline,.brand,.auth-card,.tabs,.field,.submit{animation:none;opacity:1}
+    .flow-item,.flow-item::before,.flow-item::after,.flow-num,.flow-title{animation:none}
+    .flow-item:first-child{background:#fff;border-color:#e3e8f3;box-shadow:0 18px 48px rgba(28,39,73,.14)}
+    .flow-item:first-child::before{width:58%;opacity:1}
+    .flow-item:first-child::after{color:var(--brand)}
+    .flow-item:first-child .flow-num{background:#eaf1ff;color:var(--brand)}
+    .flow-item:first-child .flow-title{color:#152033}
   }
-
-  .page {
-    position:relative; z-index:1;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:24px 20px;
+  .trust{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+  .trust span{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:8px 10px;font-size:.74rem;font-weight:700}
+  .auth-card{background:var(--card);border:1px solid var(--line-strong);box-shadow:var(--shadow);border-radius:var(--radius);padding:22px;backdrop-filter:blur(24px);animation:slideRight .4s ease-out .12s both;transition:background .5s,border-color .5s,box-shadow .5s}
+  .card-head{margin-bottom:18px;text-align:center}
+  .card-title{font-size:1.22rem;font-weight:800;letter-spacing:-.035em;margin-bottom:5px;color:var(--ink);transition:color .5s}
+  .card-sub{font-size:.82rem;color:var(--muted);line-height:1.5;transition:color .5s}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(0,0,0,.04);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px;animation:fadeIn .4s ease-out .18s both;transition:background .5s,border-color .5s}
+  [data-theme="dark"] .tabs{background:rgba(0,0,0,.25)}
+  .tab{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 8px;font-size:.82rem;font-weight:800;cursor:pointer;transition:background .5s,color .5s}
+  .tab.active{background:var(--card);color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+  .panel{display:none}
+  .panel.form{display:none}
+  .panel.form.active{display:flex}
+  .panel.form.active.animate{animation:panelIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both}
+  .card-head.animate{animation:panelIn 0.18s ease-out both}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideRight{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .form{flex-direction:column;gap:12px}
+  .field{display:flex;flex-direction:column;gap:7px;animation:fadeIn 0.25s ease-out both}
+  .field:nth-child(1){animation-delay:.05s}
+  .field:nth-child(2){animation-delay:.08s}
+  .field:nth-child(3){animation-delay:.11s}
+  .field:nth-child(4){animation-delay:.14s}
+  .field:nth-child(5){animation-delay:.17s}
+  .label-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  label{font-size:.74rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.07em}
+  .hint-link{background:none;border:0;color:var(--brand);font-size:.76rem;font-weight:800;cursor:pointer;text-decoration:none}
+  .input-row{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:100%}
+  .forgot-link{align-self:flex-start;margin-top:0}
+  .input-wrap{position:relative;width:100%}
+  input{width:100%;height:46px;border:1px solid var(--line-strong);background:var(--input-bg);border-radius:12px;color:var(--ink);font-size:.9rem;outline:none;padding:0 13px;transition:border-color .5s,box-shadow .5s,background .5s,color .5s}
+  input:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(124,92,255,.12);background:var(--card)}
+  .input-wrap.has-toggle input{padding-right:52px}
+  .toggle-pass{position:absolute;top:50%;right:12px;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--soft);border-radius:9px;cursor:pointer;line-height:1;transform:translateY(-50%);transition:background .18s,color .18s}
+  .toggle-pass svg{width:19px;height:19px;display:block;stroke:currentColor;transition:transform .18s ease}
+  .toggle-pass::after{content:'';position:absolute;left:50%;top:50%;width:20px;height:2px;background:currentColor;border-radius:1px;transform:translate(-50%, -50%) rotate(-45deg) scaleX(0);opacity:0;transition:transform .2s ease,opacity .2s ease}
+  .toggle-pass:hover{background:#eef2fb;color:var(--ink)}
+  .toggle-pass.is-visible{color:var(--brand)}
+  .toggle-pass.is-visible::after{transform:translate(-50%, -50%) rotate(-45deg) scaleX(1);opacity:1}
+  .forgot-link{align-self:flex-end;margin-top:-1px}
+  .field-error{display:none;color:var(--red);font-size:.73rem;line-height:1.35}
+  .field.invalid input{border-color:#f2a0aa;background:#fff9fa}.field.invalid .field-error{display:block}
+  .caps-warning{display:none;color:#ad6b00;font-size:.72rem;line-height:1.35;margin-top:-2px}.caps-warning.show{display:block}
+  .submit{width:100%;height:48px;border:0;border-radius:13px;background:var(--brand);color:#fff;font-size:.9rem;font-weight:800;cursor:pointer;box-shadow:0 12px 26px rgba(79,109,245,.22);transition:transform .16s,background .16s,opacity .16s;margin-top:3px;animation:fadeIn 0.25s ease-out .15s both}
+  .submit:hover:not(:disabled){transform:translateY(-1px);background:var(--brand-dark)}
+  .submit:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+  .divider{display:flex;align-items:center;gap:10px;color:#98a2b3;font-size:.72rem;font-weight:700;margin:15px 0;animation:fadeIn 0.25s ease-out .15s both}
+  .divider::before,.divider::after{content:"";height:1px;background:var(--line);flex:1}
+  .google{width:100%;height:46px;border:1px solid var(--line-strong);border-radius:13px;background:var(--input-bg);color:var(--ink);font-weight:800;font-size:.86rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;transition:.18s;animation:fadeIn 0.25s ease-out .15s both}
+  .google:hover{border-color:var(--line);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.09)}
+  .google.disabled{opacity:.5;pointer-events:none}
+  .google svg{width:18px;height:18px}
+  .switch-line{text-align:center;color:var(--muted);font-size:.78rem;margin-top:14px;line-height:1.5}
+  .switch-line button{background:none;border:0;color:var(--brand);font-weight:800;cursor:pointer}
+  .status{border-radius:12px;padding:11px 12px;font-size:.8rem;line-height:1.5;margin-bottom:14px;border:1px solid transparent}
+  .status.error{color:#a92638;background:#fff1f3;border-color:#ffd4da}.status.success{color:#087653;background:#edfff8;border-color:#c9f5e7}
+  .dev-link{margin-top:10px;font-size:.74rem;line-height:1.4;color:var(--muted);word-break:break-all}.dev-link a{color:var(--brand);font-weight:800}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(14px);background:#171b26;color:#fff;border-radius:12px;padding:12px 14px;font-size:.82rem;box-shadow:0 16px 44px rgba(20,23,34,.24);opacity:0;pointer-events:none;transition:.2s;z-index:30}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .mobile-only{display:none}
+  @media(max-width:880px){
+    body{background:#f7f8fc}
+    .shell{display:flex;flex-direction:column;justify-content:flex-start;gap:20px;min-height:100vh;padding:18px 14px 28px}
+    .brand{align-self:stretch;min-height:auto;padding:0;display:block}.topline{position:static;margin-bottom:22px}
+    .hero-copy{text-align:left}.eyebrow{margin-bottom:12px}h1{font-size:2.05rem}.lead{font-size:.9rem;line-height:1.65}
+    .flow,.trust{display:none}.auth-card{width:100%;max-width:440px;padding:18px;border-radius:18px}.mobile-only{display:block}
   }
-
-  /* Back link */
-  .back {
-    position:fixed; top:20px; left:20px;
-    display:inline-flex; align-items:center; gap:6px;
-    color: var(--muted); text-decoration:none; font-size:.82rem;
-    transition: color .2s;
-    z-index:10;
+  @media(max-width:420px){.auth-card{padding:16px}.tabs{margin-bottom:14px}h1{font-size:1.84rem}}
+  
+  /* Unified smooth transitions for simultaneous theme change */
+  html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+    transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
   }
-  .back:hover { color: var(--text); }
-  .back svg { width:14px; height:14px; }
-
-  /* Logo */
-  .logo {
-    font-size:1.35rem; font-weight:700; letter-spacing:-.02em;
-    margin-bottom:32px; text-align:center;
-  }
-  .logo span { color: var(--accent); }
-
-  /* Card */
-  .card {
-    width:100%; max-width:420px;
-    background: var(--surface);
-    border:1px solid var(--border);
-    border-radius: calc(var(--radius) + 4px);
-    padding:32px 28px;
-    box-shadow: 0 32px 80px #00000055, 0 0 0 1px #ffffff06 inset;
-    animation: slideUp .4s cubic-bezier(.22,1,.36,1) both;
-  }
-  @keyframes slideUp {
-    from { opacity:0; transform:translateY(24px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-
-  /* Tabs */
-  .tabs {
-    display:flex;
-    background:#0d0d14;
-    border-radius:12px;
-    padding:4px;
-    margin-bottom:28px;
-    gap:2px;
-  }
-  .tab {
-    flex:1; text-align:center; padding:9px 12px;
-    border-radius:9px; font-size:.88rem; font-weight:500;
-    cursor:pointer; color: var(--muted);
-    transition: all .2s; user-select:none; border:none; background:none;
-  }
-  .tab.active {
-    background: var(--accent);
-    color:#fff;
-    box-shadow: 0 2px 12px var(--accent-glow);
-  }
-
-  /* Error banner */
-  .error-banner {
-    display:flex; align-items:flex-start; gap:10px;
-    background:#ff4f6a15; border:1px solid #ff4f6a33;
-    color: var(--error);
-    padding:12px 14px; border-radius:10px;
-    font-size:.84rem; line-height:1.5;
-    margin-bottom:20px;
-    animation: fadeIn .25s ease both;
-  }
-  .error-banner.success {
-    background:#34d89615; border-color:#34d89633;
-    color:#34d896;
-  }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-  .error-banner svg { flex-shrink:0; width:16px; height:16px; margin-top:1px; }
-
-  /* Form */
-  .form-panel { display:none; }
-  .form-panel.active { display:flex; flex-direction:column; gap:16px; }
-
-  .field { display:flex; flex-direction:column; gap:6px; }
-  .field label {
-    font-size:.78rem; font-weight:500; color: var(--muted);
-    text-transform:uppercase; letter-spacing:.06em;
-  }
-  .field input {
-    background:#0d0d14; border:1px solid var(--border);
-    border-radius:12px; padding:13px 16px;
-    color: var(--text); font-family:inherit; font-size:.92rem;
-    outline:none; transition: border-color .2s, box-shadow .2s;
-    -webkit-appearance:none;
-  }
-  .field input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-  .field input::placeholder { color: var(--muted); opacity:.6; }
-
-  /* Submit button */
-  .btn-submit {
-    width:100%; padding:14px;
-    background: var(--accent);
-    border:none; border-radius:12px;
-    color:#fff; font-family:inherit; font-size:.95rem; font-weight:600;
-    cursor:pointer; letter-spacing:-.01em;
-    transition: transform .15s, opacity .15s, box-shadow .2s;
-    box-shadow: 0 4px 20px var(--accent-glow);
-    margin-top:4px;
-  }
-  .btn-submit:hover { opacity:.9; transform:translateY(-1px); box-shadow: 0 6px 28px #7c5cff55; }
-  .btn-submit:active { transform:translateY(0); opacity:1; }
-
-  /* OAuth */
-  .oauth-section {
-    margin-top:20px;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-  }
-  .oauth-divider {
-    display:flex;
-    align-items:center;
-    gap:12px;
-    color:var(--muted);
-    font-size:.74rem;
-  }
-  .oauth-divider::before,
-  .oauth-divider::after {
-    content:'';
-    flex:1;
-    height:1px;
-    background:var(--border);
-  }
-  .google-btn {
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    padding:13px 14px;
-    background:#f8f8fb;
-    border:1px solid #ffffff22;
-    border-radius:12px;
-    color:#161620;
-    font-family:inherit;
-    font-size:.92rem;
-    font-weight:600;
-    text-decoration:none;
-    transition:transform .15s, box-shadow .2s, background .2s;
-  }
-  .google-btn:hover {
-    background:#fff;
-    transform:translateY(-1px);
-    box-shadow:0 8px 28px #00000044;
-  }
-  .google-btn:active { transform:translateY(0); }
-  .google-btn svg { width:18px; height:18px; flex-shrink:0; }
-
-  /* Footer hint */
-  .card-footer {
-    text-align:center; margin-top:20px;
-    font-size:.8rem; color: var(--muted);
-    line-height:1.6;
-  }
-
-  /* Token pill on register */
-  .token-pill {
-    display:inline-flex; align-items:center; gap:5px;
-    background: var(--accent-glow); border:1px solid #7c5cff44;
-    color: var(--accent); border-radius:20px;
-    padding:4px 10px; font-size:.76rem; font-weight:500;
-    margin-top:4px;
-  }
-  .token-pill svg { width:12px; height:12px; }
 </style>
 </head>
-<body>
+<script>
+  (function(){
+    const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+    const l = localStorage.getItem('lang') || 'ru';
+    document.documentElement.setAttribute('lang', l);
+  })();
+</script>
+<div class="topline">
+  <a href="/" class="logo">lendings<span>.kz</span></a>
+</div>
+<div class="controls">
+  <button class="lang-toggle" id="langToggle" onclick="toggleLang()" aria-label="Сменить язык">RU</button>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Сменить тему">
+    <svg viewBox="0 0 24 24" class="sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg viewBox="0 0 24 24" class="moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</div>
+<main class="shell">
+  <section class="brand" aria-label="lendings.kz">
+    <div class="hero-copy">
+      <h1 data-i18n="heroTitle">Сайт для вашего бизнеса за минуты</h1>
+      <div class="flow" aria-hidden="true">
+        <div class="flow-item"><div class="flow-num">01</div><div class="flow-title" data-i18n="step1">Создать страницу</div></div>
+        <div class="flow-item"><div class="flow-num">02</div><div class="flow-title" data-i18n="step2">Улучшить с AI</div></div>
+        <div class="flow-item"><div class="flow-num">03</div><div class="flow-title" data-i18n="step3">Запустить продвижение</div></div>
+      </div>
+    </div>
+  </section>
 
-<a href="/" class="back">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-  На главную
-</a>
-
-<div class="page">
-  <div class="logo">lendings<span>.kz</span></div>
-
-  <div class="card">
-    <!-- Tabs -->
-    <div class="tabs" role="tablist">
-      <button class="tab active" role="tab" id="tab-login" onclick="switchTab('login')">Войти</button>
-      <button class="tab" role="tab" id="tab-register" onclick="switchTab('register')">Регистрация</button>
+  <section class="auth-card" aria-label="Авторизация">
+    <div class="card-head">
+      <div>
+        <div class="card-title" id="cardTitle" data-i18n="welcome">Добро пожаловать</div>
+        <div class="card-sub" id="cardSub" data-i18n="loginSub">Войдите, чтобы продолжить</div>
+      </div>
     </div>
 
-    <!-- Error (Jinja2: shown only if error exists) -->
     {% if error %}
-    <div class="error-banner" role="alert">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      {{ error }}
-    </div>
+    <div class="status error" id="serverStatus" data-field="{{ field_error }}">{{ error }}</div>
     {% endif %}
     {% if success %}
-    <div class="error-banner success" role="status">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M20 6L9 17l-5-5"/>
-      </svg>
-      {{ success }}
-    </div>
+    <div class="status success" id="serverSuccess">{{ success }}</div>
     {% endif %}
 
-    <!-- Login form -->
-    <form class="form-panel active" id="panel-login" method="POST" action="/auth/login">
-      <div class="field">
-        <label for="login-phone">Телефон</label>
-        <input type="tel" id="login-phone" name="phone" placeholder="+7 777 000 00 00" autocomplete="tel" required>
+    <div class="tabs" role="tablist" id="mainTabs">
+      <button class="tab active" type="button" id="tab-login" onclick="showPanel('login')" data-i18n="tabLogin">Вход</button>
+      <button class="tab" type="button" id="tab-register" onclick="showPanel('register')" data-i18n="tabReg">Регистрация</button>
+    </div>
+
+    <form class="panel form active" id="panel-login" method="POST" action="/auth/login" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field" data-field="email">
+        <div class="label-row">
+          <label for="loginEmail" data-i18n="email">Email</label>
+        </div>
+        <input id="loginEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="you@example.com" value="{{ values.email or '' }}" required>
+        <div class="field-error"></div>
       </div>
-      <div class="field">
-        <label for="login-password">Пароль</label>
-        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+      <div class="field" data-field="password">
+        <div class="label-row">
+          <label for="loginPassword" data-i18n="password">Пароль</label>
+        </div>
+        <div class="input-row">
+          <div class="input-wrap has-toggle">
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" maxlength="128" data-i18n-ph="phPassword" placeholder="Введите пароль" required>
+            <button class="toggle-pass" type="button" onclick="togglePassword('loginPassword', this)" aria-label="Показать пароль" title="Показать пароль"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+          <button class="hint-link forgot-link" type="button" onclick="showPanel('forgot')" data-i18n="forgotLink">Забыли пароль?</button>
+        </div>
+        <div class="field-error"></div>
       </div>
-      <button type="submit" class="btn-submit">Войти</button>
+      <button class="submit" type="submit" data-i18n="loginBtn" data-loading="Входим...">Войти</button>
     </form>
 
-    <!-- Register form -->
-    <form class="form-panel" id="panel-register" method="POST" action="/auth/register">
-      <div class="field">
-        <label for="reg-name">Ваше имя</label>
-        <input type="text" id="reg-name" name="name" placeholder="Как вас зовут?" autocomplete="name" required>
+    <form class="panel form" id="panel-register" method="POST" action="/auth/register" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field" data-field="name">
+        <label for="regName" data-i18n="name">Имя</label>
+        <input id="regName" name="name" type="text" autocomplete="name" maxlength="80" data-i18n-ph="phName" placeholder="Как к вам обращаться" value="{{ values.name or '' }}" required>
+        <div class="field-error"></div>
       </div>
-      <div class="field">
-        <label for="reg-phone">Телефон</label>
-        <input type="tel" id="reg-phone" name="phone" placeholder="+7 777 000 00 00" autocomplete="tel" required>
+      <div class="field" data-field="email">
+        <label for="regEmail" data-i18n="email">Email</label>
+        <input id="regEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="you@example.com" value="{{ values.email or '' }}" required>
+        <div class="field-error"></div>
       </div>
-      <div class="field">
-        <label for="reg-email">Email</label>
-        <input type="email" id="reg-email" name="email" placeholder="you@example.com" autocomplete="email" required>
+      <div class="field" data-field="password">
+        <label for="regPassword" data-i18n="password">Пароль</label>
+        <div class="input-wrap has-toggle">
+          <input id="regPassword" name="password" type="password" autocomplete="new-password" maxlength="128" data-i18n-ph="phMin8" placeholder="Минимум 8 символов" required>
+          <button class="toggle-pass" type="button" onclick="togglePassword('regPassword', this)" aria-label="Показать пароль" title="Показать пароль"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="caps-warning" data-caps-for="regPassword">Включён Caps Lock.</div>
+        <div class="field-error"></div>
       </div>
-      <div class="field">
-        <label for="reg-password">Пароль</label>
-        <input type="password" id="reg-password" name="password" placeholder="Минимум 6 символов" autocomplete="new-password" required minlength="6">
+      <div class="field" data-field="confirm_password">
+        <label for="confirmPassword" data-i18n="confirmPw">Повторите пароль</label>
+        <div class="input-wrap has-toggle">
+          <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" maxlength="128" data-i18n-ph="phConfirm" placeholder="Ещё раз пароль" required>
+          <button class="toggle-pass" type="button" onclick="togglePassword('confirmPassword', this)" aria-label="Показать пароль" title="Показать пароль"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="field-error"></div>
       </div>
-      <button type="submit" class="btn-submit">Зарегистрироваться</button>
+      <button class="submit" type="submit" data-i18n="regBtn" data-loading="Создаём...">Создать аккаунт</button>
     </form>
 
-    {% if google_configured %}
-    <div class="oauth-section">
-      <div class="oauth-divider">или</div>
-      <a class="google-btn" href="/auth/google">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-          <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-          <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-          <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-        </svg>
-        Continue with Google
+    <form class="panel form" id="panel-forgot" method="POST" action="/auth/forgot-password" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field" data-field="email">
+        <label for="forgotEmail" data-i18n="email">Email</label>
+        <input id="forgotEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="you@example.com" value="{{ values.email or '' }}" required>
+        <div class="field-error"></div>
+      </div>
+      <button class="submit" type="submit" data-i18n="forgotBtn" data-loading="Отправляем...">Получить ссылку</button>
+      <div class="switch-line"><span data-i18n="haveAccount">Вспомнили пароль?</span> <button type="button" onclick="showPanel('login')" data-i18n="backToLogin">Вернуться ко входу</button></div>
+    </form>
+
+    <form class="panel form" id="panel-reset" method="POST" action="/auth/reset-password" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="token" value="{{ reset_token }}">
+      <div class="field" data-field="password">
+        <label for="resetPassword">Новый пароль</label>
+        <div class="input-wrap has-toggle">
+          <input id="resetPassword" name="password" type="password" autocomplete="new-password" maxlength="128" placeholder="Минимум 8 символов" required>
+          <button class="toggle-pass" type="button" onclick="togglePassword('resetPassword', this)" aria-label="Показать пароль" title="Показать пароль"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="caps-warning" data-caps-for="resetPassword">Включён Caps Lock.</div>
+        <div class="field-error"></div>
+      </div>
+      <div class="field" data-field="confirm_password">
+        <label for="resetConfirm">Повторите пароль</label>
+        <div class="input-wrap has-toggle">
+          <input id="resetConfirm" name="confirm_password" type="password" autocomplete="new-password" maxlength="128" placeholder="Ещё раз пароль" required>
+          <button class="toggle-pass" type="button" onclick="togglePassword('resetConfirm', this)" aria-label="Показать пароль" title="Показать пароль"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="field-error"></div>
+      </div>
+      <button class="submit" type="submit" data-loading="Сохраняем...">Сменить пароль</button>
+    </form>
+
+    <div id="oauthBlock">
+      {% if local_guest_enabled %}
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px">
+        <a class="google" href="/auth/guest?next=/dashboard">
+          <span>Guest Dashboard</span>
+        </a>
+      </div>
+      {% endif %}
+      <div class="divider" data-i18n="or">или</div>
+      <a class="google" href="/auth/google" id="googleBtn">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+        <span data-i18n="google">Войти через Google</span>
       </a>
     </div>
-    {% endif %}
+  </section>
+</main>
 
-    <div class="card-footer">
-      {% if active_tab == 'register' or not active_tab %}
-      <span class="token-pill">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm2 11H10v-1h1v-4h-1v-1h3v5h1v1z"/></svg>
-        Создавай сайты в несколько кликов
-      </span>
-      {% endif %}
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-    document.getElementById('panel-' + tab).classList.add('active');
+const initialPanel = "{{ active_tab or 'login' }}";
+const serverField = "{{ field_error or '' }}";
+const serverError = {{ (error or '')|tojson }};
+const I18N = {
+  ru: {
+    heroTitle: "Сайт для вашего бизнеса за минуты",
+    step1: "Создать страницу", step2: "Улучшить с AI", step3: "Запустить продвижение",
+    welcome: "Добро пожаловать", loginSub: "Войдите, чтобы продолжить", regSub: "Создайте аккаунт",
+    forgotSub: "Мы отправим безопасную ссылку на ваш email.", resetSub: "Придумайте пароль для дальнейшего входа.",
+    tabLogin: "Вход", tabReg: "Регистрация", email: "Email", password: "Пароль", name: "Имя",
+    confirmPw: "Повторите пароль", newPw: "Новый пароль", loginBtn: "Войти", regBtn: "Создать аккаунт",
+    forgotBtn: "Получить ссылку", resetBtn: "Сменить пароль", forgotLink: "Забыли пароль?",
+    backToLogin: "Вернуться ко входу", or: "или", google: "Войти через Google", haveAccount: "Вспомнили пароль?",
+    phPassword: "Введите пароль", phName: "Как к вам обращаться", phMin8: "Минимум 8 символов", phConfirm: "Ещё раз пароль",
+    errEmail: "Введите корректный email.", errName: "Проверьте имя.", errMin8: "Минимум 8 символов.", errPassword: "Введите пароль.", errMatch: "Пароли не совпадают.", errInvalid: "Неверный email или пароль.", loading: "Загрузка...",
+    invalid_credentials: "Неверный email или пароль.", user_exists: "Этот email уже зарегистрирован."
+  },
+  kz: {
+    heroTitle: "Бизнес-бетті бірнеше минутта жасаңыз",
+    step1: "Бетті жасау", step2: "AI-мен жақсарту", step3: "Жарнаманы қосу",
+    welcome: "Қош келдіңіз", loginSub: "Жалғастыру үшін жүйеге кіріңіз", regSub: "Тіркелгі жасау",
+    forgotSub: "Біз сіздің электронды поштаңызға сілтеме жібереміз.", resetSub: "Келесі кіру үшін құпия сөз ойлап табыңыз.",
+    tabLogin: "Кіру", tabReg: "Тіркелу", email: "Email", password: "Құпия сөз", name: "Атыңыз",
+    confirmPw: "Құпия сөзді қайталаңыз", newPw: "Жаңа құпия сөз", loginBtn: "Кіру", regBtn: "Тіркелгі жасау",
+    forgotBtn: "Сілтемені алу", resetBtn: "Құпия сөзді өзгерту", forgotLink: "Құпия сөзді ұмыттыңыз ба?",
+    backToLogin: "Кіруге қайту", or: "немесе", google: "Google арқылы кіру", haveAccount: "Құпия сөз есіңізде ме?",
+    phPassword: "Құпия сөзді енгізіңіз", phName: "Сізді қалай атаймыз", phMin8: "Минимум 8 таңба", phConfirm: "Құпия сөзді қайталаңыз",
+    errEmail: "Дұрыс email енгізіңіз.", errName: "Атыңызды тексеріңіз.", errMin8: "Кемінде 8 таңба.", errPassword: "Құпия сөзді енгізіңіз.", errMatch: "Құпия сөздер сәйкес келмейді.", errInvalid: "Email немесе құпия сөз қате.", loading: "Жүктеу...",
+    invalid_credentials: "Email немесе құпия сөз қате.", user_exists: "Бұл email тіркелген."
+  },
+  en: {
+    heroTitle: "Site for your business in minutes",
+    step1: "Create page", step2: "Improve with AI", step3: "Launch promotion",
+    welcome: "Welcome", loginSub: "Sign in to continue", regSub: "Create an account",
+    forgotSub: "We will send a secure link to your email.", resetSub: "Create a password for future logins.",
+    tabLogin: "Login", tabReg: "Register", email: "Email", password: "Password", name: "Name",
+    confirmPw: "Confirm Password", newPw: "New Password", loginBtn: "Login", regBtn: "Create account",
+    forgotBtn: "Get link", resetBtn: "Reset password", forgotLink: "Forgot password?",
+    backToLogin: "Back to login", or: "or", google: "Sign in with Google", haveAccount: "Remembered your password?",
+    phPassword: "Enter password", phName: "How to address you", phMin8: "Minimum 8 characters", phConfirm: "Repeat password",
+    errEmail: "Enter a valid email.", errName: "Check your name.", errMin8: "Minimum 8 characters.", errPassword: "Enter password.", errMatch: "Passwords do not match.", errInvalid: "Invalid email or password.", loading: "Loading...",
+    invalid_credentials: "Invalid email or password.", user_exists: "This email is already registered."
+  }
+};
+
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+
+function toggleLang(){
+  const cur = document.documentElement.getAttribute('lang') || 'ru';
+  const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
+  setLang(next);
+}
+
+function setLang(lang){
+  document.documentElement.setAttribute('lang', lang);
+  localStorage.setItem('lang', lang);
+  document.getElementById('langToggle').textContent = lang.toUpperCase();
+  const dict = I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    if(dict[key]) el.setAttribute('placeholder', dict[key]);
+  });
+}
+
+function showPanel(name){
+  const lang = document.documentElement.getAttribute('lang') || 'ru';
+  const dict = I18N[lang];
+  const panelTitles = {
+    login: [dict.welcome, dict.loginSub],
+    register: [dict.welcome, dict.regSub],
+    forgot: [dict.welcome, dict.forgotSub],
+    reset: [dict.newPw, dict.resetSub]
+  };
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  panel.classList.add('active');
+  panel.classList.remove('animate');
+  const head = document.querySelector('.card-head');
+  head.classList.remove('animate');
+  void panel.offsetHeight;
+  void head.offsetHeight;
+  panel.classList.add('animate');
+  head.classList.add('animate');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(name === 'login' || name === 'register') document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('mainTabs').style.display = (name === 'login' || name === 'register') ? 'grid' : 'none';
+  document.getElementById('oauthBlock').style.display = (name === 'login' || name === 'register') ? 'block' : 'none';
+  const [title, sub] = panelTitles[name] || panelTitles.login;
+  document.getElementById('cardTitle').textContent = title;
+  document.getElementById('cardSub').textContent = sub;
+  const first = document.querySelector('#panel-' + name + ' input:not([type="hidden"])');
+  if(name === 'forgot'){
+    const loginEmail = document.getElementById('loginEmail');
+    const forgotEmail = document.getElementById('forgotEmail');
+    if(loginEmail && forgotEmail && loginEmail.value.trim()){
+      forgotEmail.value = loginEmail.value.trim();
+    }
+  }
+  setTimeout(()=>first?.focus(), 80);
+}
+
+function togglePassword(id, btn){
+  const input = document.getElementById(id);
+  const visible = input.type !== 'text';
+  const newType = visible ? 'text' : 'password';
+
+  const syncIds = ['regPassword', 'confirmPassword'];
+  const buttons = [btn];
+  if (syncIds.includes(id)) {
+    syncIds.forEach(syncId => {
+      const syncInput = document.getElementById(syncId);
+      if (syncInput) syncInput.type = newType;
+      const syncBtn = document.querySelector(`.toggle-pass[onclick="togglePassword('${syncId}', this)"]`);
+      if (syncBtn && syncBtn !== btn) buttons.push(syncBtn);
+    });
+  } else {
+    input.type = newType;
   }
 
-  // Auto-switch tab if error came from register action
-  (function() {
-    const params = new URLSearchParams(window.location.search);
-    const initialTab = "{{ active_tab or '' }}";
-    const fromRegister = params.get('tab') === 'register' || initialTab === 'register';
-    if (fromRegister) switchTab('register');
-  })();
+  buttons.forEach(button => {
+    button.classList.toggle('is-visible', visible);
+    button.setAttribute('aria-label', visible ? 'Скрыть пароль' : 'Показать пароль');
+    button.setAttribute('title', visible ? 'Скрыть пароль' : 'Показать пароль');
+  });
+}
+
+function setFieldError(form, field, message){
+  const wrap = form.querySelector(`.field[data-field="${field}"]`);
+  if(!wrap) return;
+  wrap.classList.add('invalid');
+  wrap.querySelector('.field-error').textContent = message;
+}
+function clearErrors(form){
+  form.querySelectorAll('.field').forEach(f=>{
+    f.classList.remove('invalid');
+    const err=f.querySelector('.field-error'); if(err) err.textContent='';
+  });
+}
+const invisibleChars = /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/;
+const invisibleCharsGlobal = /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g;
+function normalizeForValidation(value){
+  try{return String(value || '').normalize('NFKC').trim()}catch(_){return ''}
+}
+function normalizeForInput(value){
+  try{return String(value || '').normalize('NFKC')}catch(_){return ''}
+}
+function hasUnsafeChars(value){return invisibleChars.test(String(value || ''))}
+function utf8Bytes(value){return new TextEncoder().encode(value || '').length}
+function sanitizeEmailInput(value){
+  return normalizeForInput(value)
+    .replace(invisibleCharsGlobal, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Za-z0-9!#$%&'*+/=?^_`{|}~@.-]/g, '')
+    .slice(0, 254)
+    .toLowerCase();
+}
+function sanitizeNameInput(value, trimEnd=false){
+  let v = normalizeForInput(value)
+    .replace(invisibleCharsGlobal, '')
+    .replace(/[‐‑‒–—―]/g, '-')
+    .replace(/[’ʼ`]/g, "'")
+    .replace(/[^A-Za-zА-Яа-яЁё '-]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[ '-]+/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/'{2,}/g, "'");
+  if(trimEnd) v = v.replace(/[ '-]+$/g, '');
+  return v.slice(0, 80);
+}
+function sanitizePasswordInput(value){
+  return String(value || '')
+    .replace(invisibleCharsGlobal, '')
+    .replace(/^\s+/g, '')
+    .replace(/\s+$/g, '')
+    .slice(0, 128);
+}
+function guardEmailBeforeInput(input){
+  input.addEventListener('beforeinput', event=>{
+    if(!event.data) return;
+    const clean = sanitizeEmailInput(event.data);
+    if(clean !== event.data.toLowerCase()){
+      event.preventDefault();
+      if(clean) document.execCommand('insertText', false, clean);
+    }
+  });
+}
+function validEmail(value){
+  const v = normalizeForValidation(value).toLowerCase();
+  if(!v || v.length > 254 || hasUnsafeChars(v) || /\s/.test(v) || !/^[\x00-\x7F]+$/.test(v)) return false;
+  const parts = v.split('@');
+  if(parts.length !== 2) return false;
+  const [local, domain] = parts;
+  if(!local || !domain || local.length > 64 || local.includes('..') || domain.includes('..')) return false;
+  const labels = domain.split('.');
+  if(labels.length < 2 || labels.some(label => !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return false;
+  if(!/^[a-z]{2,}$/.test(labels[labels.length - 1])) return false;
+  return /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(v);
+}
+function validLoginIdentity(value){return validEmail(value)}
+function validName(value){
+  const v = normalizeForValidation(value).replace(/\s+/g, ' ');
+  if(v.length < 2 || v.length > 80 || hasUnsafeChars(v) || /^[ '-]|[ '-]$/.test(v)) return false;
+  if(/([ '-])\1/.test(v)) return false;
+  let punctuation = 0;
+  for(const ch of v){
+    if(/[A-Za-zА-Яа-яЁё]/.test(ch) || ch === ' ') continue;
+    if(ch === '-' || ch === "'"){punctuation++; continue}
+    return false;
+  }
+  return punctuation <= 6;
+}
+function passwordChecks(value){
+  const pw = String(value || '');
+  return {
+    length: pw.length >= 8 && pw.length <= 128 && utf8Bytes(pw) <= 72 && pw === pw.trim() && !hasUnsafeChars(pw)
+  };
+}
+function validNewPassword(value){
+  const checks = passwordChecks(value);
+  return checks.length;
+}
+function installInputGuards(){
+  document.querySelectorAll('input[name="email"]').forEach(input=>{
+    guardEmailBeforeInput(input);
+    input.addEventListener('input', ()=>{
+      const clean = sanitizeEmailInput(input.value);
+      if(input.value !== clean) input.value = clean;
+    });
+    input.addEventListener('paste', event=>{
+      event.preventDefault();
+      const clean = sanitizeEmailInput((event.clipboardData || window.clipboardData).getData('text'));
+      document.execCommand('insertText', false, clean);
+    });
+  });
+  document.querySelectorAll('input[name="name"]').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const clean = sanitizeNameInput(input.value, false);
+      if(input.value !== clean) input.value = clean;
+    });
+    input.addEventListener('blur', ()=>{
+      input.value = sanitizeNameInput(input.value, true);
+    });
+  });
+  document.querySelectorAll('input[name="password"], input[name="confirm_password"]').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const clean = sanitizePasswordInput(input.value);
+      if(input.value !== clean) input.value = clean;
+    });
+  });
+}
+function validateAuthForm(form){
+  const lang = document.documentElement.getAttribute('lang') || 'ru';
+  const dict = I18N[lang];
+  clearErrors(form);
+  let ok = true;
+  const email = form.querySelector('input[name="email"]');
+  if(email){
+    const validIdentity = form.id === 'panel-login' ? validLoginIdentity(email.value.trim()) : validEmail(email.value.trim());
+    if(!validIdentity){setFieldError(form,'email',dict.errEmail);ok=false}
+  }
+  const nameInput = form.querySelector('input[name="name"]');
+  if(nameInput && form.id === 'panel-register' && !validName(nameInput.value)){setFieldError(form,'name',dict.errName);ok=false}
+  const pw = form.querySelector('input[name="password"]');
+  if(pw && form.id !== 'panel-login' && !validNewPassword(pw.value)){setFieldError(form,'password',dict.errMin8);ok=false}
+  if(pw && !pw.value && form.id === 'panel-login'){setFieldError(form,'password',dict.errPassword);ok=false}
+  if(pw && form.id === 'panel-login' && (pw.value.length > 128 || utf8Bytes(pw.value) > 72 || hasUnsafeChars(pw.value))){setFieldError(form,'password',dict.errInvalid);ok=false}
+  const cp = form.querySelector('input[name="confirm_password"]');
+  if(cp && pw && cp.value !== pw.value){setFieldError(form,'confirm_password',dict.errMatch);ok=false}
+  return ok;
+}
+
+document.querySelectorAll('form.form').forEach(form=>{
+  form.addEventListener('submit', e=>{
+    form.querySelectorAll('input[name="email"], input[name="name"]').forEach(input=>{
+      input.value = input.name === 'email' ? sanitizeEmailInput(input.value) : sanitizeNameInput(input.value, true);
+    });
+    form.querySelectorAll('input[name="password"], input[name="confirm_password"]').forEach(input=>{
+      input.value = sanitizePasswordInput(input.value);
+    });
+    if(!validateAuthForm(form)){e.preventDefault();return}
+    const btn = form.querySelector('.submit');
+    if(btn.disabled){e.preventDefault();return}
+    const lang = document.documentElement.getAttribute('lang') || 'ru';
+    const dict = I18N[lang];
+    btn.dataset.original = btn.textContent;
+    btn.textContent = dict.loading;
+    btn.disabled = true;
+  });
+});
+
+const regPassword = document.getElementById('regPassword');
+const resetPassword = document.getElementById('resetPassword');
+function watchCaps(input){
+  input?.addEventListener('keyup', event=>{
+    const warn = document.querySelector(`[data-caps-for="${input.id}"]`);
+    warn?.classList.toggle('show', !!event.getModifierState && event.getModifierState('CapsLock'));
+  });
+}
+installInputGuards();
+watchCaps(document.getElementById('loginPassword'));
+watchCaps(regPassword);
+watchCaps(resetPassword);
+
+const initialLang = localStorage.getItem('lang') || 'ru';
+setLang(initialLang);
+showPanel(initialPanel);
+
+if(serverError) {
+  const lang = document.documentElement.getAttribute('lang') || 'ru';
+  const dict = I18N[lang];
+  let msg = serverError;
+  // Map common backend error keys/messages
+  if(msg === 'Неверный email или пароль') msg = dict.errInvalid;
+  if(msg === 'Этот email уже зарегистрирован') msg = dict.user_exists;
+
+  if(serverField){
+    const active = document.getElementById('panel-' + initialPanel);
+    setFieldError(active, serverField, msg);
+  }
+
+  const t=document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+// Clear error status on page load
+window.addEventListener('load', ()=>{
+  const statusEl = document.getElementById('serverStatus');
+  if(statusEl){
+    statusEl.remove();
+  }
+});
 </script>
 </body>
 </html>

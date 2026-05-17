@@ -1,525 +1,2632 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lendings.kz — Мои сайты</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-  :root {
-    --bg:#0a0a0f; --surface:#111118; --surface2:#16161f; --border:#1e1e2e;
-    --accent:#7c5cff; --accent-dim:#5b3fd4; --accent-glow:#7c5cff33;
-    --text:#f0eeff; --muted:#6b6b8a; --muted2:#3d3d55;
-    --green:#34d896; --red:#ff4f6a; --radius:16px;
-  }
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
-  body { font-family:'Sora',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
-  body::before {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background: radial-gradient(ellipse 70% 30% at 10% 5%, #7c5cff14 0%, transparent 60%),
-                radial-gradient(ellipse 40% 25% at 90% 80%, #5b3fd40c 0%, transparent 60%);
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>lendings.kz — Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
 
-  /* Header */
-  .header {
-    position:sticky; top:0; z-index:100;
-    background:#0a0a0fee; backdrop-filter:blur(20px) saturate(180%);
-    border-bottom:1px solid var(--border);
-    padding:0 20px; height:58px;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-  }
-  .logo { font-size:1.05rem; font-weight:700; letter-spacing:-.02em; flex-shrink:0; }
-  .logo span { color:var(--accent); }
-  .header-right { display:flex; align-items:center; gap:10px; min-width:0; }
-  .token-badge {
-    display:inline-flex; align-items:center; gap:5px;
-    background:var(--accent-glow); border:1px solid #7c5cff44;
-    color:var(--accent); border-radius:20px;
-    padding:5px 10px; font-size:.76rem; font-weight:600; white-space:nowrap; flex-shrink:0;
-  }
-  .token-badge svg { width:11px; height:11px; }
-  .verified-badge {
-    display:inline-flex; align-items:center; gap:5px;
-    background:#34d89618; border:1px solid #34d89633;
-    color:var(--green); border-radius:20px;
-    padding:5px 10px; font-size:.72rem; font-weight:600; white-space:nowrap; flex-shrink:0;
-  }
-  .verified-badge svg { width:12px; height:12px; }
-  .header-btn {
-    background:none; border:1px solid var(--border); color:var(--muted);
-    border-radius:9px; padding:7px 12px; font-family:inherit; font-size:.78rem;
-    cursor:pointer; white-space:nowrap; flex-shrink:0; text-decoration:none;
-    display:inline-flex; align-items:center; gap:5px; transition:all .2s;
-  }
-  .header-btn:hover { color:var(--text); border-color:#7c5cff44; }
-  .header-btn.danger:hover { border-color:#ff4f6a44; color:var(--red); }
-
-  /* Toast */
-  .toast {
-    position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-8px);
-    background:#1a1430; border:1px solid #7c5cff44; border-radius:12px;
-    padding:12px 20px; font-size:.84rem; font-weight:500; color:var(--text);
-    box-shadow:0 8px 32px #00000088; z-index:200;
-    opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; white-space:nowrap;
-  }
-  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
-  /* Content */
-  .content { position:relative; z-index:1; max-width:680px; margin:0 auto; padding:24px 20px 60px; }
-
-  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-
-  /* New site banner */
-  .new-banner {
-    display:none; align-items:center; gap:12px;
-    background:linear-gradient(135deg,#1a2a1a,#111c14);
-    border:1px solid #34d89633; border-radius:14px;
-    padding:14px 18px; margin-bottom:20px;
-    animation:fadeUp .4s both;
-  }
-  .new-banner.show { display:flex; }
-  .new-banner-icon { font-size:1.4rem; flex-shrink:0; }
-  .new-banner-text { flex:1; font-size:.85rem; line-height:1.5; }
-  .new-banner-text strong { color:var(--green); }
-  .new-banner-link {
-    color:var(--green); text-decoration:none; font-size:.8rem; font-weight:600;
-    white-space:nowrap; display:flex; align-items:center; gap:4px;
-  }
-
-  /* Email verification */
-  .verify-banner {
-    background:linear-gradient(135deg,#1a1430,#12111c);
-    border:1px solid #f5c84244; border-radius:14px;
-    padding:16px 18px; margin-bottom:20px;
-    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
-    animation:fadeUp .4s both;
-  }
-  .verify-title { font-size:.9rem; font-weight:700; margin-bottom:4px; }
-  .verify-sub { font-size:.78rem; color:var(--muted); line-height:1.5; }
-  .verify-status { font-size:.76rem; margin-top:8px; min-height:18px; }
-  .verify-status.ok { color:var(--green); }
-  .verify-status.err { color:var(--red); }
-  .verify-actions { display:flex; gap:8px; flex-shrink:0; }
-  .verify-btn {
-    background:var(--accent); color:#fff; border:none; border-radius:10px;
-    padding:9px 13px; font-family:inherit; font-size:.78rem; font-weight:700;
-    cursor:pointer; white-space:nowrap; transition:opacity .2s, transform .15s;
-  }
-  .verify-btn:hover:not(:disabled) { opacity:.9; transform:translateY(-1px); }
-  .verify-btn:disabled { opacity:.45; cursor:not-allowed; }
-  @media(max-width:560px){
-    .verify-banner{flex-direction:column;}
-    .verify-actions{width:100%;}
-    .verify-btn{width:100%;}
-  }
-
-  /* Hero card */
-  .hero-card {
-    background:linear-gradient(135deg,#1a1430,#12111c);
-    border:1px solid #7c5cff33; border-radius:calc(var(--radius) + 4px);
-    padding:24px 20px; margin-bottom:28px; position:relative; overflow:hidden;
-    animation:fadeUp .4s both;
-  }
-  .hero-card::before {
-    content:''; position:absolute; top:-40px; right:-40px;
-    width:160px; height:160px; border-radius:50%;
-    background:radial-gradient(circle,#7c5cff22 0%,transparent 70%); pointer-events:none;
-  }
-  .hero-label { font-size:.72rem; font-weight:500; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
-  .hero-title { font-size:1.15rem; font-weight:700; letter-spacing:-.02em; margin-bottom:4px; }
-  .hero-sub { font-size:.82rem; color:var(--muted); margin-bottom:18px; line-height:1.5; }
-  .hero-sub strong { color:var(--accent); }
-  .btn-create {
-    display:inline-flex; align-items:center; gap:7px;
-    background:var(--accent); color:#fff; border:none; border-radius:11px;
-    padding:12px 20px; font-family:inherit; font-size:.9rem; font-weight:600;
-    cursor:pointer; text-decoration:none;
-    transition:transform .15s, box-shadow .2s, opacity .15s;
-    box-shadow:0 4px 20px #7c5cff44;
-  }
-  .btn-create:hover { opacity:.9; transform:translateY(-2px); box-shadow:0 8px 28px #7c5cff55; }
-  .hero-meta {
-    margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
-    font-size:.76rem; color:var(--muted); display:flex; align-items:center; gap:6px;
-  }
-  .hero-meta a { color:var(--accent); text-decoration:none; font-weight:600; }
-
-  /* Section */
-  .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; animation:fadeUp .4s .1s both; }
-  .section-title { font-size:.95rem; font-weight:600; letter-spacing:-.01em; }
-  .section-count { font-size:.76rem; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; }
-
-  /* Sites grid */
-  .sites-grid { display:flex; flex-direction:column; gap:10px; animation:fadeUp .4s .15s both; }
-
-  .site-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:18px 20px; transition:border-color .2s, transform .2s; position:relative; overflow:hidden;
-  }
-  .site-card:hover { border-color:#7c5cff33; transform:translateY(-1px); }
-  .site-card::before {
-    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
-    background:var(--accent); border-radius:2px 0 0 2px; opacity:0; transition:opacity .2s;
-  }
-  .site-card:hover::before { opacity:1; }
-
-  .site-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
-  .site-title { font-size:.95rem; font-weight:600; letter-spacing:-.01em; line-height:1.3; }
-  .site-slug { font-size:.72rem; color:var(--muted); margin-top:2px; }
-  .site-badge {
-    display:inline-flex; align-items:center; gap:4px;
-    background:#7c5cff18; border:1px solid #7c5cff33;
-    color:var(--accent); border-radius:7px; padding:3px 8px; font-size:.7rem; font-weight:600; flex-shrink:0;
-  }
-
-  .site-meta { font-size:.74rem; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-
-  .site-token-stats {
-    display:flex; align-items:center; flex-wrap:wrap; gap:6px;
-    margin-bottom:14px; padding:8px 10px;
-    background:var(--surface2); border:1px solid var(--border); border-radius:9px;
-  }
-  .tstat { display:flex; align-items:center; gap:4px; }
-  .tstat-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-  .tstat-val { font-size:.74rem; font-family:'Sora',monospace; font-weight:600; color:var(--text); }
-  .tstat-cache { color:#4fa3ff; }
-  .tstat-cost { color:#34d896; }
-  .tstat-sep { color:var(--muted2); font-size:.7rem; }
-
-  .site-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  .btn-open {
-    display:inline-flex; align-items:center; gap:5px;
-    background:var(--accent); color:#fff; border:none; border-radius:9px;
-    padding:8px 14px; font-family:inherit; font-size:.8rem; font-weight:600;
-    cursor:pointer; text-decoration:none; transition:opacity .15s, transform .15s;
-  }
-  .btn-open:hover { opacity:.9; transform:translateY(-1px); }
-  .btn-copy {
-    display:inline-flex; align-items:center; gap:5px;
-    background:var(--surface2); color:var(--muted); border:1px solid var(--border); border-radius:9px;
-    padding:8px 14px; font-family:inherit; font-size:.8rem; cursor:pointer;
-    transition:all .2s;
-  }
-  .btn-copy:hover { border-color:#7c5cff44; color:var(--text); }
-  .btn-copy.copied { border-color:#34d89644; color:var(--green); }
-  .btn-delete {
-    display:inline-flex; align-items:center; gap:4px;
-    background:none; color:var(--muted2); border:none;
-    font-family:inherit; font-size:.78rem; cursor:pointer;
-    padding:8px 10px; border-radius:9px; margin-left:auto;
-    transition:color .2s, background .2s;
-  }
-  .btn-delete:hover { color:var(--red); background:#ff4f6a12; }
-
-  /* Empty */
-  .empty-state { text-align:center; padding:48px 24px; animation:fadeUp .4s .2s both; }
-  .empty-icon { width:60px; height:60px; border-radius:18px; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; color:var(--muted); }
-  .empty-title { font-size:.98rem; font-weight:600; margin-bottom:8px; }
-  .empty-sub { font-size:.82rem; color:var(--muted); line-height:1.6; margin-bottom:22px; }
-
-  /* Confirm delete modal */
-  .modal-overlay {
-    display:none; position:fixed; inset:0; background:#00000088;
-    z-index:300; align-items:center; justify-content:center; padding:20px;
-  }
-  .modal-overlay.show { display:flex; }
-  .modal {
-    background:var(--surface); border:1px solid var(--border); border-radius:20px;
-    padding:28px 24px; max-width:360px; width:100%; text-align:center;
-    animation:fadeUp .25s both;
-  }
-  .modal-title { font-size:1rem; font-weight:700; margin-bottom:8px; }
-  .modal-sub { font-size:.84rem; color:var(--muted); margin-bottom:22px; line-height:1.5; }
-  .modal-actions { display:flex; gap:10px; }
-  .modal-cancel {
-    flex:1; padding:12px; background:var(--surface2); border:1px solid var(--border);
-    color:var(--muted); border-radius:11px; font-family:inherit; font-size:.88rem; cursor:pointer;
-    transition:all .2s;
-  }
-  .modal-cancel:hover { color:var(--text); }
-  .modal-confirm {
-    flex:1; padding:12px; background:#ff4f6a22; border:1px solid #ff4f6a44;
-    color:var(--red); border-radius:11px; font-family:inherit; font-size:.88rem; font-weight:600; cursor:pointer;
-    transition:all .2s;
-  }
-  .modal-confirm:hover { background:#ff4f6a33; }
-</style>
-</head>
-<body>
-
-<header class="header">
-  <div class="logo">lendings<span>.kz</span></div>
-  <div class="header-right">
-    <div class="token-badge">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-      {{ user.tokens }} кредитов
-    </div>
-    {% if user.email and user.email_verified %}
-    <div class="verified-badge">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-      Email
-    </div>
-    {% endif %}
-    <a href="/profile" class="header-btn">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Профиль
-    </a>
-    <form method="POST" action="/auth/logout" style="margin:0">
-      <button type="submit" class="header-btn danger">Выйти</button>
-    </form>
-  </div>
-</header>
-
-<div class="toast" id="toast"></div>
-
-<main class="content">
-
-  <!-- New site banner -->
-  <div class="new-banner" id="newBanner">
-    <div class="new-banner-icon">🎉</div>
-    <div class="new-banner-text">
-      <strong>Сайт готов!</strong> Ссылка скопирована — отправляй клиентам.
-    </div>
-    <a href="#" id="newBannerLink" class="new-banner-link" target="_blank">
-      Открыть
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-    </a>
-  </div>
-
-  {% if user.email and not user.email_verified %}
-  <div class="verify-banner" id="verifyBanner">
-    <div>
-      <div class="verify-title">Подтвердите email</div>
-      <div class="verify-sub">Мы отправили ссылку на {{ user.email }}. Подтверждение помогает защитить аккаунт и восстановление доступа.</div>
-      <div class="verify-status {{ 'ok' if verification_notice.success else 'err' if verification_notice.error else '' }}" id="verifyStatus">
-        {{ verification_notice.success or verification_notice.error or '' }}
-      </div>
-    </div>
-    <div class="verify-actions">
-      <button class="verify-btn" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}" onclick="resendVerification()">Отправить ещё раз</button>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Hero -->
-  <div class="hero-card">
-    <div class="hero-label">Новый сайт</div>
-    <div class="hero-title">Создать сайт-визитку</div>
-    <div class="hero-sub">ИИ соберёт сайт за минуту по твоим ответам.<br>Кредиты: <strong>{{ user.tokens }}</strong> · Слоты: <strong>{{ user.site_slots }}</strong></div>
-    <a href="/create" class="btn-create">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Создать сайт
-    </a>
-    <div class="hero-meta">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <a href="/payment?reason=no_slots">Купить ещё сайт →</a> · <a href="/payment?reason=no_credits">Докупить кредиты →</a>
-    </div>
-  </div>
-
-  <!-- Sites -->
-  {% if sites %}
-  <div class="section-head">
-    <div class="section-title">Мои сайты</div>
-    <div class="section-count">{{ sites|length }}</div>
-  </div>
-
-  <div class="sites-grid">
-    {% for site in sites %}
-    <div class="site-card" id="card-{{ site.slug }}">
-      <div class="site-top">
-        <div>
-          <div class="site-title">{{ site.title }}</div>
-          <div class="site-slug">/site/{{ site.slug }}</div>
-        </div>
-        <div class="site-badge">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-          {{ site.tokens_used }} токенов
-        </div>
-      </div>
-      <div class="site-meta">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        {{ site.created[:10] }}
-      </div>
-      {%- set total_in = (site.chat_in or 0) + (site.gen_in or 0) %}
-      {%- set total_out = (site.chat_out or 0) + (site.gen_out or 0) %}
-      {%- if total_in or total_out %}
-      <div class="site-token-stats">
-        <div class="tstat">
-          <span class="tstat-label">Чат</span>
-          <span class="tstat-val">{{ "%.1f"|format((site.chat_in or 0) / 1000) }}K / {{ "%.1f"|format((site.chat_out or 0) / 1000) }}K</span>
-        </div>
-        <div class="tstat-sep">·</div>
-        <div class="tstat">
-          <span class="tstat-label">Генерация</span>
-          <span class="tstat-val">{{ "%.1f"|format((site.gen_in or 0) / 1000) }}K / {{ "%.1f"|format((site.gen_out or 0) / 1000) }}K</span>
-        </div>
-        {%- if site.cache_read %}
-        <div class="tstat-sep">·</div>
-        <div class="tstat">
-          <span class="tstat-label">Кэш</span>
-          <span class="tstat-val tstat-cache">{{ "%.1f"|format((site.cache_read or 0) / 1000) }}K</span>
-        </div>
-        {%- endif %}
-        {%- if site.cost_usd %}
-        <div class="tstat-sep">·</div>
-        <div class="tstat">
-          <span class="tstat-label">Стоимость</span>
-          <span class="tstat-val tstat-cost">${{ "%.4f"|format(site.cost_usd) }}</span>
-        </div>
-        {%- endif %}
-      </div>
-      {%- endif %}
-      <div class="site-actions">
-        <a href="/site/{{ site.slug }}" class="btn-open" target="_blank">
-          Открыть
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-        </a>
-        <a href="/create?edit={{ site.slug }}" class="btn-copy">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Редактировать
-        </a>
-        <button class="btn-copy" onclick="copyLink('/site/{{ site.slug }}', this)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          Копировать
-        </button>
-        <button class="btn-delete" onclick="confirmDelete('{{ site.slug }}', '{{ site.title }}')">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-          Удалить
-        </button>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  {% else %}
-  <div class="empty-state">
-    <div class="empty-icon">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-    </div>
-    <div class="empty-title">Сайтов пока нет</div>
-    <div class="empty-sub">Создайте первый — ИИ соберёт<br>по вашим ответам за минуту.</div>
-    <a href="/create" class="btn-create">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Создать первый сайт
-    </a>
-  </div>
-  {% endif %}
-
-</main>
-
-<!-- Delete confirm modal -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal">
-    <div class="modal-title">Удалить сайт?</div>
-    <div class="modal-sub" id="deleteModalSub">Сайт будет удалён безвозвратно. Токены не возвращаются.</div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal()">Отмена</button>
-      <form id="deleteForm" method="POST">
-        <button type="submit" class="modal-confirm" style="width:100%">Удалить</button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<script>
-// New site banner from URL param
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const newUrl = params.get('new');
-  if (newUrl) {
-    const banner = document.getElementById('newBanner');
-    const link = document.getElementById('newBannerLink');
-    link.href = newUrl;
-    banner.classList.add('show');
-    // Clean URL
-    history.replaceState({}, '', '/dashboard');
-  }
-})();
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-function copyLink(path, btn) {
-  const url = window.location.origin + path;
-  navigator.clipboard.writeText(url).then(() => {
-    btn.classList.add('copied');
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Скопировано`;
-    showToast('Ссылка скопирована!');
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Копировать`;
-    }, 2000);
-  });
-}
-
-let pendingDeleteSlug = null;
-function confirmDelete(slug, title) {
-  pendingDeleteSlug = slug;
-  document.getElementById('deleteModalSub').textContent = `«${title}» будет удалён безвозвратно. Токены не возвращаются.`;
-  document.getElementById('deleteForm').action = `/site/${slug}/delete`;
-  document.getElementById('deleteModal').classList.add('show');
-}
-function closeModal() {
-  document.getElementById('deleteModal').classList.remove('show');
-  pendingDeleteSlug = null;
-}
-document.getElementById('deleteModal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-let verifyCooldown = 0;
-function setVerifyStatus(message, ok) {
-  const el = document.getElementById('verifyStatus');
-  if (!el) return;
-  el.textContent = message || '';
-  el.classList.toggle('ok', !!ok);
-  el.classList.toggle('err', !ok && !!message);
-}
-function tickVerifyCooldown() {
-  const btn = document.getElementById('verifyResendBtn');
-  if (!btn) return;
-  if (verifyCooldown > 0) {
-    btn.disabled = true;
-    btn.textContent = `Повторно через ${verifyCooldown}с`;
-    verifyCooldown -= 1;
-    setTimeout(tickVerifyCooldown, 1000);
-  } else {
-    btn.disabled = false;
-    btn.textContent = 'Отправить ещё раз';
-  }
-}
-async function resendVerification() {
-  const btn = document.getElementById('verifyResendBtn');
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = 'Отправляем...';
-  try {
-    const r = await fetch('/auth/resend-email-verification', {method:'POST'});
-    const data = await r.json();
-    if (data.ok) {
-      setVerifyStatus(data.message || 'Письмо отправлено.', true);
-      verifyCooldown = data.retry_after || 60;
-    } else {
-      setVerifyStatus(data.message || 'Не удалось отправить письмо.', false);
-      verifyCooldown = data.retry_after || 0;
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f9fbff;
+      --line: #e3e8f2;
+      --line-strong: #d5deed;
+      --text: #172033;
+      --muted: #66758c;
+      --soft: #8c98ab;
+      --brand: #4f6df5;
+      --brand-2: #21b889;
+      --warn: #e7a63a;
+      --red: #e25566;
+      --violet: #7b61ff;
+      --shadow: 0 24px 60px rgba(34, 48, 84, .10);
+      --radius: 14px;
+      --sidebar: 252px;
+      --header: 70px;
+      --bg-gradient: linear-gradient(180deg, #fff 0, #f5f7fb 52%, #eef3fb 100%);
     }
-  } catch (e) {
-    setVerifyStatus('Ошибка соединения. Попробуйте позже.', false);
-    verifyCooldown = 0;
-  }
-  tickVerifyCooldown();
-}
-(function(){
-  const btn = document.getElementById('verifyResendBtn');
-  if (!btn) return;
-  verifyCooldown = Number(btn.dataset.cooldown || 0);
-  if (verifyCooldown > 0) tickVerifyCooldown();
-})();
-</script>
+
+    [data-theme="dark"] {
+      --bg: #06060a;
+      --panel: rgba(15, 15, 22, 0.85);
+      --panel-soft: #0f0f16;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --soft: #64748b;
+      --brand: #8b5cf6;
+      --brand-2: #10b981;
+      --warn: #f59e0b;
+      --red: #ef4444;
+      --violet: #8b5cf6;
+      --shadow: 0 32px 100px rgba(0, 0, 0, 0.8);
+      --bg-gradient: radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+    }
+
+    .sidebar-balances {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+    .sidebar-balances .balance-pill {
+      flex: 1;
+      justify-content: center;
+      height: 32px;
+      font-size: .7rem;
+      padding: 0 8px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg)
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Unified smooth transitions for simultaneous theme change */
+    html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+      transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                  box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar) 1fr
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 24px 18px 24px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar-footer {
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      margin-top: auto;
+    }
+
+    .profile-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      transition: background .2s;
+    }
+
+    .profile-link:hover {
+      background: var(--panel-soft);
+    }
+
+    .avatar-sm {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: .85rem;
+      font-weight: 800;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar-sm img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-info {
+      min-width: 0;
+    }
+
+    .profile-name {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lang-toggle, .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .7rem;
+      font-weight: 800;
+      transition: .2s;
+    }
+
+    .lang-toggle:hover, .theme-toggle:hover {
+      border-color: var(--brand);
+      color: var(--text);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .sun { display: block; }
+    [data-theme="dark"] .sun { display: none; }
+    .moon { display: none; }
+    [data-theme="dark"] .moon { display: block; }
+
+
+    .brand {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .brand span {
+      color: var(--brand)
+    }
+
+    .nav {
+      margin-top: 18px;
+      display: grid;
+      gap: 6px
+    }
+
+    .nav a {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: .84rem;
+      font-weight: 700;
+      transition: .18s
+    }
+
+    .nav a:hover {
+      background: #eef3ff;
+      color: var(--text)
+    }
+
+    .nav a.active {
+      background: #eaf0ff;
+      color: var(--brand);
+      box-shadow: inset 0 0 0 1px #d9e3ff
+    }
+
+    .nav-ico {
+      width: 22px;
+      text-align: center;
+      color: inherit
+    }
+
+    .side-card {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 14px 38px rgba(34, 48, 84, .08)
+    }
+
+    .side-card b {
+      display: block;
+      font-size: .83rem;
+      margin-bottom: 5px
+    }
+
+    .side-card p {
+      font-size: .74rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 10px
+    }
+
+    .main {
+      min-width: 0
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      height: var(--header);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      z-index: 40
+    }
+
+    .mobile-menu {
+      display: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      color: var(--text)
+    }
+
+    .top-title {
+      min-width: 0
+    }
+
+    .crumb {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--soft);
+      font-weight: 800;
+      margin-bottom: 4px
+    }
+
+    .top-title h1 {
+      font-size: 1.12rem;
+      letter-spacing: -.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px
+    }
+
+    .balance-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 800
+    }
+
+    .balance-pill strong {
+      color: var(--text)
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), var(--violet));
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      overflow: hidden
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover
+    }
+
+    .icon-btn,
+    .btn,
+    .ghost,
+    .soft {
+      border: 0;
+      cursor: pointer;
+      border-radius: 12px;
+      font-weight: 800;
+      transition: .18s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      position: relative;
+      color: var(--muted)
+    }
+
+    .icon-btn:hover {
+      border-color: var(--line-strong);
+      color: var(--text);
+      transform: translateY(-1px)
+    }
+
+    .unread {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px #fff
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 0 15px;
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(79, 109, 245, .18)
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: #3959e8
+    }
+
+    .btn.green {
+      background: var(--brand-2);
+      box-shadow: 0 12px 24px rgba(33, 184, 137, .18)
+    }
+
+    .btn.warn {
+      background: var(--warn);
+      color: #2b1b00
+    }
+
+    .btn.red {
+      background: var(--red)
+    }
+
+    .ghost,
+    .soft {
+      min-height: 38px;
+      padding: 0 13px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .8rem
+    }
+
+    .ghost:hover,
+    .soft:hover {
+      border-color: var(--line-strong);
+      color: var(--text);
+      transform: translateY(-1px)
+    }
+
+    .soft {
+      background: var(--panel-soft);
+      color: var(--text)
+    }
+
+    .soft.disabled,
+    .btn:disabled,
+    .soft:disabled,
+    .ghost:disabled {
+      opacity: .45;
+      pointer-events: none;
+      transform: none
+    }
+
+    .content {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 28px 80px
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 20px
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow)
+    }
+
+    .hero-main {
+      padding: 28px;
+      overflow: hidden;
+      position: relative
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -100px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 109, 245, .18), transparent 68%);
+      pointer-events: none
+    }
+
+    .eyebrow {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--brand);
+      font-weight: 800;
+      margin-bottom: 10px
+    }
+
+    .hero h2 {
+      font-size: 1.9rem;
+      letter-spacing: -.06em;
+      line-height: 1.08;
+      max-width: 670px;
+      margin-bottom: 12px
+    }
+
+    .sub {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 660px
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 24px
+    }
+
+    .stat {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px
+    }
+
+    .stat-num {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .stat-lbl {
+      font-size: .72rem;
+      color: var(--muted);
+      line-height: 1.35;
+      margin-top: 3px
+    }
+
+    .ai-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between
+    }
+
+    .ai-orb {
+      height: 128px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #eaf0ff, #e8fbf5 55%, #fff6e6);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      margin-bottom: 14px
+    }
+
+    .ai-card b {
+      font-size: 1rem;
+      letter-spacing: -.03em
+    }
+
+    .ai-card p {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 8px 0 14px
+    }
+
+    .notice {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      background: #fff8eb;
+      border: 1px solid #f2d49b;
+      color: #865c10;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      font-size: .82rem;
+      line-height: 1.45
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 22px 0 12px
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -.03em
+    }
+
+    .count {
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 700
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px
+    }
+
+    .site-card {
+      overflow: hidden;
+      transition: .18s
+    }
+
+    .site-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 26px 70px rgba(34, 48, 84, .13)
+    }
+
+    .preview {
+      height: 128px;
+      background: linear-gradient(135deg, #eaf0ff, #fff 42%, #eafaf4);
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--brand);
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .site-body {
+      padding: 15px
+    }
+
+    .site-title {
+      font-size: .98rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 4px
+    }
+
+    .site-niche {
+      font-size: .78rem;
+      color: var(--muted);
+      line-height: 1.35;
+      min-height: 34px
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 25px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      font-size: .67rem;
+      font-weight: 800;
+      color: var(--muted)
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--soft)
+    }
+
+    .pill.ok .dot {
+      background: var(--brand-2)
+    }
+
+    .pill.warn .dot {
+      background: var(--warn)
+    }
+
+    .pill.bad .dot {
+      background: var(--red)
+    }
+
+    .pill.info .dot {
+      background: var(--brand)
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .empty {
+      min-height: 430px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 36px;
+      border-style: dashed
+    }
+
+    .empty-ill {
+      width: 112px;
+      height: 112px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #eaf0ff, #e8fbf5);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      font-size: 2.2rem
+    }
+
+    .empty h2 {
+      font-size: 1.55rem;
+      letter-spacing: -.05em;
+      margin-bottom: 10px
+    }
+
+    .empty p {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.65;
+      max-width: 520px;
+      margin: 0 auto 20px
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+      gap: 16px
+    }
+
+    .workspace-main,
+    .workspace-side {
+      display: grid;
+      gap: 16px
+    }
+
+    .block {
+      padding: 18px
+    }
+
+    .block h2,
+    .block h3 {
+      font-size: 1.02rem;
+      letter-spacing: -.03em;
+      margin-bottom: 10px
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.55
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 470px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px
+    }
+
+    .kv .stat {
+      padding: 12px
+    }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0
+    }
+
+    .url {
+      font-size: .82rem;
+      color: var(--brand);
+      background: #eef3ff;
+      border: 1px solid #dce5ff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      overflow-wrap: anywhere
+    }
+
+    .chatbox {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel-soft)
+    }
+
+    .chat-log {
+      height: 260px;
+      overflow: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px
+    }
+
+    .msg {
+      max-width: 84%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: .82rem;
+      line-height: 1.55;
+      white-space: pre-wrap
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--line)
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--brand);
+      color: #fff
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      background: var(--panel)
+    }
+
+    .chat-form textarea {
+      flex: 1;
+      min-height: 42px;
+      max-height: 110px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline: none
+    }
+
+    .chat-form textarea:focus {
+      border-color: var(--brand)
+    }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .table {
+      display: grid;
+      gap: 8px
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px
+    }
+
+    .row b {
+      font-size: .82rem
+    }
+
+    .row span {
+      font-size: .75rem;
+      color: var(--muted)
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px
+    }
+
+    .billing-shell {
+      display: grid;
+      gap: 16px;
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .billing-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 20px;
+    }
+
+    .billing-stat-box {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 110px;
+    }
+
+    .billing-stat-box .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .billing-stat-box .val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .billing-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .billing-service-row {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .billing-service-row:hover {
+      border-color: var(--brand);
+      transform: translateY(-1px);
+    }
+
+    .billing-service-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .service-badge {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      background: rgba(79, 109, 245, 0.1);
+      color: var(--brand);
+      border-radius: 6px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .service-badge.credits {
+      background: rgba(79, 245, 189, 0.1);
+      color: #12815f;
+    }
+
+    .service-badge.promo {
+      background: rgba(245, 177, 79, 0.1);
+      color: #b56b10;
+    }
+
+    .service-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .service-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 580px;
+    }
+
+    .billing-service-pricing {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .service-price {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .action-btn {
+      padding: 10px 18px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 10px;
+    }
+
+    .credits-grid {
+      display: flex;
+      gap: 8px;
+    }
+
+    .credit-buy-card {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+      min-width: 105px;
+    }
+
+    .credit-buy-card:hover {
+      border-color: var(--brand);
+      background: var(--panel);
+      transform: translateY(-1px);
+    }
+
+    .credit-amount {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+
+    .credit-cost {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .promo-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .promo-inputs {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .promo-presets {
+      display: flex;
+      gap: 4px;
+    }
+
+    .soft-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .soft-btn:hover, .soft-btn.active {
+      border-color: var(--brand);
+      background: var(--panel);
+    }
+
+    .soft-btn.active {
+      box-shadow: 0 0 0 1px var(--brand);
+    }
+
+    .billing-note-box {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .create-workspace {
+      height: calc(100vh - var(--header) - 56px);
+      min-height: 640px;
+      display: grid;
+      grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+      gap: 16px
+    }
+
+    .create-rail,
+    .create-chat {
+      min-height: 0
+    }
+
+    .create-rail {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: auto
+    }
+
+    .create-rail h1 {
+      font-size: 1.35rem;
+      letter-spacing: -.05em;
+      line-height: 1.15;
+      margin: 10px 0
+    }
+
+    .create-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      overflow: hidden;
+      margin: 18px 0 14px
+    }
+
+    .create-progress .bar {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+      transition: width .25s ease
+    }
+
+    .create-steps {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px
+    }
+
+    .create-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800
+    }
+
+    .create-step-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--panel);
+      color: var(--brand);
+      font-size: .7rem;
+      border: 1px solid var(--line)
+    }
+
+    .create-step.done {
+      background: #edfdf7;
+      color: #12815f;
+      border-color: #c9f5e7
+    }
+
+    .create-step.done .create-step-dot {
+      background: #c9f5e7;
+      color: #12815f;
+      border-color: #a3ecd5;
+    }
+
+    .create-step.active {
+      background: #eef3ff;
+      color: var(--brand);
+      border-color: #dce5ff
+    }
+
+    .create-step.active .create-step-dot {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .create-guide {
+      margin-top: auto;
+      display: grid;
+      gap: 10px
+    }
+
+    .create-guide-card {
+      border: 1px solid #dce5ff;
+      background: linear-gradient(135deg, #f7f9ff, #f2fff9);
+      border-radius: 16px;
+      padding: 14px
+    }
+
+    .create-guide-card b {
+      display: block;
+      font-size: .85rem;
+      letter-spacing: -.02em;
+      margin-bottom: 5px
+    }
+
+    .create-guide-card p {
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.55
+    }
+
+    .create-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .create-chip {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 0 9px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800
+    }
+
+    .create-chat {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .create-chat-head {
+      min-height: 64px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .create-chat-head h2 {
+      font-size: 1rem;
+      letter-spacing: -.03em;
+      margin-bottom: 3px
+    }
+
+    .create-chat-log {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth
+    }
+
+    .create-typing {
+      align-self: flex-start;
+      display: flex;
+      gap: 5px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      border-bottom-left-radius: 5px;
+      padding: 13px 15px
+    }
+
+    .create-typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: dashBounce 1.2s infinite
+    }
+
+    .create-typing span:nth-child(2) { animation-delay: .15s }
+    .create-typing span:nth-child(3) { animation-delay: .3s }
+
+    @keyframes dashBounce {
+      0%, 70%, 100% { transform: translateY(0) }
+      35% { transform: translateY(-5px) }
+    }
+
+    .create-input-area {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      background: var(--panel)
+    }
+
+    .create-photos {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 8px
+    }
+
+    .create-thumb-wrap { position: relative }
+    .create-thumb {
+      width: 54px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 2px solid var(--line)
+    }
+
+    .create-remove {
+      position: absolute;
+      right: -6px;
+      top: -6px;
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      cursor: pointer
+    }
+
+    .create-input-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-end
+    }
+
+    .create-photo-btn,
+    .create-send {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      flex: 0 0 auto
+    }
+
+    .create-photo-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-weight: 800
+    }
+
+    .create-photo-btn.has {
+      border-color: var(--brand);
+      color: var(--brand);
+      background: #eef3ff
+    }
+
+    .create-text {
+      flex: 1;
+      min-height: 42px;
+      max-height: 120px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 11px 13px;
+      outline: none;
+      font-size: .88rem;
+      line-height: 1.5;
+      background: var(--panel-soft);
+      color: var(--text)
+    }
+
+    .create-text:focus { border-color: var(--brand); background: var(--panel) }
+
+    .create-confirm,
+    .create-generation {
+      align-self: center;
+      width: min(620px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow)
+    }
+
+    .create-confirm h3 {
+      font-size: 1.08rem;
+      letter-spacing: -.04em;
+      margin-bottom: 8px
+    }
+
+    .create-confirm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin: 14px 0
+    }
+
+    .create-confirm-actions {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap
+    }
+
+    .create-generation {
+      border-color: #c9f5e7
+    }
+
+    .create-gen-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 15px
+    }
+
+    .create-spinner {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 3px solid var(--line);
+      border-top-color: var(--brand);
+      animation: spin .8s linear infinite
+    }
+
+    @keyframes spin { to { transform: rotate(360deg) } }
+
+    .create-gen-title { font-weight: 800 }
+    .create-gen-stage {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 0;
+      color: var(--muted);
+      font-size: .82rem
+    }
+
+    .create-gen-stage span {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--panel-soft);
+      font-size: .65rem
+    }
+
+    .create-gen-stage.active { color: var(--text) }
+    .create-gen-stage.active span { background: var(--brand-2); color: #fff }
+
+    .ledger {
+      display: grid;
+      gap: 8px
+    }
+
+    .ledger-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 11px;
+      font-size: .8rem
+    }
+
+    .positive {
+      color: var(--brand-2);
+      font-weight: 800
+    }
+
+    .negative {
+      color: var(--red);
+      font-weight: 800
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 84px;
+      transform: translateX(-50%) translateY(-8px);
+      background: #172033;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 15px;
+      font-size: .82rem;
+      box-shadow: 0 18px 50px rgba(23, 32, 51, .24);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0)
+    }
+
+    .dropdown {
+      position: fixed;
+      right: 82px;
+      top: 62px;
+      width: min(360px, calc(100vw - 28px));
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      z-index: 90;
+      display: none;
+      overflow: hidden
+    }
+
+    .dropdown.show {
+      display: block
+    }
+
+    .drop-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 800
+    }
+
+    .notif {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: .8rem
+    }
+
+    .notif:last-child {
+      border-bottom: 0
+    }
+
+    .notif b {
+      display: block;
+      margin-bottom: 4px
+    }
+
+    .notif p {
+      color: var(--muted);
+      line-height: 1.45
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, .58);
+      z-index: 120;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px
+    }
+
+    .modal-backdrop.show {
+      display: flex
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 460px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 30px 90px rgba(17, 24, 39, .25)
+    }
+
+    .modal.wide {
+      max-width: 680px
+    }
+
+    .modal-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 7px
+    }
+
+    .modal-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 14px
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 12px
+    }
+
+    .field label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--soft);
+      font-weight: 800
+    }
+
+    .field input,
+    .field select {
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 12px;
+      outline: none
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--brand)
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px
+    }
+
+    .forecast {
+      display: none;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px
+    }
+
+    .forecast.show {
+      display: block
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .forecast-num {
+      font-weight: 800
+    }
+
+    .forecast-lbl {
+      font-size: .68rem;
+      color: var(--muted)
+    }
+
+    @media(max-width:1080px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+
+      .hero,
+      .workspace,
+      .two-col,
+      .billing-hero,
+      .billing-grid,
+      .create-workspace {
+        grid-template-columns: 1fr
+      }
+
+      .create-workspace {
+        height: auto;
+        min-height: 0
+      }
+
+      .create-rail {
+        max-height: none
+      }
+
+      .create-chat {
+        min-height: 620px
+      }
+
+      .preview-frame {
+        height: 360px
+      }
+    }
+
+    @media(max-width:820px) {
+      .app {
+        grid-template-columns: 1fr
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(290px, 86vw);
+        transform: translateX(-104%);
+        transition: .22s;
+        box-shadow: 20px 0 70px rgba(17, 24, 39, .18)
+      }
+
+      .sidebar.show {
+        transform: translateX(0)
+      }
+
+      .mobile-menu {
+        display: block
+      }
+
+      .topbar {
+        display: flex;
+        padding: 0 14px
+      }
+
+      .top-title h1 {
+        font-size: .96rem
+      }
+
+      .balance-pill.hide-sm,
+      .quick-create-text {
+        display: none
+      }
+
+      .content {
+        padding: 18px 14px 80px
+      }
+
+      .hero-main {
+        padding: 22px
+      }
+
+      .hero h2 {
+        font-size: 1.55rem
+      }
+
+      .stats-grid,
+      .kv {
+        grid-template-columns: 1fr
+      }
+
+      .cards {
+        grid-template-columns: 1fr
+      }
+
+      .billing-hero {
+        padding: 18px
+      }
+
+      .billing-balances,
+      .promo-presets {
+        grid-template-columns: 1fr
+      }
+
+      .side-card {
+        position: static;
+        margin-top: 18px
+      }
+
+      .dropdown {
+        right: 14px
+      }
+
+      .chat-log {
+        height: 220px
+      }
+
+      .create-chat {
+        min-height: calc(100vh - 180px)
+      }
+
+      .create-chat-head {
+        align-items: flex-start;
+        flex-direction: column
+      }
+
+      .create-confirm-grid {
+        grid-template-columns: 1fr
+      }
+
+      .modal-actions {
+        flex-direction: column
+      }
+
+      .modal-actions .btn,
+      .modal-actions .ghost {
+        width: 100%
+      }
+    }
+
+    /* Create page full-height layout overrides */
+    @media(min-width: 1081px) {
+      .content.create-mode {
+        height: 100vh;
+        max-width: 100%;
+        padding: 16px;
+        overflow: hidden;
+      }
+      .content.create-mode .create-workspace {
+        height: 100%;
+        min-height: 0;
+      }
+    }
+
+    [data-theme="dark"] .create-step.done {
+      background: rgba(16, 185, 129, 0.08);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+    [data-theme="dark"] .create-step.done .create-step-dot {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    [data-theme="dark"] .create-step.active {
+      background: rgba(139, 92, 246, 0.08);
+      color: var(--brand);
+      border-color: rgba(139, 92, 246, 0.2);
+    }
+    [data-theme="dark"] .create-photo-btn.has {
+      background: rgba(139, 92, 246, 0.15);
+    }
+    [data-theme="dark"] .nav a.active {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--brand);
+      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.2);
+    }
+    [data-theme="dark"] .nav a:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+  </style>
+  <script>
+    (function(){
+      const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+
+<body>
+  {% macro site_card(site) -%}
+  {% set support_bad = site.support_status == 'suspended' %}
+  {% set support_warn = site.support_status in ['expiring_soon','invoice_issued'] %}
+  <article class="panel site-card">
+    <div class="preview">{{ (site.title or 'Site')[:18] }}</div>
+    <div class="site-body">
+      <div class="site-title">{{ site.title }}</div>
+      <div class="site-niche">{{ (site.data.services or site.data.name or '/site/' ~ site.slug)|truncate(82) }}</div>
+      <div class="pills">
+        <span class="pill {{ 'bad' if support_bad else 'warn' if support_warn else 'ok' }}"><span class="dot"></span>{{
+          site.support_label }}</span>
+        <span class="pill info"><span class="dot"></span>{{ site.promotion_label }}</span>
+        <span class="pill"><span class="dot"></span>{{ site.analytics_label }}</span>
+      </div>
+      <div class="muted">Обновлено: {{ site.updated[:16] }}</div>
+      <div class="card-actions">
+        <a class="soft" href="/dashboard/sites/{{ site.id }}">Workspace</a>
+        <a class="soft" href="/site/{{ site.slug }}" target="_blank">Open</a>
+        <a class="soft {{ 'disabled' if not site.support_operational else '' }}"
+          href="/dashboard/sites/{{ site.id }}">Edit</a>
+        <button class="soft" onclick="copyLink('/site/{{ site.slug }}')">Copy</button>
+      </div>
+    </div>
+  </article>
+  {%- endmacro %}
+  {% set can_create = (user.site_slots or 0) > (sites|length) %}
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <a class="brand" href="/dashboard" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
+          <div style="display:flex; gap:6px;">
+            <button class="lang-toggle" id="langToggle" onclick="toggleLang()">RU</button>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle Theme">
+              <svg viewBox="0 0 24 24" class="sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <svg viewBox="0 0 24 24" class="moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          </div>
+        </div>
+        <nav class="nav" style="margin-top:0;">
+          <a href="/dashboard" class="{{ 'active' if dashboard_view == 'overview' else '' }}">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </span>
+            <span data-i18n="nav_dashboard">Dashboard</span>
+          </a>
+          <a href="/dashboard/create" class="{{ 'active' if dashboard_view == 'create' else '' }}">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+            <span data-i18n="nav_create">Create Page</span>
+          </a>
+          <a href="/dashboard/billing" class="{{ 'active' if dashboard_view == 'billing' else '' }}">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </span>
+            <span data-i18n="nav_billing">Billing</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
+        <div class="balance-pill" title="Development Credits"><span>Dev</span><strong>{{ user.dev_credits or 0 }}</strong></div>
+        <div class="balance-pill" title="Promo Credits"><span>Promo</span><strong>{{ user.promo_credits or 0 }}</strong></div>
+      </div>
+
+      <div class="sidebar-footer" style="margin-top: 0;">
+        <a class="profile-link" href="/profile">
+          <div class="avatar-sm">
+            {% if user.avatar_url %}
+              <img src="{{ user.avatar_url }}" alt="">
+            {% else %}
+              {{ (user.name or user.email or 'U')[:1]|upper }}
+            {% endif %}
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">{{ user.name or user.email }}</div>
+            <div class="profile-sub" style="font-size: .68rem; color: var(--muted); margin-top: 2px;" data-i18n="nav_profile">Profile</div>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+
+    <div class="main">
+      <header class="topbar">
+        <button class="mobile-menu" onclick="toggleSidebar()">☰</button>
+        <div class="top-title">
+          {% if dashboard_view == 'create' %}
+          <h1 data-i18n="header_create">Create Page</h1>
+          <p data-i18n="header_create_sub">AI workspace для новой бизнес-страницы</p>
+          {% elif dashboard_view == 'billing' %}
+          <h1 data-i18n="header_billing">Billing</h1>
+          <p data-i18n="header_billing_sub">Оплата, поддержка и пакеты</p>
+          {% elif dashboard_view == 'site' and selected_site %}
+          <h1>{{ selected_site.title }}</h1>
+          <p data-i18n="header_site_edit_sub">Workspace страницы</p>
+          {% else %}
+          <h1 data-i18n="header_dashboard">Dashboard</h1>
+          <p data-i18n="header_dashboard_sub">Обзор ваших страниц</p>
+          {% endif %}
+        </div>
+        <div class="top-actions">
+          {% if dashboard_view != 'create' %}
+          <a class="btn" href="/dashboard/create">＋ Create Page</a>
+          {% endif %}
+        </div>
+      </header>
+
+
+
+      <main class="content {% if dashboard_view == 'create' %}create-mode{% endif %}">
+        {% if user.email and not user.email_verified %}
+        <div class="notice">
+          <div><b>Подтвердите email.</b> {{ verification_notice.success or verification_notice.error or 'Это нужно для
+            восстановления доступа и безопасности аккаунта.' }}</div>
+          <button class="ghost" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}"
+            onclick="resendVerification()">Отправить</button>
+        </div>
+        {% endif %}
+
+        {% if dashboard_view == 'overview' %}
+        <div class="section-head" style="margin-top: 8px;">
+          <div>
+            <div class="section-title" data-i18n="header_dashboard">Аналитика</div>
+            <div class="count" data-i18n="overview_sub">Обзор показателей</div>
+          </div>
+          {% if sites %}
+          <select class="site-selector" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-family:inherit;font-size:.85rem;outline:none;">
+            <option value="all" data-i18n="overview_all_pages">Все страницы</option>
+            {% for site in sites %}
+            <option value="{{ site.id }}">{{ site.title }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+        </div>
+
+        <div class="stats-dashboard" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;margin-bottom:32px;">
+          <!-- views sparkline -->
+          <div class="panel" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:.72rem;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;" data-i18n="overview_views">Просмотры страниц</div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;">0 / 30д</div>
+            </div>
+            <div style="font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">—</div>
+            <div style="height:60px;display:flex;align-items:center;border-radius:6px;background:var(--panel-soft);border:1px solid var(--line);padding:0 8px;">
+              <svg width="100%" height="32" viewBox="0 0 200 40" preserveAspectRatio="none" style="display:block;">
+                <path d="M 0 35 C 30 35, 40 35, 60 35 C 80 35, 100 35, 120 35 C 140 35, 160 35, 200 35" fill="none" stroke="var(--line-strong)" stroke-width="1.5" stroke-dasharray="3 3" />
+                <path d="M 0 32 Q 25 28, 50 30 T 100 20 T 150 25 T 200 15" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-opacity="0.3" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- conversions histogram -->
+          <div class="panel" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:.72rem;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;" data-i18n="overview_conversions">Заявки (Конверсия)</div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;">0%</div>
+            </div>
+            <div style="font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">—</div>
+            <div style="height:60px;display:flex;align-items:flex-end;justify-content:space-between;border-radius:6px;background:var(--panel-soft);border:1px solid var(--line);padding:10px 16px;">
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+              <div style="height:10%; width:5%; background:var(--line-strong); border-radius:1px; opacity:0.6;"></div>
+            </div>
+          </div>
+
+          <!-- clicks breakdown -->
+          <div class="panel" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:.72rem;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;" data-i18n="overview_clicks">Активность (Клики)</div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;">0</div>
+            </div>
+            <div style="font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">—</div>
+            <div style="height:60px;display:flex;flex-direction:column;justify-content:center;border-radius:6px;background:var(--panel-soft);border:1px solid var(--line);padding:12px 16px;">
+              <div style="height:6px; border-radius:3px; background:var(--line); display:flex; overflow:hidden; width:100%;">
+                <div style="width:100%; background:var(--line-strong);"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:0.62rem; color:var(--soft); font-weight:600; margin-top:8px;">
+                <span data-i18n="overview_no_data">Нет данных</span>
+                <span>—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if sites %}
+        <div class="section-head">
+          <div>
+            <div class="section-title" data-i18n="overview_my_pages">Мои страницы</div>
+            <div class="count"><span class="sites-count">{{ sites|length }}</span> <span data-i18n="overview_pages_unit">страниц</span></div>
+          </div>
+        </div>
+        <section class="cards">{% for site in sites %}{{ site_card(site) }}{% endfor %}</section>
+        {% endif %}
+        {% endif %}
+
+
+        {% if dashboard_view == 'create' %}
+        <section class="create-workspace">
+          <aside class="panel create-rail">
+            <h1>{% if edit_site %}Улучшение страницы{% else %}Создание бизнес-страницы{% endif %}</h1>
+            <p class="muted">
+              {% if edit_site %}
+              Напишите, что изменить. AI уточнит детали и обновит страницу без конструктора.
+              {% else %}
+              AI проведёт через короткий разговор: бизнес, услуги, контакты, стиль, фото и подтверждение перед генерацией.
+              {% endif %}
+            </p>
+            <div class="create-progress"><div class="bar" id="progressBar"></div></div>
+            <div class="create-steps" id="steps"></div>
+          </aside>
+
+          <section class="panel create-chat">
+            <div class="create-chat-head">
+              <div>
+                <h2>{% if edit_site %}AI редактор{% else %}Расскажите о бизнесе{% endif %}</h2>
+                <div class="count" id="chatStatus">AI будет вести по шагам, черновик сохраняется</div>
+              </div>
+              {% if not edit_site %}<button class="ghost" onclick="resetDraft()">Новый черновик</button>{% endif %}
+            </div>
+            <div class="create-chat-log" id="chat"></div>
+            <div class="create-input-area" id="inputArea">
+              <div class="create-photos" id="inputPhotos"></div>
+              <div class="create-input-row">
+                <label class="create-photo-btn" id="photoBtn" title="Добавить фото">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                  <input type="file" id="photoInput" accept="image/*" multiple hidden onchange="handlePhotos(this)">
+                </label>
+                <textarea id="inp" class="create-text" rows="1" placeholder="Напишите ответ..." oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+                <button class="btn create-send" id="sendBtn" onclick="send()">→</button>
+              </div>
+            </div>
+          </section>
+        </section>
+        {% endif %}
+
+
+
+        {% if dashboard_view == 'site' and selected_site %}
+        <section class="workspace">
+          <div class="workspace-main">
+            <div class="panel block">
+              <div class="section-head" style="margin:0 0 12px">
+                <div>
+                  <h2>Overview</h2>
+                  <div class="muted">Публичная страница, поддержка, продвижение и аналитика.</div>
+                </div>
+                <div class="card-actions"><a class="soft" href="/site/{{ selected_site.slug }}" target="_blank">Open
+                    Site</a><button class="soft" onclick="copyLink('/site/{{ selected_site.slug }}')">Copy
+                    Link</button><button class="soft"
+                    onclick="shareSite('/site/{{ selected_site.slug }}')">Share</button></div>
+              </div>
+              <div class="url-row">
+                <div class="url">{{ request.base_url|string|trim('/') }}/site/{{ selected_site.slug }}</div>
+              </div>
+              <iframe class="preview-frame" src="/site/{{ selected_site.slug }}"
+                title="{{ selected_site.title }}"></iframe>
+              <div class="kv" style="margin-top:12px">
+                <div class="stat">
+                  <div class="stat-lbl">Support</div>
+                  <div class="stat-num" style="font-size:.95rem">{{ selected_site.support_label }}</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-lbl">Promotion</div>
+                  <div class="stat-num" style="font-size:.95rem">{{ selected_site.promotion_label }}</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-lbl">Updated</div>
+                  <div class="stat-num" style="font-size:.95rem">{{ selected_site.updated[:16] }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel block">
+              <h2>AI Improvements</h2>
+              <p class="muted">Пишите как человеку: “Добавь WhatsApp кнопку”, “Сделай стиль темнее”, “Добавь блок
+                отзывов”. AI уточнит детали и обновит HTML.</p>
+              {% if not selected_site.support_operational %}
+              <div class="notice" style="margin-top:12px">Редактирование заблокировано до продления поддержки.</div>
+              {% else %}
+              <div class="chatbox" style="margin-top:12px">
+                <div class="chat-log" id="siteEditLog">
+                  <div class="msg bot">Что улучшим на этой странице?</div>
+                </div>
+                <div class="chat-form">
+                  <textarea id="siteEditInput"
+                    placeholder="Например: добавь отзывы и сделай кнопку записи заметнее"></textarea>
+                  <button class="btn" onclick="sendSiteEdit('{{ selected_site.slug }}')">Send</button>
+                </div>
+              </div>
+              <div class="suggestions">
+                <button class="soft" onclick="useSuggestion('Добавь WhatsApp кнопку в первый экран')">WhatsApp
+                  CTA</button>
+                <button class="soft" onclick="useSuggestion('Сделай стиль темнее и премиальнее')">Dark style</button>
+                <button class="soft" onclick="useSuggestion('Добавь блок с отзывами клиентов')">Отзывы</button>
+              </div>
+              <p class="muted" style="margin-top:10px">Списание Development Credits показывается после правки. Баланс:
+                {{ user.dev_credits or 0 }}.</p>
+              {% endif %}
+            </div>
+
+            <div class="panel block">
+              <h2>Analytics</h2>
+              {% if selected_site.analytics_status in ['blocked','unavailable'] %}
+              <p class="muted">Аналитика появится после настройки продвижения и активной поддержки.</p>
+              {% elif selected_site.needs_analytics_restore %}
+              <p class="muted">Страница изменилась. Восстановите аналитику перед новым запуском продвижения.</p>
+              <button class="btn warn" style="margin-top:10px"
+                onclick="restoreAnalytics('{{ selected_site.slug }}')">Restore analytics</button>
+              {% else %}
+              <div class="kv">
+                <div class="stat">
+                  <div class="stat-num">{{ analytics_metrics.visits }}</div>
+                  <div class="stat-lbl">visits</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-num">{{ analytics_metrics.cta_clicks }}</div>
+                  <div class="stat-lbl">CTA clicks</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-num">{{ analytics_metrics.whatsapp_clicks }}</div>
+                  <div class="stat-lbl">WhatsApp clicks</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-num">{{ analytics_metrics.telegram_clicks }}</div>
+                  <div class="stat-lbl">Telegram clicks</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-num">{{ analytics_metrics.instagram_clicks }}</div>
+                  <div class="stat-lbl">Instagram clicks</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <aside class="workspace-side">
+            <div class="panel block">
+              <h3>Promotion</h3>
+              {% if not selected_site.support_operational %}
+              <p class="muted">Недоступно без активной поддержки.</p>
+              {% else %}
+              <p class="muted">Настройка продвижения и рекламных кампаний временно недоступна. Пожалуйста, ожидайте обновлений.</p>
+              {% endif %}
+            </div>
+
+            <div class="panel block">
+              <h3>Versions</h3>
+              <div class="table">
+                {% for v in versions[:5] %}
+                <div class="row">
+                  <div><b>Version {{ v.version_no }}</b><br><span>{{ v.reason or 'snapshot' }} · {{ v.created[:16]
+                      }}</span></div><button class="soft"
+                    onclick="restoreVersion('{{ selected_site.slug }}',{{ v.id }})">Restore</button>
+                </div>
+                {% else %}
+                <p class="muted">История версий появится после генерации и AI-правок.</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="panel block">
+              <h3>Support</h3>
+              <p class="muted">Статус: <b>{{ selected_site.support_label }}</b><br>Оплачено до: {{
+                selected_site.support_paid_until_display }}</p>
+              {% if selected_site.support_status != 'active' %}
+              <button class="btn warn" style="margin-top:12px" onclick="paySupport('{{ selected_site.slug }}')">Renew
+                support · {{ support_monthly_price }} ₸</button>
+              {% endif %}
+            </div>
+          </aside>
+        </section>
+        {% endif %}
+
+
+
+        {% if dashboard_view == 'billing' %}
+        <section class="billing-shell">
+          
+
+
+          <!-- services list -->
+          <div class="billing-rows">
+            
+            <!-- row 1 slots -->
+            <div class="billing-service-row">
+              <div class="billing-service-info">
+                <div class="service-badge" data-i18n="bill_badge_new_site">Новый сайт</div>
+                <div>
+                  <h3 class="service-title" data-i18n="bill_slot_title">Слот для дополнительного сайта</h3>
+                  <p class="service-desc"><span data-i18n="bill_slot_desc1">Позволяет создать еще одну полноценную бизнес-страницу. Включает</span> {{ slot_pkg.tokens }} <span data-i18n="bill_slot_desc2">Development Credits для AI-редактирования, поддержки и улучшения контента. Первый месяц обслуживания включен.</span></p>
+                </div>
+              </div>
+              <div class="billing-service-pricing">
+                <div class="service-price">{{ "{:,}".format(slot_pkg.price).replace(",", " ") }} ₸</div>
+                <a class="btn action-btn" href="/payment?reason=no_slots" data-i18n="bill_btn_buy_slot">Купить слот</a>
+              </div>
+            </div>
+
+            <!-- row 2 dev credits -->
+            <div class="billing-service-row">
+              <div class="billing-service-info">
+                <div class="service-badge credits" data-i18n="bill_badge_edits">AI-правки</div>
+                <div>
+                  <h3 class="service-title">Development Credits</h3>
+                  <p class="service-desc" data-i18n="bill_dev_desc">Используются для редактирования структуры, текстовых блоков, цветовой гаммы и стилистики ваших страниц с помощью AI-ассистента.</p>
+                </div>
+              </div>
+              <div class="billing-service-pricing credits-grid">
+                {% for pkg in credit_pkgs %}
+                <a class="credit-buy-card" href="/payment?reason=no_credits">
+                  <span class="credit-amount">+{{ pkg.tokens }} credits</span>
+                  <span class="credit-cost">{{ "{:,}".format(pkg.price).replace(",", " ") }} ₸</span>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- row 3 promo credits -->
+            <div class="billing-service-row">
+              <div class="billing-service-info">
+                <div class="service-badge promo" data-i18n="bill_badge_promo">Реклама</div>
+                <div>
+                  <h3 class="service-title">Promotion Credits</h3>
+                  <p class="service-desc" data-i18n="bill_promo_desc">Используются в качестве рекламного бюджета для автоматического запуска и проведения целевых рекламных кампаний вашего сайта. 1 кредит = 1 ₸.</p>
+                </div>
+              </div>
+              <div class="billing-service-pricing promo-actions">
+                <div class="promo-inputs">
+                  <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600;"><span data-i18n="bill_promo_min">Минимально</span>: {{ "{:,}".format(promo_min_purchase).replace(",", " ") }}</span>
+                  <div class="promo-presets">
+                    <button class="soft-btn preset-btn active" data-val="{{ promo_min_purchase }}" onclick="setPromoAmount(this, {{ promo_min_purchase }})">{{ "{:,}".format(promo_min_purchase).replace(",", " ") }}</button>
+                    <button class="soft-btn preset-btn" data-val="{{ promo_min_purchase * 3 }}" onclick="setPromoAmount(this, {{ promo_min_purchase * 3 }})">{{ "{:,}".format(promo_min_purchase * 3).replace(",", " ") }}</button>
+                    <button class="soft-btn preset-btn" data-val="{{ promo_min_purchase * 10 }}" onclick="setPromoAmount(this, {{ promo_min_purchase * 10 }})">{{ "{:,}".format(promo_min_purchase * 10).replace(",", " ") }}</button>
+                  </div>
+                </div>
+                <button class="btn action-btn" id="promoSubmitBtn" onclick="submitPromoCredits()" data-i18n="bill_btn_promo">Заказать продвижение</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- bottom maintenance support info box -->
+          <div class="billing-note-box" style="margin-top: 8px;">
+            <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--text); margin-bottom: 6px;" data-i18n="bill_note_title">Регулярное обслуживание и поддержка сайтов</h4>
+            <p class="muted" style="font-size: 0.78rem; line-height: 1.5; margin: 0;" data-i18n="bill_note_desc">Каждая бизнес-страница включает 1 месяц бесплатной технической поддержки и обслуживания. По истечении этого срока публичная страница, аналитика и возможность AI-редактирования временно приостанавливаются (переходят в режим мягкого обслуживания). Вы можете быстро продлить подписку на обслуживание непосредственно в рабочей панели (workspace) нужной вам страницы.</p>
+          </div>
+
+        </section>
+        {% endif %}
+
+
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+
+
+  <script>
+    const PROMO_TENGE = {{ promo_credit_tenge }};
+    let siteEditHistory = [];
+    function toast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2800) }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show') }
+    function toggleNotifications() { document.getElementById('notifications').classList.toggle('show') }
+    function openModal(id) { document.getElementById(id).classList.add('show') }
+    function closeModal(id) { document.getElementById(id).classList.remove('show') }
+    async function postJson(url, body = {}) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const data = await r.json().catch(() => ({})); if (!r.ok || data.ok === false) throw new Error(data.message || data.error || 'Ошибка запроса'); return data }
+    function copyLink(path) { navigator.clipboard?.writeText(window.location.origin + path).then(() => toast('Ссылка скопирована')).catch(() => toast(window.location.origin + path)) }
+    function shareSite(path) { if (navigator.share) { navigator.share({ url: window.location.origin + path }).catch(() => { }) } else copyLink(path) }
+
+    async function restoreAnalytics(slug) { try { await postJson(`/api/sites/${slug}/analytics/restore`); toast('Аналитика восстановлена'); setTimeout(() => location.reload(), 700) } catch (e) { toast(e.message) } }
+    async function paySupport(slug) { try { await postJson(`/api/sites/${slug}/support/pay`); toast('Поддержка оплачена'); setTimeout(() => location.reload(), 700) } catch (e) { toast(e.message) } }
+    async function purchasePromoCredits(credits) { try { const data = await postJson('/api/billing/promo-credits/purchase', { credits }); toast(`+${data.credits} Promotion Credits зачислено`); setTimeout(() => location.reload(), 700) } catch (e) { toast(e.message) } }
+    let currentPromoAmount = {{ promo_min_purchase }};
+    function setPromoAmount(btn, amount) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPromoAmount = amount;
+      updatePromoButtonText(amount);
+    }
+    async function submitPromoCredits() {
+      await purchasePromoCredits(currentPromoAmount);
+    }
+    async function restoreVersion(slug, id) { if (!confirm('Восстановить эту версию? Это спишет Development Credits.')) return; try { await postJson(`/api/sites/${slug}/versions/${id}/restore`); toast('Версия восстановлена'); setTimeout(() => location.reload(), 800) } catch (e) { toast(e.message) } }
+    function appendEditMsg(text, who) { const log = document.getElementById('siteEditLog'); if (!log) return; const div = document.createElement('div'); div.className = `msg ${who}`; div.textContent = text; log.appendChild(div); log.scrollTop = log.scrollHeight }
+    function useSuggestion(text) { const inp = document.getElementById('siteEditInput'); if (inp) { inp.value = text; inp.focus() } }
+    async function sendSiteEdit(slug) { const inp = document.getElementById('siteEditInput'); const text = (inp.value || '').trim(); if (!text) return; inp.value = ''; appendEditMsg(text, 'user'); appendEditMsg('Думаю над правкой...', 'bot'); try { const data = await postJson(`/site/${slug}/edit`, { message: text, edit_history: siteEditHistory, photo_urls: [] }); document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); if (data.edit_history) siteEditHistory = data.edit_history; if (!data.done) { appendEditMsg(data.message || 'Уточните деталь', 'bot'); return } appendEditMsg(`Готово. Списано ${data.tokens_spent || 0} Development Credits.`, 'bot'); setTimeout(() => location.reload(), 900) } catch (e) { document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); appendEditMsg(e.message, 'bot') } }
+    let verifyCooldown = Number(document.getElementById('verifyResendBtn')?.dataset.cooldown || 0);
+    function tickVerifyCooldown() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; if (verifyCooldown > 0) { btn.disabled = true; btn.textContent = `${verifyCooldown}с`; verifyCooldown -= 1; setTimeout(tickVerifyCooldown, 1000) } else { btn.disabled = false; btn.textContent = 'Отправить' } }
+    async function resendVerification() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; btn.disabled = true; try { const r = await fetch('/auth/resend-email-verification', { method: 'POST' }); const d = await r.json(); toast(d.message || 'Письмо отправлено'); verifyCooldown = d.retry_after || 60 } catch (e) { toast('Не удалось отправить письмо'); verifyCooldown = 0 } tickVerifyCooldown() }
+    if (verifyCooldown > 0) tickVerifyCooldown();
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show') }));
+    document.addEventListener('click', e => { if (!e.target.closest('#notifications') && !e.target.closest('.icon-btn')) document.getElementById('notifications')?.classList.remove('show') });
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+    const I18N = {
+      ru: {
+        nav_dashboard: 'Панель',
+        nav_create: 'Создать страницу',
+        nav_billing: 'Оплата',
+        nav_profile: 'Профиль',
+        header_dashboard: 'Аналитика',
+        header_dashboard_sub: 'Обзор ваших страниц',
+        header_create: 'Создать страницу',
+        header_create_sub: 'AI-помощник для новой бизнес-страницы',
+        header_billing: 'Биллинг',
+        header_billing_sub: 'Оплата, поддержка и пакеты',
+        header_site_edit_sub: 'Workspace страницы',
+        overview_sub: 'Обзор показателей',
+        overview_all_pages: 'Все страницы',
+        overview_views: 'Просмотры страниц',
+        overview_conversions: 'Заявки (Конверсия)',
+        overview_clicks: 'Активность (Клики)',
+        overview_no_data: 'Нет данных',
+        overview_my_pages: 'Мои страницы',
+        overview_pages_unit: 'страниц',
+        bill_title: 'Баланс и услуги',
+        bill_sub: 'Управляйте вашими слотами веб-страниц, балансом кредитов на AI-правки и бюджетом продвижения.',
+        bill_lbl_slots: 'Слоты',
+        bill_badge_new_site: 'Новый сайт',
+        bill_slot_title: 'Слот для дополнительного сайта',
+        bill_slot_desc1: 'Позволяет создать еще одну полноценную бизнес-страницу. Включает',
+        bill_slot_desc2: 'Development Credits для AI-редактирования, поддержки и улучшения контента. Первый месяц обслуживания включен.',
+        bill_btn_buy_slot: 'Купить слот',
+        bill_badge_edits: 'AI-правки',
+        bill_dev_desc: 'Используются для редактирования структуры, текстовых блоков, цветовой гаммы и стилистики ваших страниц с помощью AI-ассистента.',
+        bill_badge_promo: 'Реклама',
+        bill_promo_desc: 'Используются в качестве рекламного бюджета для автоматического запуска и проведения целевых рекламных кампаний вашего сайта. 1 кредит = 1 ₸.',
+        bill_promo_min: 'Минимально',
+        bill_btn_promo: 'Заказать продвижение',
+        bill_note_title: 'Регулярное обслуживание и поддержка сайтов',
+        bill_note_desc: 'Каждая бизнес-страница включает 1 месяц бесплатной технической поддержки и обслуживания. По истечении этого срока публичная страница, аналитика и возможность AI-редактирования временно приостанавливаются (переходят в режим мягкого обслуживания). Вы можете быстро продлить подписку на обслуживание непосредственно в рабочей панели (workspace) нужной вам страницы.'
+      },
+      kz: {
+        nav_dashboard: 'Басқару панелі',
+        nav_create: 'Парақша жасау',
+        nav_billing: 'Төлем',
+        nav_profile: 'Профиль',
+        header_dashboard: 'Талдау',
+        header_dashboard_sub: 'Бизнес-парақшаларыңызды шолу',
+        header_create: 'Парақша жасау',
+        header_create_sub: 'Бизнес-парақшаны жасауға арналған AI-көмекші',
+        header_billing: 'Төлем',
+        header_billing_sub: 'Төлем, қолдау және пакеттер',
+        header_site_edit_sub: 'Сайт жұмыс кеңістігі',
+        overview_sub: 'Көрсеткіштерді шолу',
+        overview_all_pages: 'Барлық парақшалар',
+        overview_views: 'Парақша көрілімдері',
+        overview_conversions: 'Өтінімдер (Конверсия)',
+        overview_clicks: 'Белсенділік (Шертулер)',
+        overview_no_data: 'Деректер жоқ',
+        overview_my_pages: 'Менің парақшаларым',
+        overview_pages_unit: 'парақша',
+        bill_title: 'Баланс пен қызметтер',
+        bill_sub: 'Веб-парақша ұяшықтарын, AI-түзету несиелерінің балансын және жарнама бюджетін басқарыңыз.',
+        bill_lbl_slots: 'Ұяшықтар',
+        bill_badge_new_site: 'Жаңа сайт',
+        bill_slot_title: 'Қосымша сайтқа арналған ұяшық',
+        bill_slot_desc1: 'Тағы бір толыққанды бизнес-парақша жасауға мүмкіндік береді. Слотқа',
+        bill_slot_desc2: 'Development Credits редакциялау, қолдау және контентті жақсартуға арналған Development Credits кіреді. Қызмет көрсетудің бірінші айы қосылған.',
+        bill_btn_buy_slot: 'Ұяшықты сатып алу',
+        bill_badge_edits: 'AI-түзетулер',
+        bill_dev_desc: 'AI-көмекшінің көмегімен парақшаларыңыздың құрылымын, мәтін блоктарын, түс гаммасын және стилін өңдеу үшін қолданылады.',
+        bill_badge_promo: 'Жарнама',
+        bill_promo_desc: 'Сайтыңыздың мақсатты жарнамалық науқандарын автоматты түрде іске қосу және жүргізу үшін жарнамалық бюджет ретінде қолданылады. 1 несие = 1 ₸.',
+        bill_promo_min: 'Минималды',
+        bill_btn_promo: 'Жарнамаға тапсырыс беру',
+        bill_note_title: 'Сайттарды тұрақты түрде қолдау және техникалық қызмет көрсету',
+        bill_note_desc: 'Әрбір бизнес-парақшаға 1 ай тегін техникалық қолдау және қызмет көрсету кіреді. Осы мерзім өткеннен кейін жария парақша, талдау және AI-өңдеу мүмкіндігі уақытша тоқтатылады (жұмсақ қызмет көрсету режиміне ауысады). Сіз қызмет көрсетуге жазылуды өзіңізге қажетті парақшаның жұмыс панелінде (workspace) жылдам ұзарта аласыз.'
+      },
+      en: {
+        nav_dashboard: 'Dashboard',
+        nav_create: 'Create Page',
+        nav_billing: 'Billing',
+        nav_profile: 'Profile',
+        header_dashboard: 'Dashboard',
+        header_dashboard_sub: 'Overview of your pages',
+        header_create: 'Create Page',
+        header_create_sub: 'AI workspace for new business page',
+        header_billing: 'Billing',
+        header_billing_sub: 'Payment, support and packages',
+        header_site_edit_sub: 'Site workspace',
+        overview_sub: 'Overview of metrics',
+        overview_all_pages: 'All pages',
+        overview_views: 'Page views',
+        overview_conversions: 'Applications (Conversion)',
+        overview_clicks: 'Activity (Clicks)',
+        overview_no_data: 'No data',
+        overview_my_pages: 'My pages',
+        overview_pages_unit: 'pages',
+        bill_title: 'Balance and services',
+        bill_sub: 'Manage your web page slots, AI edits credit balance, and promotion campaign budget.',
+        bill_lbl_slots: 'Slots',
+        bill_badge_new_site: 'New site',
+        bill_slot_title: 'Slot for an additional site',
+        bill_slot_desc1: 'Allows you to create another fully-featured business page. Includes',
+        bill_slot_desc2: 'Development Credits for AI editing, support and content improvements. First month of service is included.',
+        bill_btn_buy_slot: 'Buy slot',
+        bill_badge_edits: 'AI edits',
+        bill_dev_desc: 'Used to modify structural layout, text content, color palettes, and visual styling of your pages with the AI assistant.',
+        bill_badge_promo: 'Advertising',
+        bill_promo_desc: 'Used as a promotional marketing budget to automatically launch and run highly targeted ad campaigns for your site. 1 credit = 1 ₸.',
+        bill_promo_min: 'Minimum',
+        bill_btn_promo: 'Order promotion',
+        bill_note_title: 'Regular site maintenance and technical support',
+        bill_note_desc: 'Each business page includes 1 month of free technical support and maintenance hosting. After this period, the public page, analytics tracking, and AI-editing capabilities are temporarily suspended (switched to soft maintenance mode). You can easily extend your service subscription directly in the workspace of the page you need.'
+      }
+    };
+
+    function updatePromoButtonText(amount) {
+      const submitBtn = document.getElementById('promoSubmitBtn');
+      if (!submitBtn) return;
+      const lang = document.documentElement.getAttribute('lang') || 'ru';
+      const formattedAmount = amount.toLocaleString('ru-RU');
+      if (lang === 'en') {
+        submitBtn.textContent = `Buy for ${formattedAmount} ₸`;
+      } else if (lang === 'kz') {
+        submitBtn.textContent = `${formattedAmount} ₸ бағасына сатып алу`;
+      } else {
+        submitBtn.textContent = `Купить за ${formattedAmount} ₸`;
+      }
+    }
+
+    function setLang(lang) {
+      document.documentElement.setAttribute('lang', lang);
+      localStorage.setItem('lang', lang);
+      const btn = document.getElementById('langToggle');
+      if (btn) btn.textContent = lang.toUpperCase();
+
+      const dict = I18N[lang] || I18N.ru;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+
+      const activePreset = document.querySelector('.preset-btn.active');
+      if (activePreset) {
+        updatePromoButtonText(Number(activePreset.dataset.val));
+      }
+    }
+
+    function toggleLang() {
+      const cur = document.documentElement.getAttribute('lang') || 'ru';
+      const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
+      setLang(next);
+    }
+    (function () {
+      const params = new URLSearchParams(location.search);
+      if (params.get('missing') === 'site') toast('Страница не найдена');
+      if (params.get('support') === 'inactive') toast('Поддержка сайта не активна');
+      const l = localStorage.getItem('lang') || 'ru';
+      setLang(l);
+    })();
+    {% if dashboard_view == 'create' %}
+    const editConfig = {% if edit_site %}{{ edit_site|tojson }}{% else %}null{% endif %};
+    let sessionId = {{ (onboarding.session.id if onboarding and onboarding.session else none) | tojson }};
+    let history = {{ (onboarding.session.history if onboarding and onboarding.session else []) | tojson }};
+    let collected = {{ (onboarding.session.collected if onboarding and onboarding.session else {}) | tojson }};
+    let photoUrls = {{ (onboarding.session.photo_urls if onboarding and onboarding.session else []) | tojson }};
+    let chatIn = {{ (onboarding.session.chat_in if onboarding and onboarding.session else 0) | tojson }};
+    let chatOut = {{ (onboarding.session.chat_out if onboarding and onboarding.session else 0) | tojson }};
+    let chatCr = {{ (onboarding.session.chat_cr if onboarding and onboarding.session else 0) | tojson }};
+    let onboardingStatus = {{ (onboarding.session.status if onboarding and onboarding.session else 'draft') | tojson }};
+    let editMode = Boolean(editConfig);
+    let currentSlug = editConfig ? editConfig.slug : null;
+    let editHistory = [];
+    let inputLocked = false;
+    const STEPS = [
+      ['name','Бизнес'],
+      ['services','Услуги'],
+      ['city','Контакты'],
+      ['vibe','Стиль'],
+      ['photos','Фото'],
+      ['confirm','Готово']
+    ];
+    const GENERATION_STAGES = ['Создаем структуру','Подбираем стиль','Оптимизируем мобильную версию','Готовим публикацию'];
+    function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px'}
+    function addMsg(text, who){const chat=document.getElementById('chat');const div=document.createElement('div');div.className=`msg ${who}`;div.textContent=text;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div}
+    function showTyping(){const chat=document.getElementById('chat');const div=document.createElement('div');div.className='create-typing';div.id='typing';div.innerHTML='<span></span><span></span><span></span>';chat.appendChild(div);chat.scrollTop=chat.scrollHeight}
+    function removeTyping(){document.getElementById('typing')?.remove()}
+    function lockInput(lock=true){inputLocked=lock;document.getElementById('inp').disabled=lock;document.getElementById('sendBtn').disabled=lock;document.getElementById('photoBtn').style.pointerEvents=lock?'none':'';document.getElementById('photoBtn').style.opacity=lock?'.5':''}
+    function setStatus(text){document.getElementById('chatStatus').textContent=text}
+    const STEP_ICONS = {
+      done: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"/></svg>`,
+      name: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+      services: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+      city: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+      vibe: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12c0 2.7 1 5.2 2.8 7a.5.5 0 0 0 .2.6l-.3 1c-.1.5.3 1.1.9 1l1-.2c.2 0 .4.1.6.2C8.6 21.8 10.2 22 12 22z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1" fill="currentColor"/><circle cx="16.5" cy="9.5" r="1" fill="currentColor"/><circle cx="15.5" cy="14.5" r="1" fill="currentColor"/></svg>`,
+      photos: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+      confirm: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+    };
+    function progress(){let done=0;for(const [key] of STEPS){if(key==='photos'){if(photoUrls.length)done++}else if(key==='confirm'){if(onboardingStatus==='ready'||onboardingStatus==='generating'||onboardingStatus==='completed')done++}else if(collected[key])done++}return Math.round(done/STEPS.length*100)}
+    function renderSteps(){const p=progress();document.getElementById('progressBar').style.width=p+'%';const current=STEPS.find(([k])=>!((k==='photos'&&photoUrls.length)||(k==='confirm'&&['ready','generating','completed'].includes(onboardingStatus))||collected[k]))?.[0]||'confirm';document.getElementById('steps').innerHTML=STEPS.map(([key,label],i)=>{const done=(key==='photos'&&photoUrls.length)||(key==='confirm'&&['ready','generating','completed'].includes(onboardingStatus))||collected[key];const iconHtml = done ? STEP_ICONS.done : (STEP_ICONS[key] || i+1);return `<div class="create-step ${done?'done':key===current?'active':''}"><span class="create-step-dot">${iconHtml}</span>${label}</div>`}).join('')}
+    function renderSummary(summaryRows){}
+    function renderPhotos(){const box=document.getElementById('inputPhotos');box.innerHTML='';photoUrls.forEach((url,idx)=>{const wrap=document.createElement('div');wrap.className='create-thumb-wrap';wrap.innerHTML=`<img class="create-thumb" src="${url}" alt=""><button class="create-remove" onclick="removePhoto(${idx})">×</button>`;box.appendChild(wrap)});document.getElementById('photoBtn').classList.toggle('has',photoUrls.length>0);renderSteps()}
+    function removePhoto(idx){photoUrls.splice(idx,1);renderPhotos();autosave()}
+    async function handlePhotos(input){for(const file of Array.from(input.files||[])){const fd=new FormData();fd.append('file',file);try{const r=await fetch('/upload-photo',{method:'POST',body:fd});const j=await r.json();if(j.url)photoUrls.push(j.url)}catch(e){toast('Не удалось загрузить фото')}}input.value='';renderPhotos();autosave()}
+    async function autosave(){if(editMode)return;setStatus('Сохраняю черновик...');try{const r=await fetch('/api/onboarding/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,status:onboardingStatus,history,collected,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});const data=await r.json();if(data.session){sessionId=data.session.id;onboardingStatus=data.session.status||onboardingStatus}setStatus('Черновик сохранён')}catch(e){setStatus('Черновик не сохранился')}}
+    function showConfirmation(summaryRows){onboardingStatus='ready';lockInput(true);renderSteps();renderSummary(summaryRows);const chat=document.getElementById('chat');const card=document.createElement('div');card.className='create-confirm';card.id='confirmCard';card.innerHTML=`<h3>Собрал данные. Делаю сайт?</h3><p class="muted">Проверьте краткое резюме. Если что-то не так, можно вернуться к диалогу и дописать детали.</p><div class="create-confirm-grid">${(summaryRows||[]).filter(r=>r.key!=='photos').map(r=>`<div class="sum-row"><div class="sum-label">${r.label}</div><div class="sum-value">${r.value||'не заполнено'}</div></div>`).join('')}<div class="sum-row"><div class="sum-label">Фото</div><div class="sum-value">${photoUrls.length} фото</div></div></div><div class="create-confirm-actions"><button class="btn" onclick="generateSite()">Да, создать сайт</button><button class="ghost" onclick="editMore()">Дополнить информацию</button></div>`;chat.appendChild(card);chat.scrollTop=chat.scrollHeight}
+    function editMore(){document.getElementById('confirmCard')?.remove();onboardingStatus='draft';lockInput(false);setStatus('Дополните информацию');document.getElementById('inp').placeholder='Что изменить или добавить?';renderSteps();autosave()}
+    function showGeneration(){lockInput(true);const chat=document.getElementById('chat');const box=document.createElement('div');box.className='create-generation';box.id='generationBox';box.innerHTML=`<div class="create-gen-top"><div class="create-spinner"></div><div><div class="create-gen-title">Создаём страницу</div><div class="muted">Это может занять до минуты</div></div></div>${GENERATION_STAGES.map((s,i)=>`<div class="create-gen-stage" id="stage-${i}"><span>${i+1}</span>${s}</div>`).join('')}`;chat.appendChild(box);chat.scrollTop=chat.scrollHeight;let i=0;function tick(){GENERATION_STAGES.forEach((_,idx)=>document.getElementById(`stage-${idx}`)?.classList.toggle('active',idx<=i));i=Math.min(i+1,GENERATION_STAGES.length-1);if(document.getElementById('generationBox'))setTimeout(tick,1300)}tick()}
+    async function generateSite(){document.getElementById('confirmCard')?.remove();onboardingStatus='generating';showGeneration();try{const r=await fetch('/api/onboarding/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Не удалось создать сайт');setStatus('Страница готова');window.location.href=data.workspace_url||'/dashboard/sites'}catch(e){document.getElementById('generationBox')?.remove();onboardingStatus='failed';lockInput(false);addMsg(e.message,'bot');renderSteps();autosave()}}
+    async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});const j=await r.json();removeTyping();if(j.error)throw new Error(j.error);if(j.edit_history)editHistory=j.edit_history;if(!j.done){addMsg(j.message,'bot');return}addMsg('Готово. Страница обновлена.','bot');setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900)}catch(e){removeTyping();addMsg(e.message||'Ошибка правки','bot')}return}
+      try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,message:text,history,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});const j=await r.json();removeTyping();if(j.error)throw new Error(j.error);history=j.history||history;sessionId=j.session_id||sessionId;collected=j.collected||collected;chatIn=j.chat_in??chatIn;chatOut=j.chat_out??chatOut;chatCr=j.chat_cr??chatCr;addMsg(j.message,'bot');renderSteps();renderSummary(j.summary);if(j.confirm_required){showConfirmation(j.summary)}else{autosave()}}catch(e){removeTyping();addMsg(e.message||'Что-то пошло не так, попробуйте ещё раз.','bot')}}
+    async function resetDraft(){if(!confirm('Начать новый черновик?'))return;try{const r=await fetch('/api/onboarding/reset',{method:'POST'});const d=await r.json();sessionId=d.session.id;history=[];collected={};photoUrls=[];chatIn=chatOut=chatCr=0;onboardingStatus='draft';document.getElementById('chat').innerHTML='';addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot');lockInput(false);renderPhotos();renderSteps();renderSummary()}catch(e){toast('Не удалось сбросить черновик')}}
+    function loadCreateInitial(){renderSteps();renderSummary();renderPhotos();if(editMode){history=JSON.parse(editConfig.history||'[]');currentSlug=editConfig.slug;for(const msg of history){if(msg.role==='user')addMsg(msg.content,'user');else addMsg(msg.content,'bot')}addMsg(`Страница «${editConfig.title}» открыта. Что изменить?`,'bot');document.getElementById('inp').placeholder='Например: сделай стиль темнее';return}
+      if(history.length){for(const msg of history){addMsg(msg.content,msg.role==='user'?'user':'bot')}if(onboardingStatus==='ready')showConfirmation(({{ (onboarding.summary if onboarding else []) | tojson }}));else addMsg('Продолжим с места, где остановились.','bot')}else{addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot')}
+      if(onboardingStatus==='generating'){showGeneration();setStatus('Генерация уже запускалась. Если страница не появилась, попробуйте позже.')}
+    }
+    loadCreateInitial();
+    {% endif %}
+  </script>
+
 </body>
+
 </html>
