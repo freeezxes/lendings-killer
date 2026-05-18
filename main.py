@@ -2521,7 +2521,6 @@ async def api_restore_version(slug: str, version_id: int, request: Request):
         restored_html = _inject_analytics(result["html"], site["slug"])
         (GENERATED_DIR / f"{site['slug']}.html").write_text(restored_html, encoding="utf-8")
         db.update_site_html(site["id"], str(GENERATED_DIR / f"{site['slug']}.html"), site.get("tokens_used") or 0)
-        services.VersionService.create_snapshot(site["id"], restored_html, result.get("data") or {}, f"version_restore:{version_id}")
     return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
 

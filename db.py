@@ -321,6 +321,7 @@ def init_db():
 
     migrate_credit_logs()
     migrate_add_oauth_columns()
+    normalize_site_versions()
 
 def _make_user_columns_nullable(columns: list[str]):
     # relax legacy not null constraints
@@ -949,18 +950,78 @@ def get_promo_credit_log(user_id: int, limit: int = 20) -> list:
         ).fetchall()
         return [dict(r) for r in rows]
 
-def create_site_version(site_id: int, html: str, data: dict, reason: str):
-    # create site version
+def _canonical_version_data(data) -> str:
+    # stable JSON lets us detect duplicate version states even if key order changed
+    if isinstance(data, str):
+        try:
+            data = json.loads(data or "{}")
+        except json.JSONDecodeError:
+            data = {}
+    return json.dumps(data or {}, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def normalize_site_versions():
+    # remove duplicated version states and keep version numbers compact per site
     with get_conn() as c:
         c.execute("BEGIN IMMEDIATE")
+        site_ids = [r[0] for r in c.execute("SELECT DISTINCT site_id FROM site_versions").fetchall()]
+        for site_id in site_ids:
+            rows = c.execute(
+                """SELECT id, html, data, version_no
+                   FROM site_versions
+                   WHERE site_id=?
+                   ORDER BY version_no ASC, id ASC""",
+                (site_id,),
+            ).fetchall()
+            seen = set()
+            delete_ids = []
+            keep_ids = []
+            for row in rows:
+                key = (row["html"], _canonical_version_data(row["data"]))
+                if key in seen:
+                    delete_ids.append(row["id"])
+                    continue
+                seen.add(key)
+                keep_ids.append(row["id"])
+
+            if delete_ids:
+                placeholders = ",".join("?" for _ in delete_ids)
+                c.execute(f"DELETE FROM site_versions WHERE id IN ({placeholders})", delete_ids)
+
+            if keep_ids:
+                placeholders = ",".join("?" for _ in keep_ids)
+                c.execute(
+                    f"UPDATE site_versions SET version_no=-id WHERE id IN ({placeholders})",
+                    keep_ids,
+                )
+                for version_no, version_id in enumerate(keep_ids, start=1):
+                    c.execute(
+                        "UPDATE site_versions SET version_no=? WHERE id=?",
+                        (version_no, version_id),
+                    )
+
+
+def create_site_version(site_id: int, html: str, data: dict, reason: str):
+    # create site version
+    data_json = _canonical_version_data(data)
+    with get_conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        existing_rows = c.execute(
+            "SELECT id, html, data FROM site_versions WHERE site_id=?",
+            (site_id,),
+        ).fetchall()
+        for row in existing_rows:
+            if row["html"] == html and _canonical_version_data(row["data"]) == data_json:
+                return row["id"]
+
         version_no = c.execute(
             "SELECT COALESCE(MAX(version_no),0)+1 FROM site_versions WHERE site_id=?",
             (site_id,),
         ).fetchone()[0]
-        c.execute(
+        cur = c.execute(
             """INSERT INTO site_versions (site_id, version_no, html, data, reason)
                VALUES (?,?,?,?,?)""",
-            (site_id, version_no, html, json.dumps(data or {}, ensure_ascii=False), reason),
+            (site_id, version_no, html, data_json, reason),
         )
         c.execute(
             """DELETE FROM site_versions
@@ -972,6 +1033,7 @@ def create_site_version(site_id: int, html: str, data: dict, reason: str):
                )""",
             (site_id, site_id),
         )
+        return cur.lastrowid
 
 def get_site_versions(site_id: int, limit: int = 10) -> list:
     # get site versions
