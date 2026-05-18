@@ -134,6 +134,21 @@ def init_db():
             expires  TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            email       TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name        TEXT,
+            created     TEXT DEFAULT (datetime('now')),
+            last_login_at TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+            id          TEXT PRIMARY KEY,
+            admin_id    INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+            expires     TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             token       TEXT PRIMARY KEY,
             user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -267,6 +282,7 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_site_versions_site_created ON site_versions(site_id, created DESC);
         CREATE INDEX IF NOT EXISTS idx_onboarding_user_status_updated ON onboarding_sessions(user_id, status, updated DESC);
         CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON notifications(user_id, is_read, created DESC);
+        CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_expires ON admin_sessions(admin_id, expires);
         """)
     # migrate users table with named balances
     with get_conn() as c:
@@ -1349,6 +1365,95 @@ def delete_session(sid: str):
     # delete session
     with get_conn() as c:
         c.execute("DELETE FROM sessions WHERE id=?", (sid,))
+
+# admin auth
+def admin_count() -> int:
+    # count registered admin accounts
+    with get_conn() as c:
+        return int(c.execute("SELECT COUNT(*) FROM admin_users").fetchone()[0])
+
+def create_admin_user(email: str, password: str, name: str = "") -> dict | None:
+    # create separate admin account
+    email = normalize_email(email)
+    if not email or not password:
+        return None
+    try:
+        hashed = bcrypt.hash(password)
+        with get_conn() as c:
+            cur = c.execute(
+                """INSERT INTO admin_users (email, password_hash, name, created)
+                   VALUES (?,?,?,datetime('now'))""",
+                (email, hashed, (name or "").strip() or email),
+            )
+            row = c.execute(
+                "SELECT id,email,name,created,last_login_at FROM admin_users WHERE id=?",
+                (cur.lastrowid,),
+            ).fetchone()
+            return dict(row) if row else None
+    except sqlite3.IntegrityError:
+        return None
+
+def get_admin_by_email(email: str) -> dict | None:
+    # get admin by email
+    email = normalize_email(email)
+    if not email:
+        return None
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM admin_users WHERE email=?", (email,)).fetchone()
+        return dict(row) if row else None
+
+def get_admin_by_id(admin_id: int) -> dict | None:
+    # get admin by id
+    with get_conn() as c:
+        row = c.execute(
+            "SELECT id,email,name,created,last_login_at FROM admin_users WHERE id=?",
+            (admin_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+def verify_admin_password(email: str, password: str) -> dict | None:
+    # verify separate admin credentials
+    admin = get_admin_by_email(email)
+    if admin and bcrypt.verify(password or "", admin.get("password_hash") or ""):
+        mark_admin_login(admin["id"])
+        return get_admin_by_id(admin["id"])
+    return None
+
+def mark_admin_login(admin_id: int):
+    # update admin login timestamp
+    with get_conn() as c:
+        c.execute("UPDATE admin_users SET last_login_at=datetime('now') WHERE id=?", (admin_id,))
+
+def create_admin_session(admin_id: int) -> str:
+    # create separate admin session
+    sid = secrets.token_urlsafe(32)
+    expires = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    with get_conn() as c:
+        c.execute(
+            "INSERT INTO admin_sessions (id, admin_id, expires) VALUES (?,?,?)",
+            (sid, admin_id, expires),
+        )
+    return sid
+
+def get_admin_by_session(sid: str | None) -> dict | None:
+    # resolve admin session
+    if not sid:
+        return None
+    with get_conn() as c:
+        row = c.execute(
+            """SELECT a.id,a.email,a.name,a.created,a.last_login_at
+               FROM admin_sessions s
+               JOIN admin_users a ON a.id=s.admin_id
+               WHERE s.id=? AND s.expires > datetime('now')""",
+            (sid,),
+        ).fetchone()
+        return dict(row) if row else None
+
+def delete_admin_session(sid: str | None):
+    # delete admin session
+    if sid:
+        with get_conn() as c:
+            c.execute("DELETE FROM admin_sessions WHERE id=?", (sid,))
 
 # admin stats
 def admin_stats() -> dict:

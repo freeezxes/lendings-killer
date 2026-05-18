@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin auth — lendings.kz</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+  :root{--bg:#080810;--surface:#10101a;--surface2:#151522;--line:#24243a;--text:#f1eeff;--muted:#8b8aa3;--accent:#7c5cff;--red:#ff5f7e;--green:#34d896}
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Sora,-apple-system,sans-serif;display:grid;place-items:center;padding:20px}
+  body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 45% 30% at 20% 0%,#7c5cff1f,transparent 60%),radial-gradient(ellipse 35% 25% at 90% 100%,#34d89614,transparent 55%)}
+  main{position:relative;width:min(440px,100%)}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:0 24px 80px #0008}
+  .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+  .logo{font-size:1.08rem;font-weight:800;letter-spacing:-.03em}.logo span{color:var(--accent)}
+  .badge{border:1px solid #ff5f7e44;background:#ff5f7e16;color:var(--red);border-radius:8px;padding:4px 8px;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px}
+  .tab{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-weight:800;cursor:pointer}
+  .tab.active{border-color:#7c5cff66;color:var(--text);background:#7c5cff22}
+  form{display:none;gap:13px}.form.active{display:grid}
+  label{display:grid;gap:6px;font-size:.76rem;font-weight:700;color:var(--muted)}
+  input{width:100%;height:44px;border-radius:11px;border:1px solid var(--line);background:#090912;color:var(--text);padding:0 12px;font:600 .92rem Sora,sans-serif;outline:none}
+  input:focus{border-color:#7c5cff88;box-shadow:0 0 0 3px #7c5cff1e}
+  .submit{height:46px;border:0;border-radius:11px;background:var(--accent);color:white;font-weight:900;font-size:.92rem;cursor:pointer;margin-top:3px}
+  .submit:hover{filter:brightness(1.06)}
+  .error{background:#ff5f7e16;border:1px solid #ff5f7e44;color:#ffd6de;border-radius:12px;padding:11px 12px;font-size:.82rem;line-height:1.45;margin-bottom:14px}
+  .note{margin-top:16px;color:var(--muted);font-size:.75rem;line-height:1.55}
+  .locked{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:14px;color:var(--muted);font-size:.82rem;line-height:1.5}
+  a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <section class="panel">
+    <div class="brand">
+      <div class="logo">lendings<span>.kz</span></div>
+      <div class="badge">Admin</div>
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <div class="tabs">
+      <button class="tab {% if active_tab != 'register' %}active{% endif %}" type="button" data-tab="login">Вход</button>
+      <button class="tab {% if active_tab == 'register' %}active{% endif %}" type="button" data-tab="register">Регистрация</button>
+    </div>
+
+    <form class="form {% if active_tab != 'register' %}active{% endif %}" method="post" action="/admin/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Email
+        <input name="email" type="email" autocomplete="username" value="{{ values.email or '' }}" required>
+      </label>
+      <label>Пароль
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="submit" type="submit">Войти в админку</button>
+    </form>
+
+    {% if registration_open %}
+    <form class="form {% if active_tab == 'register' %}active{% endif %}" method="post" action="/admin/register">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="setup_key" value="{{ setup_key }}">
+      <label>Имя
+        <input name="name" type="text" autocomplete="name" value="{{ values.name or '' }}" required>
+      </label>
+      <label>Email
+        <input name="email" type="email" autocomplete="username" value="{{ values.email or '' }}" required>
+      </label>
+      <label>Пароль
+        <input name="password" type="password" autocomplete="new-password" required>
+      </label>
+      <label>Повторите пароль
+        <input name="confirm_password" type="password" autocomplete="new-password" required>
+      </label>
+      <button class="submit" type="submit">Создать админа</button>
+    </form>
+    {% else %}
+    <div class="form {% if active_tab == 'register' %}active{% endif %}">
+      <div class="locked">Регистрация админов закрыта. Первый админ уже создан, дальше вход только по отдельному admin-аккаунту.</div>
+    </div>
+    {% endif %}
+
+    <div class="note">
+      Это отдельный вход для админки. Он не связан с клиентским аккаунтом, Google-входом и балансами пользователей.
+    </div>
+  </section>
+</main>
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const forms = document.querySelectorAll('.form');
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.toggle('active', t === tab));
+    forms.forEach(form => form.classList.toggle('active', form.action && form.action.endsWith('/' + tab.dataset.tab) || (!form.action && tab.dataset.tab === 'register')));
+  }));
+</script>
+</body>
+</html>

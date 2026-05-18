@@ -58,6 +58,8 @@ GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PHONE = "77064177628"
+ADMIN_SESSION_COOKIE = "admin_sid"
+ADMIN_CSRF_COOKIE = "admin_csrf"
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -72,6 +74,9 @@ AUTH_FORM_POST_PATHS = {
     "/auth/forgot-password",
     "/auth/reset-password",
     "/profile/update",
+    "/admin/login",
+    "/admin/register",
+    "/admin/logout",
 }
 EMAIL_VERIFY_SECONDS = 3600
 EMAIL_RESEND_COOLDOWN_SECONDS = 60
@@ -771,6 +776,85 @@ def _set_session_cookie(response: RedirectResponse, request: Request, sid: str):
         samesite="lax",
         max_age=365 * 24 * 3600,
     )
+
+
+def _admin_setup_key() -> str:
+    # optional key for creating additional admin accounts
+    return os.environ.get("ADMIN_REGISTRATION_KEY", "").strip()
+
+
+def _admin_registration_allowed(setup_key: str = "") -> bool:
+    # allow first admin signup, then require an explicit server-side key
+    required = _admin_setup_key()
+    if required:
+        return bool(setup_key and hmac.compare_digest(required, setup_key))
+    if db.admin_count() == 0:
+        return True
+    return False
+
+
+def _require_admin(request: Request) -> dict | None:
+    # resolve separate admin session
+    return db.get_admin_by_session(request.cookies.get(ADMIN_SESSION_COOKIE))
+
+
+def _set_admin_session_cookie(response: RedirectResponse, request: Request, sid: str):
+    # set separate admin session cookie
+    response.set_cookie(
+        ADMIN_SESSION_COOKIE,
+        sid,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        max_age=30 * 24 * 3600,
+    )
+
+
+def _set_admin_csrf_cookie(response, request: Request, token: str):
+    # set csrf cookie for admin forms
+    response.set_cookie(
+        ADMIN_CSRF_COOKIE,
+        token,
+        httponly=True,
+        secure=_cookie_secure(request),
+        samesite="lax",
+        max_age=2 * 3600,
+    )
+
+
+def _admin_auth_template(
+    request: Request,
+    *,
+    error: str = "",
+    active_tab: str = "login",
+    status_code: int = 200,
+    values: dict | None = None,
+    setup_key: str | None = None,
+):
+    # render separate admin auth page
+    setup_key = request.query_params.get("setup_key", "") if setup_key is None else setup_key
+    csrf_token = auth_services.CsrfService.generate()
+    response = templates.TemplateResponse(
+        request,
+        "admin_auth.html",
+        {
+            "csrf_token": csrf_token,
+            "error": error,
+            "active_tab": active_tab,
+            "values": values or {},
+            "has_admins": db.admin_count() > 0,
+            "registration_open": _admin_registration_allowed(setup_key),
+            "setup_key": setup_key,
+        },
+        status_code=status_code,
+    )
+    _set_admin_csrf_cookie(response, request, csrf_token)
+    return response
+
+
+def _verify_admin_csrf(request: Request, csrf_token: str):
+    # verify admin csrf
+    auth_services.CsrfService.verify(csrf_token, request.cookies.get(ADMIN_CSRF_COOKIE))
 
 
 def _oauth_destination(user: dict, is_new_user: bool) -> str:
@@ -1652,17 +1736,132 @@ async def serve_site(slug: str):
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     # admin page
-    user = _require_auth(request)
-    if not user or user.get("phone") != ADMIN_PHONE:
-        return HTMLResponse("<h1>403 Forbidden</h1>", status_code=403)
-    return templates.TemplateResponse(request, "admin.html", {"user": user})
+    admin = _require_admin(request)
+    if not admin:
+        return RedirectResponse("/admin/login", status_code=302)
+    csrf_token = auth_services.CsrfService.generate()
+    response = templates.TemplateResponse(request, "admin.html", {"admin": admin, "csrf_token": csrf_token})
+    _set_admin_csrf_cookie(response, request, csrf_token)
+    return response
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    # separate admin login page
+    if _require_admin(request):
+        return RedirectResponse("/admin", status_code=302)
+    return _admin_auth_template(request, active_tab="login")
+
+
+@app.get("/admin/register", response_class=HTMLResponse)
+async def admin_register_page(request: Request):
+    # separate admin registration page
+    if _require_admin(request):
+        return RedirectResponse("/admin", status_code=302)
+    if not _admin_registration_allowed(request.query_params.get("setup_key", "")):
+        return _admin_auth_template(
+            request,
+            active_tab="login",
+            error="Регистрация админов закрыта. Войдите или используйте server setup key.",
+            status_code=403,
+        )
+    return _admin_auth_template(request, active_tab="register")
+
+
+@app.post("/admin/login")
+async def admin_login(
+    request: Request,
+    email: str = Form(""),
+    password: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    # separate admin login
+    try:
+        _verify_admin_csrf(request, csrf_token)
+        email = auth_services.validate_email(email)
+    except auth_services.AuthError as exc:
+        return _admin_auth_template(request, active_tab="login", error=exc.message, status_code=exc.status_code)
+
+    admin = db.verify_admin_password(email, password)
+    if not admin:
+        return _admin_auth_template(
+            request,
+            active_tab="login",
+            error="Неверный email или пароль.",
+            status_code=401,
+            values={"email": email},
+        )
+    response = RedirectResponse("/admin", status_code=302)
+    _set_admin_session_cookie(response, request, db.create_admin_session(admin["id"]))
+    return response
+
+
+@app.post("/admin/register")
+async def admin_register(
+    request: Request,
+    name: str = Form(""),
+    email: str = Form(""),
+    password: str = Form(""),
+    confirm_password: str = Form(""),
+    setup_key: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    # separate admin registration
+    values = {"name": name, "email": email}
+    try:
+        _verify_admin_csrf(request, csrf_token)
+        if not _admin_registration_allowed(setup_key):
+            return _admin_auth_template(
+                request,
+                active_tab="login",
+                error="Регистрация админов закрыта.",
+                status_code=403,
+            )
+        email = auth_services.validate_email(email)
+        name = auth_services.validate_name(name)
+        auth_services.validate_password(password, confirm_password, email=email, name=name)
+    except auth_services.AuthError as exc:
+        return _admin_auth_template(
+            request,
+            active_tab="register",
+            error=exc.message,
+            status_code=exc.status_code,
+            values=values,
+            setup_key=setup_key,
+        )
+
+    admin = db.create_admin_user(email, password, name)
+    if not admin:
+        return _admin_auth_template(
+            request,
+            active_tab="register",
+            error="Не удалось создать админа. Возможно, email уже используется.",
+            status_code=400,
+            values=values,
+            setup_key=setup_key,
+        )
+    response = RedirectResponse("/admin", status_code=302)
+    _set_admin_session_cookie(response, request, db.create_admin_session(admin["id"]))
+    return response
+
+
+@app.post("/admin/logout")
+async def admin_logout(request: Request, csrf_token: str = Form("")):
+    # logout separate admin session
+    try:
+        _verify_admin_csrf(request, csrf_token)
+    except auth_services.AuthError:
+        pass
+    db.delete_admin_session(request.cookies.get(ADMIN_SESSION_COOKIE))
+    response = RedirectResponse("/admin/login", status_code=302)
+    response.delete_cookie(ADMIN_SESSION_COOKIE)
+    return response
 
 
 @app.get("/admin/api/stats")
 async def admin_api_stats(request: Request):
     # admin api stats
-    user = _require_auth(request)
-    if not user or user.get("phone") != ADMIN_PHONE:
+    if not _require_admin(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     return JSONResponse(db.admin_stats())
 
@@ -1670,8 +1869,7 @@ async def admin_api_stats(request: Request):
 @app.get("/admin/api/users")
 async def admin_api_users(request: Request):
     # admin api users
-    user = _require_auth(request)
-    if not user or user.get("phone") != ADMIN_PHONE:
+    if not _require_admin(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     return JSONResponse(db.admin_users())
 
@@ -1679,8 +1877,7 @@ async def admin_api_users(request: Request):
 @app.get("/admin/api/user/{uid}")
 async def admin_api_user(uid: int, request: Request):
     # admin api user
-    user = _require_auth(request)
-    if not user or user.get("phone") != ADMIN_PHONE:
+    if not _require_admin(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     detail = db.admin_user_detail(uid)
     if not detail:
@@ -1691,8 +1888,7 @@ async def admin_api_user(uid: int, request: Request):
 @app.post("/admin/api/user/{uid}/add-tokens")
 async def admin_add_tokens(uid: int, request: Request):
     # admin add tokens
-    admin = _require_auth(request)
-    if not admin or admin.get("phone") != ADMIN_PHONE:
+    if not _require_admin(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     body = await request.json()
     amount = int(body.get("amount", 0))

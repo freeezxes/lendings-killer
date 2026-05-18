@@ -34,6 +34,10 @@
     animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
   .live-label{font-size:.74rem;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:6px;}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .logout-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+    border-radius:8px;padding:7px 10px;font:600 .72rem var(--mono);cursor:pointer;transition:all .2s;}
+  .logout-btn:hover{color:var(--text);border-color:var(--muted2);}
 
   /* Content */
   .content{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
@@ -210,9 +214,15 @@
     <div class="logo">lendings<span>.kz</span></div>
     <span class="admin-badge">Admin</span>
   </div>
-  <div class="live-label">
-    <div class="live-dot"></div>
-    <span id="liveTs">—</span>
+  <div class="header-right">
+    <div class="live-label">
+      <div class="live-dot"></div>
+      <span id="liveTs">—</span>
+    </div>
+    <form method="post" action="/admin/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="logout-btn" type="submit">Выйти</button>
+    </form>
   </div>
 </header>
 
