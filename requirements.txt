@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+anthropic
+httpx
+google-auth
+requests
+resend
+pillow
+bcrypt
+jinja2
+python-multipart
+aiofiles
