@@ -973,15 +973,20 @@ def normalize_site_versions():
                    ORDER BY version_no ASC, id ASC""",
                 (site_id,),
             ).fetchall()
-            seen = set()
+            seen = {}
             delete_ids = []
             keep_ids = []
             for row in rows:
-                key = (row["html"], _canonical_version_data(row["data"]))
+                key = row["html"]
+                data_json = _canonical_version_data(row["data"])
                 if key in seen:
+                    keep = seen[key]
+                    if len(data_json) > keep["data_len"]:
+                        c.execute("UPDATE site_versions SET data=? WHERE id=?", (data_json, keep["id"]))
+                        keep["data_len"] = len(data_json)
                     delete_ids.append(row["id"])
                     continue
-                seen.add(key)
+                seen[key] = {"id": row["id"], "data_len": len(data_json)}
                 keep_ids.append(row["id"])
 
             if delete_ids:
@@ -1011,7 +1016,9 @@ def create_site_version(site_id: int, html: str, data: dict, reason: str):
             (site_id,),
         ).fetchall()
         for row in existing_rows:
-            if row["html"] == html and _canonical_version_data(row["data"]) == data_json:
+            if row["html"] == html:
+                if len(data_json) > len(_canonical_version_data(row["data"])):
+                    c.execute("UPDATE site_versions SET data=? WHERE id=?", (data_json, row["id"]))
                 return row["id"]
 
         version_no = c.execute(
