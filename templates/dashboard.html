@@ -3950,7 +3950,14 @@
 
       setStatus(t('create_status_saving'));
       try {
-        const r = await fetch('/api/onboarding/reset', { method: 'POST' });
+        const keepSessionIds = localDrafts
+          .filter(draft => draft.id !== newId && draft.sessionId)
+          .map(draft => draft.sessionId);
+        const r = await fetch('/api/onboarding/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keep_session_ids: keepSessionIds })
+        });
         const d = await r.json();
         if (!r.ok || !d.ok) throw new Error(apiErrorMessage(d, t('create_reset_failed')));
 

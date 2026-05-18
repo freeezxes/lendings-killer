@@ -1151,9 +1151,11 @@ class OnboardingService:
         return OnboardingService.present(session)
 
     @staticmethod
-    def reset(user_id: int) -> dict:
+    def reset(user_id: int, payload: dict | None = None) -> dict:
         # reset
-        session = db.create_onboarding_session(user_id)
+        payload = payload or {}
+        keep_session_ids = payload.get("keep_session_ids") if isinstance(payload.get("keep_session_ids"), list) else None
+        session = db.create_onboarding_session(user_id, keep_session_ids=keep_session_ids)
         return OnboardingService.present(session)
 
     @staticmethod

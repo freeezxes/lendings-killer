@@ -2199,8 +2199,9 @@ async def api_onboarding_reset(request: Request):
     user = _require_auth(request)
     if not user:
         return _api_error("Authentication required", 401, "auth_required")
+    payload = await _json_body(request)
     try:
-        return JSONResponse({"ok": True, **services.OnboardingService.reset(user["id"])})
+        return JSONResponse({"ok": True, **services.OnboardingService.reset(user["id"], payload)})
     except db.DraftLimitError:
         return _api_error("Draft limit reached", 409, "draft_limit_reached")
 

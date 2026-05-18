@@ -1143,6 +1143,36 @@ def count_active_onboarding_sessions(user_id: int, conn=None) -> int:
         if conn is None:
             c.close()
 
+def _normalize_session_ids(session_ids: list[int] | None) -> list[int]:
+    # normalize session ids
+    clean = []
+    seen = set()
+    for raw_id in session_ids or []:
+        try:
+            sid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if sid > 0 and sid not in seen:
+            clean.append(sid)
+            seen.add(sid)
+    return clean
+
+def _cleanup_removed_onboarding_sessions(user_id: int, keep_session_ids: list[int] | None, conn) -> None:
+    # cleanup removed onboarding sessions
+    keep_ids = _normalize_session_ids(keep_session_ids)
+    params = [user_id]
+    keep_clause = ""
+    if keep_ids:
+        keep_clause = f"AND id NOT IN ({','.join('?' for _ in keep_ids)})"
+        params.extend(keep_ids)
+    conn.execute(
+        f"""DELETE FROM onboarding_sessions
+            WHERE user_id=?
+              AND status IN ('draft','ready','failed')
+              {keep_clause}""",
+        params,
+    )
+
 def get_onboarding_session(session_id: int, user_id: int) -> dict | None:
     # get onboarding session
     with get_conn() as c:
@@ -1152,10 +1182,12 @@ def get_onboarding_session(session_id: int, user_id: int) -> dict | None:
         ).fetchone()
         return _present_onboarding_session(row)
 
-def create_onboarding_session(user_id: int) -> dict:
+def create_onboarding_session(user_id: int, keep_session_ids: list[int] | None = None) -> dict:
     # create onboarding session
     with get_conn() as c:
         c.execute("BEGIN IMMEDIATE")
+        if keep_session_ids is not None:
+            _cleanup_removed_onboarding_sessions(user_id, keep_session_ids, c)
         active_count = count_active_onboarding_sessions(user_id, c)
         if active_count >= MAX_DRAFTS:
             raise DraftLimitError("Draft limit reached")
