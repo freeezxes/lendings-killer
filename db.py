@@ -962,8 +962,18 @@ def create_site_version(site_id: int, html: str, data: dict, reason: str):
                VALUES (?,?,?,?,?)""",
             (site_id, version_no, html, json.dumps(data or {}, ensure_ascii=False), reason),
         )
+        c.execute(
+            """DELETE FROM site_versions
+               WHERE site_id=? AND id NOT IN (
+                   SELECT id FROM site_versions
+                   WHERE site_id=?
+                   ORDER BY version_no DESC
+                   LIMIT 10
+               )""",
+            (site_id, site_id),
+        )
 
-def get_site_versions(site_id: int, limit: int = 20) -> list:
+def get_site_versions(site_id: int, limit: int = 10) -> list:
     # get site versions
     with get_conn() as c:
         rows = c.execute(
@@ -1234,7 +1244,10 @@ def admin_user_detail(user_id: int) -> dict | None:
 
 # payments
 def create_payment(user_id: int, order_id: str, invoice_id: str, amount: int, tokens: int,
-                   status: str = "pending", catalog_item_id: str = "") -> dict:
+                   status: str = "pending", catalog_item_id: str = "",
+                   payment_kind: str = "dev_credits", dev_credits: int | None = None,
+                   promo_credits: int = 0, site_id: int | None = None,
+                   support_invoice_id: int | None = None) -> dict:
     # create new payment record
     with get_conn() as c:
         # add catalog_item_id column
@@ -1244,9 +1257,22 @@ def create_payment(user_id: int, order_id: str, invoice_id: str, amount: int, to
         cur = c.execute(
             """INSERT INTO payments
                (user_id, order_id, invoice_id, amount, tokens, status,
-                catalog_item_id, payment_kind, dev_credits)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (user_id, order_id, invoice_id, amount, tokens, status, catalog_item_id, "legacy", tokens)
+                catalog_item_id, payment_kind, dev_credits, promo_credits, site_id, support_invoice_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                user_id,
+                order_id,
+                invoice_id,
+                amount,
+                tokens,
+                status,
+                catalog_item_id,
+                payment_kind,
+                tokens if dev_credits is None else dev_credits,
+                promo_credits,
+                site_id,
+                support_invoice_id,
+            )
         )
         row = c.execute("SELECT * FROM payments WHERE id=?", (cur.lastrowid,)).fetchone()
         return dict(row)

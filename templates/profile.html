@@ -31,17 +31,36 @@
     --bg-gradient: radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
   }
   .sidebar-balances {
-    display: flex;
+    display: grid;
     gap: 8px;
     margin-bottom: 12px;
     padding: 0 4px;
   }
   .sidebar-balances .balance-pill {
-    flex: 1;
-    justify-content: center;
-    height: 32px;
+    width: 100%;
+    justify-content: space-between;
+    min-height: 38px;
     font-size: .7rem;
-    padding: 0 8px;
+    line-height: 1.2;
+    padding: 7px 10px;
+    white-space: normal;
+  }
+  .sidebar-balances .balance-pill span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .sidebar-balances .balance-label {
+    display: grid;
+    gap: 1px;
+  }
+  .sidebar-balances .balance-label-line {
+    display: block;
+  }
+  .sidebar-balances .balance-pill strong {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html{background:var(--bg);scroll-behavior:smooth}
@@ -222,6 +241,38 @@
     margin-left: auto;
     margin-right: auto;
   }
+
+  /* Premium Block Entrance Animations */
+  @keyframes premiumEntrance {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .settings-container,
+  .settings-container .section,
+  .ledger .log-item,
+  .empty-log,
+  .notice {
+    animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .settings-container { animation-delay: 0.05s; }
+  .settings-container .section:nth-child(1) { animation-delay: 0.1s; }
+  .settings-container .section:nth-child(2) { animation-delay: 0.18s; }
+  .settings-container .section:nth-child(3) { animation-delay: 0.26s; }
+  .settings-container .section:nth-child(4) { animation-delay: 0.34s; }
+
+  .ledger .log-item:nth-child(1) { animation-delay: 0.15s; }
+  .ledger .log-item:nth-child(2) { animation-delay: 0.20s; }
+  .ledger .log-item:nth-child(3) { animation-delay: 0.25s; }
+  .ledger .log-item:nth-child(4) { animation-delay: 0.30s; }
+  .ledger .log-item:nth-child(5) { animation-delay: 0.35s; }
 </style>
 <script>
   (function(){
@@ -235,7 +286,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
-        <a class="brand" href="/dashboard" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
+        <a class="brand" href="/" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
         <div style="display:flex; gap:6px;">
           <button class="lang-toggle" id="langToggle" onclick="toggleLang(event)">RU</button>
           <button class="theme-toggle" id="themeToggle" onclick="toggleTheme(event)" aria-label="Toggle Theme">
@@ -267,8 +318,8 @@
     </div>
 
     <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
-      <div class="balance-pill" title="Development Credits"><span>Dev</span><strong>{{ user.dev_credits or 0 }}</strong></div>
-      <div class="balance-pill" title="Promo Credits"><span>Promo</span><strong>{{ user.promo_credits or 0 }}</strong></div>
+      <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Разработка</span><span class="balance-label-line" data-i18n="balance_dev_unit">кредиты</span></span><strong>{{ "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</strong></div>
+      <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_promo_kind">Продвижение</span><span class="balance-label-line" data-i18n="balance_promo_unit">кредиты</span></span><strong>{{ "{:,}".format(user.promo_credits or 0).replace(",", " ") }}</strong></div>
     </div>
 
     <div class="sidebar-footer" style="margin-top: 0;">
@@ -339,7 +390,7 @@
             <div class="form-grid">
               <div class="field">
                 <label for="nameInput" data-i18n="profile_name_lbl">Имя</label>
-                <input type="text" name="name" id="nameInput" value="{{ user.name or '' }}" placeholder="Ваше имя" autocomplete="name" maxlength="80" required>
+                <input type="text" name="name" id="nameInput" value="{{ user.name or '' }}" placeholder="Ваше имя" data-i18n-placeholder="profile_name_placeholder" autocomplete="name" maxlength="80" required>
               </div>
               <div class="field">
                 <label data-i18n="profile_email_lbl">Email</label>
@@ -361,12 +412,12 @@
 
           {% if request.query_params.get('password_error') %}
           <div class="notice err" style="max-width:600px;">
-            <div>Ошибка: проверьте совпадение паролей и их длину (минимум 8 символов).</div>
+            <div data-i18n="profile_password_error">Ошибка: проверьте совпадение паролей и их длину (минимум 8 символов).</div>
           </div>
           {% endif %}
           {% if request.query_params.get('password_success') %}
           <div class="notice ok" style="max-width:600px;">
-            <div>Пароль успешно обновлен.</div>
+            <div data-i18n="profile_password_success">Пароль успешно обновлен.</div>
           </div>
           {% endif %}
 
@@ -390,7 +441,7 @@
         <div class="section" style="border-bottom: 1px solid var(--line);">
           <div class="section-head">
             <div>
-              <div class="section-title" data-i18n="profile_history">История Credits</div>
+              <div class="section-title" data-i18n="profile_history">История кредитов разработки</div>
               <div class="muted" data-i18n="profile_history_desc">AI-генерация, правки и транзакции.</div>
             </div>
           </div>
@@ -399,8 +450,8 @@
             {% for entry in log %}
             <div class="log-item">
               <div class="log-left">
-                <div class="log-reason">
-                  {% if 'site_generate' in (entry.reason or '') %}Создание страницы{% elif 'site_edit' in (entry.reason or '') %}AI-правка страницы{% elif 'version_restore' in (entry.reason or '') %}Восстановление версии{% elif 'credits_purchase' in (entry.reason or '') or 'slot_purchase' in (entry.reason or '') %}Пополнение Credits{% elif 'admin_grant' in (entry.reason or '') %}Ручное начисление{% else %}{{ entry.reason or 'Операция' }}{% endif %}
+                <div class="log-reason" data-log-reason="{{ entry.reason or '' }}">
+                  {% if 'site_generate' in (entry.reason or '') %}Создание страницы{% elif 'site_edit' in (entry.reason or '') %}AI-правка страницы{% elif 'version_restore' in (entry.reason or '') %}Восстановление версии{% elif 'credits_purchase' in (entry.reason or '') or 'slot_purchase' in (entry.reason or '') %}Пополнение кредитов{% elif 'admin_grant' in (entry.reason or '') %}Ручное начисление{% else %}{{ entry.reason or 'Операция' }}{% endif %}
                 </div>
                 <div class="log-ts">{{ entry.ts[:16] }}</div>
               </div>
@@ -409,7 +460,7 @@
             {% endfor %}
           </div>
           {% else %}
-          <div class="empty-log" style="max-width:600px;" data-i18n="profile_empty_history">История Development Credits пока пуста.</div>
+          <div class="empty-log" style="max-width:600px;" data-i18n="profile_empty_history">История кредитов разработки пока пуста.</div>
           {% endif %}
         </div>
 
@@ -490,12 +541,19 @@ const I18N = {
     nav_create: 'Создать страницу',
     nav_billing: 'Оплата',
     nav_profile: 'Профиль',
+    balance_dev_title: 'Кредиты разработки',
+    balance_promo_title: 'Кредиты продвижения',
+    balance_dev_kind: 'Разработка',
+    balance_dev_unit: 'кредиты',
+    balance_promo_kind: 'Продвижение',
+    balance_promo_unit: 'кредиты',
     profile_settings: 'Настройки профиля',
     profile_acc: 'Аккаунт',
     profile_basic_desc: 'Ваши основные данные и настройки профиля.',
     profile_change_photo: 'Изменить фото',
     profile_photo_desc: 'JPG, PNG или GIF. Максимум 5MB.',
     profile_name_lbl: 'Имя',
+    profile_name_placeholder: 'Ваше имя',
     profile_email_lbl: 'Email',
     profile_save_btn: 'Сохранить изменения',
     profile_sec: 'Безопасность',
@@ -503,24 +561,39 @@ const I18N = {
     profile_new_pw_lbl: 'Новый пароль',
     profile_confirm_pw_lbl: 'Повторите пароль',
     profile_update_pw_btn: 'Обновить пароль',
-    profile_history: 'История Credits',
+    profile_password_error: 'Ошибка: проверьте совпадение паролей и их длину (минимум 8 символов).',
+    profile_password_success: 'Пароль успешно обновлен.',
+    profile_history: 'История кредитов разработки',
     profile_history_desc: 'AI-генерация, правки и транзакции.',
-    profile_empty_history: 'История Development Credits пока пуста.',
+    profile_empty_history: 'История кредитов разработки пока пуста.',
     profile_danger_logout: 'Выход из аккаунта',
     profile_logout_desc: 'Сайты, черновики и история останутся в аккаунте.',
-    profile_logout_btn: 'Выйти из аккаунта'
+    profile_logout_btn: 'Выйти из аккаунта',
+    log_site_generate: 'Создание страницы',
+    log_site_edit: 'AI-правка страницы',
+    log_version_restore: 'Восстановление версии',
+    log_credits_purchase: 'Пополнение кредитов',
+    log_admin_grant: 'Ручное начисление',
+    log_default: 'Операция'
   },
   kz: {
     nav_dashboard: 'Басқару панелі',
     nav_create: 'Парақша жасау',
     nav_billing: 'Төлем',
     nav_profile: 'Профиль',
+    balance_dev_title: 'Әзірлеу кредиттері',
+    balance_promo_title: 'Ілгерілету кредиттері',
+    balance_dev_kind: 'Әзірлеу',
+    balance_dev_unit: 'кредиттері',
+    balance_promo_kind: 'Ілгерілету',
+    balance_promo_unit: 'кредиттері',
     profile_settings: 'Профиль баптаулары',
     profile_acc: 'Аккаунт',
     profile_basic_desc: 'Сіздің негізгі деректеріңіз бен профиль баптауларыңыз.',
     profile_change_photo: 'Суретті өзгерту',
     profile_photo_desc: 'JPG, PNG немесе GIF. Ең көбі 5MB.',
     profile_name_lbl: 'Аты',
+    profile_name_placeholder: 'Сіздің атыңыз',
     profile_email_lbl: 'Email',
     profile_save_btn: 'Өзгерістерді сақтау',
     profile_sec: 'Қауіпсіздік',
@@ -528,24 +601,39 @@ const I18N = {
     profile_new_pw_lbl: 'Жаңа құпия сөз',
     profile_confirm_pw_lbl: 'Құпия сөзді қайталаңыз',
     profile_update_pw_btn: 'Құпия сөзді жаңарту',
-    profile_history: 'Development Credits тарихы',
+    profile_password_error: 'Қате: құпия сөздердің сәйкестігін және ұзындығын тексеріңіз (кемінде 8 таңба).',
+    profile_password_success: 'Құпия сөз сәтті жаңартылды.',
+    profile_history: 'Әзірлеу кредиттері тарихы',
     profile_history_desc: 'AI-генерация, түзетулер және транзакциялар.',
-    profile_empty_history: 'Development Credits тарихы әлі бос.',
+    profile_empty_history: 'Әзірлеу кредиттері тарихы әлі бос.',
     profile_danger_logout: 'Аккаунттан шығу',
     profile_logout_desc: 'Сайттар, шимайлар және тарих аккаунтта қалады.',
-    profile_logout_btn: 'Аккаунттан шығу'
+    profile_logout_btn: 'Аккаунттан шығу',
+    log_site_generate: 'Парақша жасау',
+    log_site_edit: 'AI-парақша түзетуі',
+    log_version_restore: 'Нұсқаны қалпына келтіру',
+    log_credits_purchase: 'Кредиттерді толықтыру',
+    log_admin_grant: 'Қолмен қосу',
+    log_default: 'Операция'
   },
   en: {
     nav_dashboard: 'Dashboard',
     nav_create: 'Create Page',
     nav_billing: 'Billing',
     nav_profile: 'Profile',
+    balance_dev_title: 'Development credits',
+    balance_promo_title: 'Promotion credits',
+    balance_dev_kind: 'Development',
+    balance_dev_unit: 'credits',
+    balance_promo_kind: 'Promotion',
+    balance_promo_unit: 'credits',
     profile_settings: 'Profile Settings',
     profile_acc: 'Account',
     profile_basic_desc: 'Your basic information and profile settings.',
     profile_change_photo: 'Change Photo',
     profile_photo_desc: 'JPG, PNG or GIF. Max 5MB.',
     profile_name_lbl: 'Name',
+    profile_name_placeholder: 'Your name',
     profile_email_lbl: 'Email',
     profile_save_btn: 'Save Changes',
     profile_sec: 'Security',
@@ -553,14 +641,32 @@ const I18N = {
     profile_new_pw_lbl: 'New Password',
     profile_confirm_pw_lbl: 'Confirm Password',
     profile_update_pw_btn: 'Update Password',
-    profile_history: 'Credits History',
+    profile_password_error: 'Error: check that passwords match and are at least 8 characters long.',
+    profile_password_success: 'Password updated successfully.',
+    profile_history: 'Development credits history',
     profile_history_desc: 'AI generation, edits and transactions.',
     profile_empty_history: 'Credits history is currently empty.',
     profile_danger_logout: 'Log Out',
     profile_logout_desc: 'Sites, drafts and history will remain in your account.',
-    profile_logout_btn: 'Log Out'
+    profile_logout_btn: 'Log Out',
+    log_site_generate: 'Page creation',
+    log_site_edit: 'AI page edit',
+    log_version_restore: 'Version restore',
+    log_credits_purchase: 'Credits top-up',
+    log_admin_grant: 'Manual grant',
+    log_default: 'Operation'
   }
 };
+
+function profileLogKey(reason) {
+  const value = reason || '';
+  if (value.includes('site_generate')) return 'log_site_generate';
+  if (value.includes('site_edit')) return 'log_site_edit';
+  if (value.includes('version_restore')) return 'log_version_restore';
+  if (value.includes('credits_purchase') || value.includes('slot_purchase')) return 'log_credits_purchase';
+  if (value.includes('admin_grant')) return 'log_admin_grant';
+  return '';
+}
 
 function setLang(lang) {
   document.documentElement.setAttribute('lang', lang);
@@ -572,6 +678,19 @@ function setLang(lang) {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (dict[key]) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (dict[key]) el.setAttribute('title', dict[key]);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key]) el.setAttribute('placeholder', dict[key]);
+  });
+  document.querySelectorAll('[data-log-reason]').forEach(el => {
+    const reason = el.getAttribute('data-log-reason') || '';
+    const key = profileLogKey(reason);
+    el.textContent = key ? (dict[key] || I18N.ru[key]) : (reason || dict.log_default || I18N.ru.log_default);
   });
 }
 

@@ -299,6 +299,60 @@ class SupportService:
                 "amount": SUPPORT_MONTHLY_PRICE,
             }
 
+    @staticmethod
+    def mark_invoice_paid(payment: dict) -> dict:
+        # apply a paid support invoice from payment webhook
+        invoice_id = payment.get("support_invoice_id")
+        site_id = payment.get("site_id")
+        user_id = payment.get("user_id")
+        now = _now()
+        if not invoice_id or not site_id or not user_id:
+            return {"ok": False, "error": "invalid_support_payment"}
+        with db.get_conn() as c:
+            c.execute("BEGIN IMMEDIATE")
+            invoice = _rowdict(c.execute(
+                """SELECT * FROM support_invoices
+                   WHERE id=? AND user_id=? AND site_id=?""",
+                (invoice_id, user_id, site_id),
+            ).fetchone())
+            site = _rowdict(c.execute(
+                "SELECT * FROM sites WHERE id=? AND user_id=?",
+                (site_id, user_id),
+            ).fetchone())
+            if not invoice or not site:
+                return {"ok": False, "error": "support_invoice_not_found"}
+            if invoice.get("status") == InvoiceStatus.PAID.value:
+                return {"ok": True, "already_paid": True}
+
+            paid_until = _parse_dt(site.get("support_paid_until")) or now
+            extend_from = max(now, paid_until)
+            new_paid_until = extend_from + timedelta(days=SUPPORT_INCLUDED_DAYS)
+            analytics_status = site.get("analytics_status") or AnalyticsStatus.UNAVAILABLE.value
+            if analytics_status == AnalyticsStatus.BLOCKED.value and int(site.get("promo_setup_done") or 0):
+                analytics_status = AnalyticsStatus.ACTIVE.value
+            promo_status = site.get("promo_status") or PromotionStatus.NOT_CONFIGURED.value
+            if promo_status == PromotionStatus.PAUSED.value and int(site.get("promo_setup_done") or 0):
+                promo_status = PromotionStatus.CONFIGURED.value
+            c.execute(
+                """UPDATE support_invoices
+                   SET status=?, paid_at=datetime('now'), order_id=?, updated=datetime('now')
+                   WHERE id=?""",
+                (InvoiceStatus.PAID.value, payment.get("order_id"), invoice_id),
+            )
+            c.execute(
+                """UPDATE sites
+                   SET support_paid_until=?, support_status=?, analytics_status=?, promo_status=?, updated=datetime('now')
+                   WHERE id=?""",
+                (
+                    _fmt(new_paid_until),
+                    SupportStatus.ACTIVE.value,
+                    analytics_status,
+                    promo_status,
+                    site_id,
+                ),
+            )
+            return {"ok": True, "support_paid_until": _fmt(new_paid_until)}
+
 
 class CreditsService:
     # credits service class
@@ -352,6 +406,25 @@ class CreditsService:
             )
             balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
         return {"ok": True, "credits": credits, "amount": amount, "balance": balance, "order_id": order_id}
+
+    @staticmethod
+    def apply_promo_payment(payment: dict) -> dict:
+        # add promotion credits after external payment succeeds
+        credits = int(payment.get("promo_credits") or 0)
+        user_id = int(payment.get("user_id") or 0)
+        if credits <= 0 or user_id <= 0:
+            return {"ok": False, "error": "invalid_promo_payment"}
+        with db.get_conn() as c:
+            c.execute("BEGIN IMMEDIATE")
+            c.execute("UPDATE users SET promo_credits=promo_credits+? WHERE id=?", (credits, user_id))
+            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
+            c.execute(
+                """INSERT INTO promo_credit_log
+                   (user_id, delta, reason, balance_after, created)
+                   VALUES (?,?,?,?,datetime('now'))""",
+                (user_id, credits, f"promo_credit_purchase:{payment.get('order_id')}", balance),
+            )
+        return {"ok": True, "credits": credits, "balance": balance}
 
     @staticmethod
     def logs(user_id: int, limit: int = 50) -> dict:
@@ -460,6 +533,12 @@ class PromotionService:
     def validate_business_change(site: dict, edit_summary: str) -> dict:
         # prevent changing business niche
         text = (edit_summary or "").lower()
+        data = _site_data(site)
+        current = " ".join([
+            str(site.get("title") or ""),
+            str(data.get("name") or ""),
+            str(data.get("services") or ""),
+        ]).lower()
         blocked = [
             "другой бизнес",
             "новый бизнес",
@@ -467,11 +546,39 @@ class PromotionService:
             "переделай под",
             "теперь это",
             "сделай сайт для другого",
+            "замени бизнес",
+            "другая ниша",
+            "другое направление",
         ]
         if any(phrase in text for phrase in blocked):
             return {
                 "ok": False,
                 "message": "Один сайт привязан к одному направлению бизнеса. Для нового направления создайте отдельный сайт.",
+            }
+        niches = {
+            "beauty": ["маникюр", "ногт", "бров", "ресниц", "косметолог", "макияж"],
+            "barber": ["барбер", "стриж", "волос", "бород"],
+            "food": ["кафе", "кофе", "ресторан", "еда", "доставка", "пицц", "суши"],
+            "auto": ["авто", "машин", "аренда авто", "такси"],
+            "education": ["репетитор", "курс", "обуч", "математ", "англий"],
+            "massage": ["массаж", "spa", "спа"],
+            "realty": ["недвиж", "аренда квартир", "риэлтор"],
+        }
+        current_hits = {name for name, words in niches.items() if any(w in current for w in words)}
+        requested_hits = {name for name, words in niches.items() if any(w in text for w in words)}
+        if current_hits and requested_hits and current_hits.isdisjoint(requested_hits):
+            return {
+                "ok": False,
+                "message": "Похоже, запрос меняет направление бизнеса. Для новой ниши нужно создать отдельный сайт.",
+            }
+        prohibited = [
+            "казино", "ставки", "букмекер", "adult", "18+", "порно", "наркот",
+            "пирамид", "инвест гарант", "обнал", "поддель", "политическ",
+        ]
+        if any(word in text for word in prohibited):
+            return {
+                "ok": False,
+                "message": "Мы не создаём и не продвигаем сайты для запрещённых или рискованных тематик.",
             }
         return {"ok": True}
 
@@ -700,6 +807,31 @@ class AnalyticsService:
             return {"ok": False, "error": "promo_not_configured", "message": "Сначала настройте продвижение."}
         with db.get_conn() as c:
             c.execute("BEGIN IMMEDIATE")
+            spent = c.execute(
+                """UPDATE users
+                   SET dev_credits=dev_credits-?, tokens=MAX(tokens-?,0)
+                   WHERE id=? AND dev_credits>=?""",
+                (
+                    VERSION_RESTORE_DEV_CREDITS,
+                    VERSION_RESTORE_DEV_CREDITS,
+                    user_id,
+                    VERSION_RESTORE_DEV_CREDITS,
+                ),
+            )
+            if spent.rowcount != 1:
+                return {"ok": False, "error": "insufficient_dev_credits", "message": "Недостаточно кредитов разработки."}
+            balance = c.execute("SELECT dev_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
+            c.execute(
+                """INSERT INTO dev_credit_log
+                   (user_id, site_id, delta, reason, balance_after, created)
+                   VALUES (?,?,?,?,?,datetime('now'))""",
+                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, "analytics_restore", balance),
+            )
+            c.execute(
+                """INSERT INTO token_log (user_id, site_id, delta, reason)
+                   VALUES (?,?,?,?)""",
+                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, "analytics_restore"),
+            )
             c.execute(
                 """UPDATE sites
                    SET analytics_status=?, promo_status=?, updated=datetime('now')
@@ -711,7 +843,52 @@ class AnalyticsService:
                    VALUES (?,?,?,datetime('now'))""",
                 (site_id, "analytics_restored", "{}"),
             )
+        return {"ok": True, "dev_credits": balance}
+
+    @staticmethod
+    def record_event(site_id: int, event_type: str, payload: dict | None = None) -> dict:
+        # record a public site analytics event
+        allowed = {
+            "page_view",
+            "cta_click",
+            "whatsapp_click",
+            "telegram_click",
+            "instagram_click",
+            "phone_click",
+            "service_click",
+        }
+        event_type = (event_type or "").strip()
+        if event_type not in allowed:
+            event_type = "cta_click"
+        with db.get_conn() as c:
+            c.execute(
+                """INSERT INTO analytics_events
+                   (site_id, event_type, payload_json, created)
+                   VALUES (?,?,?,datetime('now'))""",
+                (site_id, event_type, json.dumps(payload or {}, ensure_ascii=False)[:2000]),
+            )
         return {"ok": True}
+
+    @staticmethod
+    def metrics(site_id: int) -> dict:
+        # aggregate analytics events for dashboard
+        with db.get_conn() as c:
+            rows = c.execute(
+                """SELECT event_type, COUNT(*) as cnt
+                   FROM analytics_events
+                   WHERE site_id=?
+                   GROUP BY event_type""",
+                (site_id,),
+            ).fetchall()
+        counts = {r["event_type"]: int(r["cnt"]) for r in rows}
+        return {
+            "visits": counts.get("page_view", 0),
+            "cta_clicks": counts.get("cta_click", 0) + counts.get("service_click", 0),
+            "whatsapp_clicks": counts.get("whatsapp_click", 0),
+            "telegram_clicks": counts.get("telegram_click", 0),
+            "instagram_clicks": counts.get("instagram_click", 0),
+            "phone_clicks": counts.get("phone_click", 0),
+        }
 
 
 class VersionService:
@@ -758,7 +935,7 @@ class VersionService:
                 ),
             )
             if spent.rowcount != 1:
-                return {"ok": False, "error": "insufficient_dev_credits", "message": "Недостаточно Development Credits."}
+                return {"ok": False, "error": "insufficient_dev_credits", "message": "Недостаточно кредитов разработки."}
             balance = c.execute("SELECT dev_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
             c.execute(
                 """INSERT INTO dev_credit_log
@@ -886,11 +1063,15 @@ class OnboardingService:
         collected = session.get("collected") or {}
         done = [key for key in OnboardingService.REQUIRED_KEYS if collected.get(key)]
         summary = [
-            {"key": "name", "label": "Бизнес", "value": collected.get("name") or ""},
-            {"key": "services", "label": "Услуги", "value": collected.get("services") or ""},
-            {"key": "city", "label": "Контакты", "value": collected.get("city") or ""},
-            {"key": "vibe", "label": "Стиль", "value": collected.get("vibe") or ""},
-            {"key": "photos", "label": "Фото", "value": f"{len(session.get('photo_urls') or [])} фото" if session.get("photo_urls") else "не добавлены"},
+            {"key": "name", "label_key": "create_summary_business", "value": collected.get("name") or ""},
+            {"key": "services", "label_key": "create_summary_services", "value": collected.get("services") or ""},
+            {"key": "city", "label_key": "create_summary_contacts", "value": collected.get("city") or ""},
+            {"key": "vibe", "label_key": "create_summary_style", "value": collected.get("vibe") or ""},
+            {
+                "key": "photos",
+                "label_key": "create_summary_photos",
+                "value": f"{len(session.get('photo_urls') or [])} фото" if session.get("photo_urls") else "",
+            },
         ]
         return {
             "session": session,
@@ -942,17 +1123,23 @@ def build_site_workspace_context(user: dict, site_id: int) -> dict | None:
     site["active_campaign"] = next((c for c in campaigns if c.get("status") == CampaignStatus.ACTIVE.value), None)
     site["needs_analytics_restore"] = site.get("analytics_status") == AnalyticsStatus.OUTDATED.value
     versions = VersionService.list_versions(user["id"], site["id"])
-    return {
-        **build_dashboard_context(user),
-        "selected_site": site,
-        "versions": versions,
-        "analytics_metrics": {
+    analytics_metrics = (
+        AnalyticsService.metrics(site["id"])
+        if site.get("analytics_status") == AnalyticsStatus.ACTIVE.value and int(site.get("promo_setup_done") or 0)
+        else {
             "visits": 0,
             "cta_clicks": 0,
             "whatsapp_clicks": 0,
             "telegram_clicks": 0,
             "instagram_clicks": 0,
-        },
+            "phone_clicks": 0,
+        }
+    )
+    return {
+        **build_dashboard_context(user),
+        "selected_site": site,
+        "versions": versions,
+        "analytics_metrics": analytics_metrics,
     }
 
 

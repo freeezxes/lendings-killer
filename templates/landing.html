@@ -52,6 +52,7 @@
   .nav-btn{height:40px;padding:0 18px;border-radius:12px;font-size:.8rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s,background .2s,box-shadow .2s;cursor:pointer}
   .nav-btn.primary{background:var(--brand);color:#fff;border:0;box-shadow:0 8px 18px rgba(79,109,245,.2)}
   .nav-btn.primary:hover{transform:translateY(-1px);background:var(--brand-dark)}
+  .controls .nav-btn.ghost{width:104px;padding:0 12px;white-space:nowrap}
   .nav-btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(14px)}
   .nav-btn.ghost:hover{border-color:var(--brand);transform:scale(1.02)}
 
@@ -239,8 +240,8 @@
       </div>
       <div class="card">
         <div class="step-num">06</div>
-        <div class="card-title" data-i18n="step6Title">Получаете клиентов</div>
-        <div class="card-desc" data-i18n="step6Desc">Следите за кликами в WhatsApp и Instagram прямо в личном кабинете.</div>
+        <div class="card-title" data-i18n="step6Title">Видите результат</div>
+        <div class="card-desc" data-i18n="step6Desc">Следите за просмотрами и кликами в WhatsApp или Instagram прямо в личном кабинете.</div>
       </div>
     </div>
   </section>
@@ -313,6 +314,7 @@
       {% else %}
       <a href="/dashboard" data-i18n="dashboard">Кабинет</a>
       {% endif %}
+      <a href="/terms">Правила</a>
       <a href="mailto:hello@lendings.kz" data-i18n="contact">Связаться</a>
     </div>
     <div class="copyright" data-i18n="rights">© 2026 lendings.kz — Все права защищены</div>
@@ -333,7 +335,7 @@ const I18N = {
     step3Title: "Улучшаете детали", step3Desc: "Просите AI поправить текст, цены или добавить фото. Первая правка — бесплатно.",
     step4Title: "Настраиваете продвижение", step4Desc: "AI подбирает каналы (Instagram, Google, 2GIS) и готовит стратегию под ключ.",
     step5Title: "Запускаете рекламу", step5Desc: "Выбираете бюджет и срок — AI сам распределяет средства для лучшего результата.",
-    step6Title: "Получаете клиентов", step6Desc: "Следите за кликами в WhatsApp и Instagram прямо в личном кабинете.",
+    step6Title: "Видите результат", step6Desc: "Следите за просмотрами и кликами в WhatsApp или Instagram прямо в личном кабинете.",
     features: "Возможности", featTitle: "Технологии для вашего роста", featSub: "Мы объединили возможности ИИ и мощные инструменты маркетинга в одном простом интерфейсе.",
     f1Title: "Интеллектуальный дизайн", f1Desc: "AI создаёт уникальный стиль под вашу нишу, а не просто подставляет текст в шаблон.",
     f2Title: "Реклама одной кнопкой", f2Desc: "Запускайте продвижение в Instagram и Google без открытия сложных рекламных кабинетов.",
@@ -387,7 +389,7 @@ const I18N = {
     step3Title: "Improve details", step3Desc: "Ask AI to adjust text, prices, or add photos. The first edit is free.",
     step4Title: "Setup promotion", step4Desc: "AI selects channels (Instagram, Google, 2GIS) and prepares a turnkey strategy.",
     step5Title: "Launch ads", step5Desc: "Choose your budget and duration — AI automatically allocates funds for the best results.",
-    step6Title: "Get clients", step6Desc: "Track clicks to WhatsApp and Instagram directly in your dashboard.",
+    step6Title: "See results", step6Desc: "Track views and clicks to WhatsApp or Instagram directly in your dashboard.",
     features: "Features", featTitle: "Technologies for your growth", featSub: "We've combined AI capabilities and powerful marketing tools in one simple interface.",
     f1Title: "Intelligent Design", f1Desc: "AI creates a unique style for your niche, rather than just plugging text into a template.",
     f2Title: "One-click Ads", f2Desc: "Launch promotion on Instagram and Google without opening complex ad dashboards.",
@@ -444,14 +446,6 @@ function toggleTheme(event){
       }
     );
 
-    document.documentElement.animate(
-      { opacity: [0, 1] },
-      {
-        duration: 450,
-        easing: 'ease-out',
-        pseudoElement: '::view-transition-new(root)',
-      }
-    );
   });
   
   transition.finished.finally(() => {

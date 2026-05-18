@@ -88,9 +88,10 @@ KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474
 # type slot = buy a site slot
 # type credits = buy extra credits only
 PAYMENT_PACKAGES = [
-    {"catalog_item_id": "17785986704184106", "type": "slot",    "slots": 1, "tokens": 1000, "price": 5000, "label": "1 сайт — 5 000 ₸",       "desc": "Слот + 1 000 кредитов на правки"},
-    {"catalog_item_id": "17785986704186047", "type": "credits", "slots": 0, "tokens": 500,  "price": 990,  "label": "500 кредитов — 990 ₸",    "desc": "Только кредиты на правки"},
-    {"catalog_item_id": "17785986704193557", "type": "credits", "slots": 0, "tokens": 1500, "price": 2490, "label": "1 500 кредитов — 2 490 ₸", "desc": "Только кредиты на правки"},
+    {"catalog_item_id": "17785986704184106", "type": "slot",    "slots": 1, "tokens": 1000, "price": 5000, "label": "1 сайт — 5 000 ₸",        "desc": "Сайт + 1 000 кредитов разработки + первый месяц поддержки"},
+    {"catalog_item_id": "17785986704186047", "type": "credits", "slots": 0, "tokens": 200,  "price": 1500, "label": "200 кредитов — 1 500 ₸",  "desc": "Кредиты разработки для AI-правок"},
+    {"catalog_item_id": "17785986704193557", "type": "credits", "slots": 0, "tokens": 500,  "price": 3000, "label": "500 кредитов — 3 000 ₸",  "desc": "Кредиты разработки для AI-правок"},
+    {"catalog_item_id": "17785986704200000", "type": "credits", "slots": 0, "tokens": 1000, "price": 5000, "label": "1 000 кредитов — 5 000 ₸", "desc": "Кредиты разработки для AI-правок"},
 ]
 
 # system prompt cached as stable prefix
@@ -118,6 +119,8 @@ SYSTEM_PROMPT = """Ты — эксперт по созданию красивы�
 - ТОЧНО используй цвета, шрифты и CSS переменные из брифа — это реальные значения с референсного сайта
 - Подключи указанные Google Fonts через <link> в <head>
 - НЕ выдумывай цены, адреса, отзывы, гарантии, лицензии, опыт, результаты, сертификаты или факты о бизнесе
+- НЕ добавляй отзывы, если клиент не дал конкретный текст отзывов
+- НЕ добавляй плейсхолдеры и недоделанные блоки. Если фото нет — делай сайт без фото, а не fake-галерею
 - Можно только структурировать, улучшать формулировки и расширять уже подтверждённую клиентом информацию
 - Имя: убери «Я», «меня зовут» — только само имя
 - Услуги: красивые карточки с ценами, каждая услуга отдельно
@@ -291,7 +294,7 @@ def _ai_generate(data: dict) -> dict:
         )
         photos_block = f"\nФОТО РАБОТ — вставь в секцию портфолио именно эти теги без изменений. НЕ меняй стили, НЕ обрезай, пусть фото показываются в своём натуральном размере:\n{tags}"
     else:
-        photos_block = "\nФото не добавлены — сделай красивые плейсхолдеры с эмодзи или CSS градиентами."
+        photos_block = "\nФото не добавлены — не создавай fake-фото, плейсхолдеры или недоделанную галерею. Сделай сайт без фотосекции, если данных не хватает."
 
     # Include AI dialogue as rich context if available
     chat_history = data.get("chat_history", [])
@@ -371,6 +374,74 @@ def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
 def _tokens_to_ours(inp: int, out: int) -> int:
     # calculate dev credit usage
     return max(1, round((inp + out) / 1_000))
+
+
+def _payment_order_id() -> str:
+    # kaspi external order suffix kept alphanumeric for status route
+    return uuid.uuid4().hex[:12].upper()
+
+
+def _kaspi_invoice(phone_clean: str, order_id: str, description: str,
+                   catalog_item_id: str = "", amount: int | None = None) -> dict:
+    # create invoice in kaspi-pos; catalog item is used when available
+    payload = {
+        "phone_number": phone_clean,
+        "external_order_id": f"lendings-{order_id}",
+        "webhook_url": "https://dum-e.com/payment/webhook",
+        "description": description,
+    }
+    if catalog_item_id:
+        payload["cart_items"] = [{"catalog_item_id": catalog_item_id, "count": 1}]
+    else:
+        payload["amount"] = int(amount or 0)
+
+    resp = httpx.post(
+        f"{KASPI_POS_URL}/api/v1/invoices",
+        headers={"X-API-Key": KASPI_API_KEY, "Content-Type": "application/json"},
+        json=payload,
+        timeout=15,
+    )
+    return resp.json()
+
+
+def _inject_analytics(html: str, slug: str) -> str:
+    # add lightweight click/page-view tracker to generated sites
+    script = f"""
+<script>
+(function(){{
+  if (window.__lendingsAnalytics) return;
+  window.__lendingsAnalytics = true;
+  var endpoint = "/api/sites/{slug}/analytics/events";
+  function eventType(el) {{
+    var href = (el && el.getAttribute && (el.getAttribute("href") || "")) || "";
+    var text = ((el && el.innerText) || "").toLowerCase();
+    if (/wa\\.me|whatsapp/i.test(href + " " + text)) return "whatsapp_click";
+    if (/t\\.me|telegram/i.test(href + " " + text)) return "telegram_click";
+    if (/instagram\\.com|instagram/i.test(href + " " + text)) return "instagram_click";
+    if (/^tel:/i.test(href)) return "phone_click";
+    if (/услуг|цена|прайс|service|price/i.test(href + " " + text)) return "service_click";
+    return "cta_click";
+  }}
+  function track(type, payload) {{
+    try {{
+      navigator.sendBeacon(endpoint, new Blob([JSON.stringify({{event_type:type,payload:payload||{{}}}})], {{type:"application/json"}}));
+    }} catch (e) {{
+      fetch(endpoint, {{method:"POST",headers:{{"Content-Type":"application/json"}},body:JSON.stringify({{event_type:type,payload:payload||{{}}}}),keepalive:true}}).catch(function(){{}});
+    }}
+  }}
+  track("page_view", {{path: location.pathname, referrer: document.referrer || ""}});
+  document.addEventListener("click", function(e) {{
+    var el = e.target && e.target.closest && e.target.closest("a,button");
+    if (!el) return;
+    track(eventType(el), {{text:(el.innerText||"").slice(0,120), href:el.getAttribute("href")||""}});
+  }}, true);
+}})();
+</script>"""
+    if "__lendingsAnalytics" in html:
+        return html
+    if "</body>" in html:
+        return html.replace("</body>", script + "\n</body>", 1)
+    return html + script
 
 
 # cost tracking
@@ -1003,19 +1074,22 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 # ── AI-driven onboarding chat ─────────────────────────────────────────────────
 CHAT_SYSTEM = """Ты — дружелюбный консультант сервиса lendings.kz. Помогаешь мастерам и малому бизнесу создать сайт-визитку через разговор.
 
-Твоя задача — в ходе живого диалога (3-6 сообщений) собрать всё необходимое для создания сайта:
+Твоя задача — в ходе живого диалога собрать всё необходимое для создания сайта, не превращая общение в жёсткую анкету:
 1. Имя и ниша (кто человек, чем занимается — уточни специфику: барбер мужских стрижек? репетитор по математике? массаж спортивный или релакс?)
 2. Услуги с ценами (попроси перечислить конкретные услуги и цены, если не дал)
 3. Город и контакт для записи (WhatsApp/Telegram/телефон)
-4. Стиль сайта — ОБЯЗАТЕЛЬНО спроси: «Как должен выглядеть сайт? Можешь описать атмосферу или скинуть ссылку на сайт с понравившимся дизайном»
+4. Стиль сайта или ссылка на референс. Если стиль не важен, можно принять «на твой вкус»
 
 Правила диалога:
 - Пиши коротко, по-дружески, на «ты»
 - Задавай по 1-2 вопроса за раз, не все сразу
 - Не выдумывай цены, адрес, отзывы, гарантии, лицензии, опыт или результаты. Если данных нет — спроси или оставь пустым
+- Не предлагай и не добавляй отзывы без конкретного текста отзывов от клиента
+- Не обещай заявки, клиентов, продажи или медицинские/финансовые результаты
 - Если ниша понятна — задавай вопросы специфичные для неё (барберу: «стрижки только мужские?», репетитору: «какие классы/предметы?»)
+- Блокируй запрещённые и рискованные тематики: азартные игры, adult, финансовые пирамиды, мошенничество, запрещённые товары, политическая реклама, явно незаконные услуги, опасные медицинские обещания
 - После каждого ответа кратко подтверди что понял («Понял, Астана, WhatsApp — отлично!»)
-- Когда собрал имя+услуги+контакт+стиль — скажи что готов делать сайт
+- Когда данных достаточно, в reply покажи короткий чек-бриф и спроси подтверждение, например: «Собрал: маникюр в Алматы, услуги с ценами, WhatsApp, нежный стиль. Делаю сайт?»
 
 ВАЖНО: отвечай ТОЛЬКО валидным JSON без markdown-обёртки:
 {
@@ -1029,7 +1103,7 @@ CHAT_SYSTEM = """Ты — дружелюбный консультант серв
   }
 }
 
-Когда все 4 поля собраны — ставь "ready": true и в reply напиши что-то вроде «Отлично! Всё есть — сейчас сделаю сайт ✨»"""
+Когда данных достаточно и чек-бриф можно показать — ставь "ready": true."""
 
 EDIT_CHAT_SYSTEM = """Ты — помощник по редактированию готового сайта-визитки. Тебе известен текущий контент сайта — используй эти знания при ответах.
 
@@ -1039,12 +1113,16 @@ EDIT_CHAT_SYSTEM = """Ты — помощник по редактировани�
 - Если клиент хочет добавить ФОТО — ставь needs_photos:true, попроси загрузить через кнопку 📎 внизу
 - Не задавай больше 1 вопроса за раз, пиши коротко, на «ты»
 - Ты ЗНАЕШЬ что сейчас на сайте — не спрашивай то что уже есть в контексте
+- Один сайт = одно направление бизнеса. Если клиент хочет превратить сайт в другой бизнес/нишу/бренд — объясни, что нужно создать отдельный сайт, ready:false
+- Не добавляй отзывы, гарантии, лицензии, опыт, результаты или факты, если клиент не дал конкретное содержание
+- Блокируй запрещённые и рискованные тематики: азартные игры, adult, финансовые пирамиды, мошенничество, запрещённые товары, политическая реклама, явно незаконные услуги, опасные медицинские обещания
 
 Примеры:
 - «поменяй цвет на тёмный» → ready:true
 - «добавь фото работ» → needs_photos:true, «Загрузи фото через кнопку 📎 ниже — добавлю в галерею»
 - «сделай красивее» → ready:false, «Что именно: цвета, шрифты, структура?»
-- «добавь раздел с отзывами» → ready:true
+- «добавь раздел с отзывами» → ready:false, «Пришли текст отзывов — добавлю их без выдуманных фактов»
+- «переделай под аренду авто» на сайте барбера → ready:false, «Для нового направления нужно создать отдельный сайт»
 - «переделай полностью» → ready:false, «В каком направлении — другой стиль, другие цвета, другая структура?»
 
 ВАЖНО: отвечай ТОЛЬКО валидным JSON:
@@ -1068,6 +1146,12 @@ async def landing(request: Request):
     # landing
     user = _require_auth(request)
     return templates.TemplateResponse(request, "landing.html", {"user": user})
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    # public product terms
+    return templates.TemplateResponse(request, "terms.html", {"user": _require_auth(request)})
 
 
 @app.get("/create", response_class=HTMLResponse)
@@ -1653,9 +1737,6 @@ async def start(request: Request):
 
 def _generate_site_from_session(user: dict, session: dict) -> dict:
     # generate site from session
-    if _dev_credits(user) < 1:
-        return {"ok": False, "status_code": 402, "error": "Недостаточно Development Credits для генерации сайта"}
-
     collected = session.get("collected") or {}
     history = session.get("history") or []
     photo_urls = session.get("photo_urls") or []
@@ -1701,18 +1782,14 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
         cost = _calc_cost(total_in, total_out, total_cr, gen_cc)
         our_tokens = _tokens_to_ours(total_in, total_out)
 
-        fresh_user = db.get_user_by_id(user["id"]) or user
-        if _dev_credits(fresh_user) < our_tokens:
-            db.fail_onboarding_session(session["id"], user["id"], "Недостаточно Development Credits")
-            return {"ok": False, "status_code": 402, "error": "Недостаточно Development Credits для генерации сайта"}
-
         name = data["name"]
         clean_name = re.sub(r'^я\s+', '', name.lower().strip())
         slug = _slugify(clean_name.split(',')[0].strip())
         if db.get_site_by_slug(slug):
             slug = f"{slug}-{uuid.uuid4().hex[:4]}"
 
-        (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+        generated_html = _inject_analytics(gen["html"], slug)
+        (GENERATED_DIR / f"{slug}.html").write_text(generated_html, encoding="utf-8")
         site = db.create_site(
             user_id=user["id"],
             slug=slug,
@@ -1728,25 +1805,17 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
             cost_usd=cost,
         )
 
-        deducted = db.deduct_tokens(
+        services.VersionService.create_snapshot(site["id"], generated_html, data, "site_generate_included")
+        db.deduct_tokens(
             user_id=user["id"],
-            amount=our_tokens,
-            reason=f"site_generate:{slug}",
-            site_id=site["id"] if site else None,
+            amount=0,
+            reason=f"site_generate_included:{slug}",
+            site_id=site["id"],
             claude_in=total_in,
             claude_out=total_out,
             cache_read=total_cr,
             cost_usd=cost,
         )
-        if not deducted:
-            db.delete_site(site["id"], user["id"])
-            html_file = GENERATED_DIR / f"{slug}.html"
-            if html_file.exists():
-                html_file.unlink()
-            db.fail_onboarding_session(session["id"], user["id"], "Баланс изменился")
-            return {"ok": False, "status_code": 409, "error": "Баланс изменился. Пополните Development Credits и попробуйте ещё раз."}
-
-        services.VersionService.create_snapshot(site["id"], gen["html"], data, "site_generate")
         db.complete_onboarding_session(session["id"], user["id"], site["id"])
         db.create_notification(
             user["id"],
@@ -1764,6 +1833,7 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
             "gen_in": gen_in, "gen_out": gen_out,
             "cache_read_tokens": total_cr, "cache_create_tokens": gen_cc,
             "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
+            "included_in_site_purchase": True,
             "model": BEDROCK_MODEL,
         })
         return {
@@ -1985,7 +2055,7 @@ async def site_edit(slug: str, request: Request):
 
     # Ready — generate
     if _dev_credits(user) < 1:
-        return JSONResponse({"error": "Недостаточно Development Credits"}, status_code=402)
+        return JSONResponse({"error": "Недостаточно кредитов разработки"}, status_code=402)
 
     business_check = services.PromotionService.validate_business_change(site, edit_summary)
     if not business_check.get("ok"):
@@ -2019,7 +2089,7 @@ async def site_edit(slug: str, request: Request):
 
     fresh_user = db.get_user_by_id(user["id"]) or user
     if _dev_credits(fresh_user) < our_tokens:
-        return JSONResponse({"error": "Недостаточно Development Credits"}, status_code=402)
+        return JSONResponse({"error": "Недостаточно кредитов разработки"}, status_code=402)
 
     if prev_html:
         services.VersionService.create_snapshot(site["id"], prev_html, site.get("data") or {}, "before_site_edit")
@@ -2031,14 +2101,15 @@ async def site_edit(slug: str, request: Request):
         cache_read=gen_cr, cost_usd=cost,
     )
     if not deducted:
-        return JSONResponse({"error": "Баланс изменился. Пополните Development Credits и попробуйте ещё раз."}, status_code=409)
+        return JSONResponse({"error": "Баланс изменился. Пополните кредиты разработки и попробуйте ещё раз."}, status_code=409)
 
-    (GENERATED_DIR / f"{slug}.html").write_text(gen["html"], encoding="utf-8")
+    updated_html = _inject_analytics(gen["html"], slug)
+    (GENERATED_DIR / f"{slug}.html").write_text(updated_html, encoding="utf-8")
 
     data_to_save = {**data, "chat_history": combined_history}
     db.update_site_data(site["id"], data_to_save)
     db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
-    services.VersionService.create_snapshot(site["id"], gen["html"], data_to_save, "site_edit")
+    services.VersionService.create_snapshot(site["id"], updated_html, data_to_save, "site_edit")
     services.CampaignService.site_changed(site["id"], "site_edit")
     updated_user = db.get_user_by_id(user["id"]) or user
 
@@ -2173,8 +2244,53 @@ async def api_purchase_promo_credits(request: Request):
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
     body = await request.json()
-    result = services.CreditsService.purchase_promo_credits(user["id"], body.get("credits"))
-    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+    try:
+        credits = int(body.get("credits") or 0)
+    except (TypeError, ValueError):
+        return JSONResponse({"ok": False, "error": "invalid_amount", "message": "Введите количество кредитов."}, status_code=400)
+    if credits < PROMO_MIN_PURCHASE:
+        return JSONResponse({
+            "ok": False,
+            "error": "min_amount",
+            "message": f"Минимальное пополнение - {PROMO_MIN_PURCHASE} кредитов продвижения.",
+        }, status_code=400)
+
+    phone_clean = re.sub(r"[^\d]", "", body.get("phone") or user.get("phone") or "")
+    if len(phone_clean) < 10:
+        return JSONResponse({"ok": False, "error": "phone_required", "message": "Введите номер телефона Kaspi."}, status_code=400)
+
+    amount = credits * PROMO_CREDIT_TENGE
+    order_id = _payment_order_id()
+    try:
+        data = _kaspi_invoice(
+            phone_clean,
+            order_id,
+            f"lendings.kz {credits} кредитов продвижения",
+            amount=amount,
+        )
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": f"Ошибка платежного шлюза: {exc}"}, status_code=502)
+    if not data.get("id"):
+        return JSONResponse({"ok": False, "error": "Kaspi не принял платёж", "detail": data}, status_code=400)
+    db.create_payment(
+        user_id=user["id"],
+        order_id=order_id,
+        invoice_id=str(data["id"]),
+        amount=amount,
+        tokens=0,
+        status="pending",
+        payment_kind="promo_credits",
+        dev_credits=0,
+        promo_credits=credits,
+    )
+    return JSONResponse({
+        "ok": True,
+        "invoice_id": data["id"],
+        "order_id": order_id,
+        "credits": credits,
+        "amount": amount,
+        "message": f"Запрос отправлен на номер +{phone_clean}. Откройте Kaspi и подтвердите оплату.",
+    })
 
 
 @app.get("/api/billing/credit-logs")
@@ -2204,6 +2320,28 @@ async def api_support_status(slug: str, request: Request):
     })
 
 
+@app.post("/api/sites/{slug}/analytics/events")
+async def api_site_analytics_event(slug: str, request: Request):
+    # public endpoint used by generated sites
+    slug = re.sub(r"[^a-zA-Z0-9_-]", "", slug)
+    site = db.get_site_by_slug(slug)
+    if not site:
+        return JSONResponse({"ok": False}, status_code=404)
+    site = services.SupportService.refresh_site(site["id"]) or site
+    if site.get("analytics_status") != "active" or not int(site.get("promo_setup_done") or 0):
+        return JSONResponse({"ok": True, "ignored": True})
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    services.AnalyticsService.record_event(
+        site["id"],
+        body.get("event_type") or "cta_click",
+        body.get("payload") or {},
+    )
+    return JSONResponse({"ok": True})
+
+
 @app.post("/api/sites/{slug}/support/pay")
 async def api_support_pay(slug: str, request: Request):
     # api support pay
@@ -2213,8 +2351,46 @@ async def api_support_pay(slug: str, request: Request):
     site = _owned_site(slug, user)
     if not site:
         return JSONResponse({"error": "Сайт не найден"}, status_code=404)
-    result = services.SupportService.pay_invoice(user["id"], site["id"])
-    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+    site = services.SupportService.refresh_site(site["id"]) or site
+    invoice = services.SupportService.get_open_invoice(site["id"])
+    if not invoice:
+        return JSONResponse({"ok": False, "error": "support_active", "message": "Поддержка уже активна."}, status_code=400)
+    body = await request.json()
+    phone_clean = re.sub(r"[^\d]", "", body.get("phone") or user.get("phone") or "")
+    if len(phone_clean) < 10:
+        return JSONResponse({"ok": False, "error": "phone_required", "message": "Введите номер телефона Kaspi."}, status_code=400)
+    order_id = _payment_order_id()
+    try:
+        data = _kaspi_invoice(
+            phone_clean,
+            order_id,
+            f"lendings.kz поддержка сайта {site['slug']}",
+            amount=int(invoice["amount"]),
+        )
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": f"Ошибка платежного шлюза: {exc}"}, status_code=502)
+    if not data.get("id"):
+        return JSONResponse({"ok": False, "error": "Kaspi не принял платёж", "detail": data}, status_code=400)
+    db.create_payment(
+        user_id=user["id"],
+        order_id=order_id,
+        invoice_id=str(data["id"]),
+        amount=int(invoice["amount"]),
+        tokens=0,
+        status="pending",
+        payment_kind="support_invoice",
+        dev_credits=0,
+        promo_credits=0,
+        site_id=site["id"],
+        support_invoice_id=invoice["id"],
+    )
+    return JSONResponse({
+        "ok": True,
+        "invoice_id": data["id"],
+        "order_id": order_id,
+        "amount": int(invoice["amount"]),
+        "message": f"Запрос отправлен на номер +{phone_clean}. Откройте Kaspi и подтвердите оплату.",
+    })
 
 
 @app.post("/api/sites/{slug}/promotion/setup")
@@ -2342,7 +2518,10 @@ async def api_restore_version(slug: str, version_id: int, request: Request):
         return JSONResponse({"error": "Сайт не найден"}, status_code=404)
     result = services.VersionService.restore(user["id"], site["id"], version_id)
     if result.get("ok"):
-        (GENERATED_DIR / f"{site['slug']}.html").write_text(result["html"], encoding="utf-8")
+        restored_html = _inject_analytics(result["html"], site["slug"])
+        (GENERATED_DIR / f"{site['slug']}.html").write_text(restored_html, encoding="utf-8")
+        db.update_site_html(site["id"], str(GENERATED_DIR / f"{site['slug']}.html"), site.get("tokens_used") or 0)
+        services.VersionService.create_snapshot(site["id"], restored_html, result.get("data") or {}, f"version_restore:{version_id}")
     return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
 
@@ -2392,22 +2571,15 @@ async def payment_create(request: Request):
                 return JSONResponse({"error": "Ошибка при создании аккаунта"}, status_code=500)
         is_new_session = True
 
-    order_id = uuid.uuid4().hex[:12].upper()
+    order_id = _payment_order_id()
 
     try:
-        resp = httpx.post(
-            f"{KASPI_POS_URL}/api/v1/invoices",
-            headers={"X-API-Key": KASPI_API_KEY, "Content-Type": "application/json"},
-            json={
-                "phone_number": phone_clean,
-                "external_order_id": f"lendings-{order_id}",
-                "webhook_url": "https://dum-e.com/payment/webhook",
-                "description": f"lendings.kz {pkg['label']}",
-                "cart_items": [{"catalog_item_id": catalog_item_id, "count": 1}],
-            },
-            timeout=15,
+        data = _kaspi_invoice(
+            phone_clean,
+            order_id,
+            f"lendings.kz {pkg['label']}",
+            catalog_item_id=catalog_item_id,
         )
-        data = resp.json()
     except Exception as e:
         return JSONResponse({"error": f"Ошибка платежного шлюза: {e}"}, status_code=502)
 
@@ -2422,6 +2594,9 @@ async def payment_create(request: Request):
         tokens=pkg["tokens"],
         status="pending",
         catalog_item_id=catalog_item_id,
+        payment_kind="site_slot" if pkg["type"] == "slot" else "dev_credits",
+        dev_credits=pkg["tokens"],
+        promo_credits=0,
     )
 
     return JSONResponse({
@@ -2449,6 +2624,7 @@ async def payment_status(order_id: str, request: Request):
         "tokens": payment["tokens"],
         "dev_credits": payment.get("dev_credits") or payment["tokens"],
         "promo_credits": payment.get("promo_credits") or 0,
+        "payment_kind": payment.get("payment_kind") or "legacy",
     })
 
     if payment["status"] == "paid" and not user:
@@ -2483,11 +2659,21 @@ async def payment_webhook(request: Request):
     ev_type = event.get("event")
     if ev_type == "payment.success":
         db.complete_payment(payment["id"])
-        pkg = next((p for p in PAYMENT_PACKAGES if p["catalog_item_id"] == payment.get("catalog_item_id")), None)
-        if pkg and pkg.get("type") == "slot":
-            db.add_site_slot(payment["user_id"], payment["tokens"], f"slot_purchase:{order_id}")
+        kind = payment.get("payment_kind") or "legacy"
+        if kind == "site_slot":
+            db.add_site_slot(payment["user_id"], int(payment.get("dev_credits") or payment["tokens"] or 0), f"slot_purchase:{order_id}")
+        elif kind == "dev_credits":
+            db.add_tokens(payment["user_id"], int(payment.get("dev_credits") or payment["tokens"] or 0), f"credits_purchase:{order_id}")
+        elif kind == "promo_credits":
+            services.CreditsService.apply_promo_payment(payment)
+        elif kind == "support_invoice":
+            services.SupportService.mark_invoice_paid(payment)
         else:
-            db.add_tokens(payment["user_id"], payment["tokens"], f"credits_purchase:{order_id}")
+            pkg = next((p for p in PAYMENT_PACKAGES if p["catalog_item_id"] == payment.get("catalog_item_id")), None)
+            if pkg and pkg.get("type") == "slot":
+                db.add_site_slot(payment["user_id"], payment["tokens"], f"slot_purchase:{order_id}")
+            else:
+                db.add_tokens(payment["user_id"], payment["tokens"], f"credits_purchase:{order_id}")
     elif ev_type in ("payment.failed", "payment.expired"):
         db.fail_payment(payment["id"], ev_type)
 

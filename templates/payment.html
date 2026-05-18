@@ -19,6 +19,10 @@
     display:flex;align-items:center;justify-content:space-between;}
   .logo{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;}
   .logo span{color:var(--accent);}
+  .header-actions{display:flex;align-items:center;gap:10px;}
+  .lang-toggle{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-family:inherit;font-size:.72rem;font-weight:800;cursor:pointer;}
+  .lang-toggle:hover{color:var(--text);border-color:var(--accent);}
   .back-btn{color:var(--muted);text-decoration:none;font-size:.82rem;
     display:flex;align-items:center;gap:6px;transition:color .2s;}
   .back-btn:hover{color:var(--text);}
@@ -63,6 +67,8 @@
   
   .slot-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
   .slot-name{font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+  .credit-label-lines{display:inline-grid;gap:1px;line-height:1.12;vertical-align:top;}
+  .credit-label-lines span{display:block;}
   .slot-price{font-size:1.15rem;font-weight:800;color:var(--accent);flex-shrink:0;}
   .slot-features{display:flex;flex-direction:column;gap:6px;}
   .slot-feat{font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:7px;}
@@ -113,18 +119,44 @@
     border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:.82rem;}
   .balance-row span{color:var(--muted);}
   .balance-row strong{color:var(--accent);}
+
+  /* Premium Staggered Animations */
+  @keyframes premiumEntrance {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .banner, .verify-banner, .balance-row, .section, .phone-section, #payBtn {
+    animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .banner { animation-delay: 0.05s; }
+  .verify-banner { animation-delay: 0.1s; }
+  .balance-row { animation-delay: 0.15s; }
+  .section:nth-of-type(1) { animation-delay: 0.2s; }
+  .section:nth-of-type(2) { animation-delay: 0.28s; }
+  .phone-section { animation-delay: 0.36s; }
+  #payBtn { animation-delay: 0.44s; }
 </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="logo">lendings<span>.kz</span></div>
-  {% if user and user.site_slots > 0 %}
-  <a href="/dashboard" class="back-btn">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Назад
-  </a>
-  {% endif %}
+  <a class="logo" href="/" style="text-decoration:none; color:inherit;">lendings<span>.kz</span></a>
+  <div class="header-actions">
+    <button class="lang-toggle" id="langToggle" onclick="toggleLang()">RU</button>
+    {% if user and user.site_slots > 0 %}
+    <a href="/dashboard" class="back-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span data-i18n="back">Назад</span>
+    </a>
+    {% endif %}
+  </div>
 </header>
 
 <main class="content">
@@ -133,24 +165,24 @@
   <div class="banner welcome">
     <div class="banner-icon">🚀</div>
     <div class="banner-text">
-      <div class="banner-title">Добро пожаловать в Dum-E!</div>
-      <div class="banner-sub">Приобретите ваш первый слот, ответьте на вопросы в чате и ваш готовый сайт будет запущен через 60 секунд.</div>
+      <div class="banner-title" data-i18n="banner_welcome_title">Добро пожаловать в lendings.kz</div>
+      <div class="banner-sub" data-i18n="banner_welcome_sub">Купите первый сайт, ответьте на вопросы в чате и получите опубликованную бизнес-страницу.</div>
     </div>
   </div>
   {% elif reason == 'no_slots' %}
   <div class="banner no_slots">
     <div class="banner-icon">➕</div>
     <div class="banner-text">
-      <div class="banner-title">Создать дополнительный сайт</div>
-      <div class="banner-sub">Приобретите новый слот, чтобы запустить еще одну независимую страницу для другого бизнеса или направления.</div>
+      <div class="banner-title" data-i18n="banner_slots_title">Создать дополнительный сайт</div>
+      <div class="banner-sub" data-i18n="banner_slots_sub">Приобретите новый слот, чтобы запустить еще одну независимую страницу для другого бизнеса или направления.</div>
     </div>
   </div>
   {% elif reason == 'no_credits' %}
   <div class="banner no_credits">
     <div class="banner-icon">⚡</div>
     <div class="banner-text">
-      <div class="banner-title">Развитие и AI-правки сайта</div>
-      <div class="banner-sub">Приобретите Development Credits, чтобы продолжить совершенствовать, обновлять и дополнять ваш сайт с помощью AI-ассистента.</div>
+      <div class="banner-title" data-i18n="banner_credits_title">Развитие и AI-правки сайта</div>
+      <div class="banner-sub" data-i18n="banner_credits_sub">Купите кредиты разработки, чтобы обновлять и улучшать сайт с помощью AI-ассистента.</div>
     </div>
   </div>
   {% endif %}
@@ -158,38 +190,39 @@
   {% if user and user.email and not user.email_verified %}
   <div class="verify-banner">
     <div>
-      <div class="verify-title">Подтвердите email</div>
-      <div class="verify-sub">Ссылка отправляется на {{ user.email }}. Если письма нет, отправьте его повторно.</div>
+      <div class="verify-title" data-i18n="verify_title">Подтвердите email</div>
+      <div class="verify-sub"><span data-i18n="verify_sub_before">Ссылка отправляется на</span> {{ user.email }}. <span data-i18n="verify_sub_after">Если письма нет, отправьте его повторно.</span></div>
       <div class="verify-status {{ 'ok' if verification_notice.success else 'err' if verification_notice.error else '' }}" id="verifyStatus">
         {{ verification_notice.success or verification_notice.error or '' }}
       </div>
     </div>
-    <button class="verify-btn" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}" onclick="resendVerification()">Отправить ещё раз</button>
+    <button class="verify-btn" id="verifyResendBtn" data-cooldown="{{ verification_notice.retry_after or 0 }}" onclick="resendVerification()" data-i18n="verify_resend">Отправить ещё раз</button>
   </div>
   {% endif %}
 
   {% if user and (user.dev_credits > 0 or user.promo_credits > 0 or user.site_slots > 0) %}
   <div class="balance-row">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
-    <span>Development:</span> <strong>{{ user.dev_credits or 0 }}</strong>
+    <span data-i18n="balance_dev">Разработка:</span> <strong>{{ user.dev_credits or 0 }}</strong>
     <span style="color:var(--muted2)">·</span>
-    <span>Слоты:</span> <strong style="color:var(--green)">{{ user.site_slots }}</strong>
+    <span data-i18n="balance_slots">Слоты:</span> <strong style="color:var(--green)">{{ user.site_slots }}</strong>
   </div>
   {% endif %}
 
   <!-- slot purchase -->
   {% if reason != 'no_credits' %}
   <div class="section">
-    <div class="section-title">Новый сайт</div>
+    <div class="section-title" data-i18n="section_new_site">Новый сайт</div>
     <div class="slot-card" id="slotCard" onclick="selectItem(this, '{{ slot_pkg.catalog_item_id }}', 'slot')">
       <div class="slot-top">
-        <div class="slot-name">{{ slot_pkg.tokens }} Development Credits + слот</div>
+        <div class="slot-name"><span data-i18n="slot_name_prefix">Сайт +</span> {{ slot_pkg.tokens }} <span class="credit-label-lines"><span data-i18n="dev_credits_kind">кредитов</span><span data-i18n="dev_credits_unit">разработки</span></span></div>
         <div class="slot-price">{{ "{:,}".format(slot_pkg.price).replace(",", " ") }} ₸</div>
       </div>
       <div class="slot-features">
-        <div class="slot-feat">Слот для 1 сайта</div>
-        <div class="slot-feat">{{ slot_pkg.tokens }} Development Credits на улучшения</div>
-        <div class="slot-feat">Первый месяц поддержки включён</div>
+        <div class="slot-feat" data-i18n="slot_feat_site">Слот для 1 сайта</div>
+        <div class="slot-feat">{{ slot_pkg.tokens }} <span data-i18n="slot_feat_credits">кредитов разработки на будущие правки</span></div>
+        <div class="slot-feat" data-i18n="slot_feat_generation">Первая генерация сайта без списания кредитов</div>
+        <div class="slot-feat" data-i18n="slot_feat_support">Первый месяц поддержки включён</div>
       </div>
     </div>
   </div>
@@ -198,12 +231,12 @@
   <!-- credits purchase -->
   {% if (user and user.site_slots > 0) or reason == 'no_credits' %}
   <div class="section">
-    <div class="section-title">Докупить Development Credits</div>
+    <div class="section-title" data-i18n="section_dev_credits">Докупить кредиты разработки</div>
     <div class="credit-cards">
       {% for pkg in credit_pkgs %}
       <div class="credit-card" onclick="selectItem(this, '{{ pkg.catalog_item_id }}', 'credits')">
         <div>
-          <div class="credit-name">{{ pkg.tokens }} Development Credits</div>
+          <div class="credit-name">{{ pkg.tokens }} <span class="credit-label-lines"><span data-i18n="dev_credits_kind">кредитов</span><span data-i18n="dev_credits_unit">разработки</span></span></div>
         </div>
         <div class="credit-price">{{ "{:,}".format(pkg.price).replace(",", " ") }} ₸</div>
       </div>
@@ -215,12 +248,13 @@
 
   <!-- phone -->
   <div class="phone-section">
-    <div class="field-label">Номер телефона Kaspi</div>
+    <div class="field-label" data-i18n="kaspi_phone_label">Номер телефона Kaspi</div>
     <input type="tel" id="phoneInput" class="phone-input" placeholder="+7 700 000 00 00"/>
-    <div class="phone-hint">Kaspi пришлёт запрос на оплату на этот номер</div>
+    <div class="phone-hint" data-i18n="kaspi_phone_hint">Kaspi пришлёт запрос на оплату на этот номер</div>
   </div>
 
-  <button class="pay-btn" id="payBtn" onclick="submitPayment()" disabled>Оплатить через Kaspi</button>
+  <button class="pay-btn" id="payBtn" onclick="submitPayment()" disabled data-i18n="pay_btn">Оплатить через Kaspi</button>
+  <div class="phone-hint" style="text-align:center;margin-top:10px"><span data-i18n="terms_before">Оплачивая, вы принимаете</span> <a href="/terms" style="color:var(--accent)" data-i18n="terms_link">правила пользования</a>.</div>
 
   <div class="status-box" id="statusBox"><div id="statusContent"></div></div>
 
@@ -229,6 +263,72 @@
 <script>
 let selectedId = null;
 let selectedType = null;
+const I18N = {
+  ru: {
+    back:'Назад', banner_welcome_title:'Добро пожаловать в lendings.kz', banner_welcome_sub:'Купите первый сайт, ответьте на вопросы в чате и получите опубликованную бизнес-страницу.',
+    banner_slots_title:'Создать дополнительный сайт', banner_slots_sub:'Приобретите новый слот, чтобы запустить еще одну независимую страницу для другого бизнеса или направления.',
+    banner_credits_title:'Развитие и AI-правки сайта', banner_credits_sub:'Купите кредиты разработки, чтобы обновлять и улучшать сайт с помощью AI-ассистента.',
+    verify_title:'Подтвердите email', verify_sub_before:'Ссылка отправляется на', verify_sub_after:'Если письма нет, отправьте его повторно.', verify_resend:'Отправить ещё раз',
+    balance_dev:'Разработка:', balance_slots:'Слоты:', section_new_site:'Новый сайт', slot_name_prefix:'Сайт +', dev_credits_kind:'кредитов', dev_credits_unit:'разработки',
+    slot_feat_site:'Слот для 1 сайта', slot_feat_credits:'кредитов разработки на будущие правки', slot_feat_generation:'Первая генерация сайта без списания кредитов', slot_feat_support:'Первый месяц поддержки включён',
+    section_dev_credits:'Докупить кредиты разработки', kaspi_phone_label:'Номер телефона Kaspi', kaspi_phone_hint:'Kaspi пришлёт запрос на оплату на этот номер', pay_btn:'Оплатить через Kaspi',
+    terms_before:'Оплачивая, вы принимаете', terms_link:'правила пользования', sending:'Отправляем запрос...', error:'Ошибка', try_again:'Попробуйте ещё раз',
+    pending_title:'Ожидаем оплату', pending_btn:'Ожидаем подтверждение...', connection_error:'Ошибка соединения', cooldown:'Повторно через {s}с',
+    sending_email:'Отправляем...', email_sent:'Письмо отправлено.', email_failed:'Не удалось отправить письмо.', connection_later:'Ошибка соединения. Попробуйте позже.',
+    timeout_title:'Время истекло', paid_title:'Оплачено!', slot_paid:'Сайт оплачен. Можно создавать страницу.', credits_paid:'{n} кредитов разработки зачислено.',
+    rejected_title:'Платёж отклонён'
+  },
+  kz: {
+    back:'Артқа', banner_welcome_title:'lendings.kz-ке қош келдіңіз', banner_welcome_sub:'Алғашқы сайтты сатып алып, чаттағы сұрақтарға жауап беріңіз де, жарияланған бизнес-парақша алыңыз.',
+    banner_slots_title:'Қосымша сайт жасау', banner_slots_sub:'Басқа бизнес немесе бағыт үшін тағы бір тәуелсіз парақша іске қосу үшін жаңа слот сатып алыңыз.',
+    banner_credits_title:'Сайтты дамыту және AI-түзетулер', banner_credits_sub:'AI-көмекші арқылы сайтты жаңарту және жақсарту үшін әзірлеу кредиттерін сатып алыңыз.',
+    verify_title:'Email-ды растаңыз', verify_sub_before:'Сілтеме мына email-ға жіберіледі:', verify_sub_after:'Хат келмесе, қайта жіберіңіз.', verify_resend:'Қайта жіберу',
+    balance_dev:'Әзірлеу:', balance_slots:'Слоттар:', section_new_site:'Жаңа сайт', slot_name_prefix:'Сайт +', dev_credits_kind:'әзірлеу', dev_credits_unit:'кредиті',
+    slot_feat_site:'1 сайтқа арналған слот', slot_feat_credits:'болашақ түзетулерге арналған әзірлеу кредиті', slot_feat_generation:'Алғашқы генерация кредитсіз кіреді', slot_feat_support:'Бірінші ай қолдау қосылған',
+    section_dev_credits:'Әзірлеу кредиттерін сатып алу', kaspi_phone_label:'Kaspi телефон нөмірі', kaspi_phone_hint:'Kaspi осы нөмірге төлем сұрауын жібереді', pay_btn:'Kaspi арқылы төлеу',
+    terms_before:'Төлем жасай отырып, сіз', terms_link:'пайдалану ережелерін қабылдайсыз', sending:'Сұрау жіберілуде...', error:'Қате', try_again:'Қайталап көріңіз',
+    pending_title:'Төлем күтілуде', pending_btn:'Растауды күтеміз...', connection_error:'Қосылым қатесі', cooldown:'Қайта жіберу {s}с кейін',
+    sending_email:'Жіберілуде...', email_sent:'Хат жіберілді.', email_failed:'Хатты жіберу мүмкін болмады.', connection_later:'Қосылым қатесі. Кейінірек көріңіз.',
+    timeout_title:'Уақыт аяқталды', paid_title:'Төленді!', slot_paid:'Сайт төленді. Парақша жасауға болады.', credits_paid:'{n} әзірлеу кредиті қосылды.',
+    rejected_title:'Төлем қабылданбады'
+  },
+  en: {
+    back:'Back', banner_welcome_title:'Welcome to lendings.kz', banner_welcome_sub:'Buy your first site, answer the chat questions, and get a published business page.',
+    banner_slots_title:'Create an additional site', banner_slots_sub:'Buy a new slot to launch another independent page for a different business or direction.',
+    banner_credits_title:'Site development and AI edits', banner_credits_sub:'Buy development credits to update and improve your site with the AI assistant.',
+    verify_title:'Confirm email', verify_sub_before:'The link is sent to', verify_sub_after:'If there is no email, send it again.', verify_resend:'Send again',
+    balance_dev:'Development:', balance_slots:'Slots:', section_new_site:'New site', slot_name_prefix:'Site +', dev_credits_kind:'development', dev_credits_unit:'credits',
+    slot_feat_site:'Slot for 1 site', slot_feat_credits:'development credits for future edits', slot_feat_generation:'First generation included without credit charge', slot_feat_support:'First support month included',
+    section_dev_credits:'Buy development credits', kaspi_phone_label:'Kaspi phone number', kaspi_phone_hint:'Kaspi will send a payment request to this number', pay_btn:'Pay with Kaspi',
+    terms_before:'By paying, you accept the', terms_link:'terms of use', sending:'Sending request...', error:'Error', try_again:'Try again',
+    pending_title:'Waiting for payment', pending_btn:'Waiting for confirmation...', connection_error:'Connection error', cooldown:'Again in {s}s',
+    sending_email:'Sending...', email_sent:'Email sent.', email_failed:'Could not send email.', connection_later:'Connection error. Try again later.',
+    timeout_title:'Time expired', paid_title:'Paid!', slot_paid:'Site is paid. You can create the page.', credits_paid:'{n} development credits added.',
+    rejected_title:'Payment declined'
+  }
+};
+function t(key, vars={}) {
+  const lang = document.documentElement.getAttribute('lang') || localStorage.getItem('lang') || 'ru';
+  let text = (I18N[lang] && I18N[lang][key]) || I18N.ru[key] || key;
+  Object.entries(vars).forEach(([k,v]) => text = text.replaceAll(`{${k}}`, v));
+  return text;
+}
+function setLang(lang) {
+  document.documentElement.setAttribute('lang', lang);
+  localStorage.setItem('lang', lang);
+  const btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = lang.toUpperCase();
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  const payBtn = document.getElementById('payBtn');
+  if (payBtn && !payBtn.disabled) payBtn.textContent = t('pay_btn');
+}
+function toggleLang() {
+  const cur = document.documentElement.getAttribute('lang') || 'ru';
+  setLang(cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru'));
+}
 
 function selectItem(el, id, type) {
   document.querySelectorAll('.slot-card, .credit-card').forEach(c => c.classList.remove('selected'));
@@ -251,7 +351,7 @@ async function submitPayment() {
   const phone = document.getElementById('phoneInput').value;
   const btn = document.getElementById('payBtn');
   btn.disabled = true;
-  btn.textContent = 'Отправляем запрос…';
+  btn.textContent = t('sending');
 
   try {
     const r = await fetch('/payment/create', {
@@ -259,12 +359,12 @@ async function submitPayment() {
       body: JSON.stringify({catalog_item_id: selectedId, phone})
     });
     const data = await r.json();
-    if (!data.ok) { showStatus('error','❌','Ошибка', data.error||'Попробуйте ещё раз'); resetBtn(); return; }
-    showStatus('pending', null, 'Ожидаем оплату', data.message);
+    if (!data.ok) { showStatus('error','❌',t('error'), data.error||t('try_again')); resetBtn(); return; }
+    showStatus('pending', null, t('pending_title'), data.message || '');
     startPolling(data.order_id);
-    btn.textContent = 'Ожидаем подтверждение…';
+    btn.textContent = t('pending_btn');
   } catch(e) {
-    showStatus('error','❌','Ошибка соединения','Попробуйте ещё раз');
+    showStatus('error','❌',t('connection_error'),t('try_again'));
     resetBtn();
   }
 }
@@ -290,31 +390,31 @@ function tickVerifyCooldown() {
   if (!btn) return;
   if (verifyCooldown > 0) {
     btn.disabled = true;
-    btn.textContent = `Повторно через ${verifyCooldown}с`;
+    btn.textContent = t('cooldown', {s: verifyCooldown});
     verifyCooldown -= 1;
     setTimeout(tickVerifyCooldown, 1000);
   } else {
     btn.disabled = false;
-    btn.textContent = 'Отправить ещё раз';
+    btn.textContent = t('verify_resend');
   }
 }
 async function resendVerification() {
   const btn = document.getElementById('verifyResendBtn');
   if (!btn) return;
   btn.disabled = true;
-  btn.textContent = 'Отправляем...';
+  btn.textContent = t('sending_email');
   try {
     const r = await fetch('/auth/resend-email-verification', {method:'POST'});
     const data = await r.json();
     if (data.ok) {
-      setVerifyStatus(data.message || 'Письмо отправлено.', true);
+      setVerifyStatus(data.message || t('email_sent'), true);
       verifyCooldown = data.retry_after || 60;
     } else {
-      setVerifyStatus(data.message || 'Не удалось отправить письмо.', false);
+      setVerifyStatus(data.message || t('email_failed'), false);
       verifyCooldown = data.retry_after || 0;
     }
   } catch(e) {
-    setVerifyStatus('Ошибка соединения. Попробуйте позже.', false);
+    setVerifyStatus(t('connection_later'), false);
     verifyCooldown = 0;
   }
   tickVerifyCooldown();
@@ -329,29 +429,30 @@ async function resendVerification() {
 function resetBtn() {
   const btn = document.getElementById('payBtn');
   btn.disabled = false;
-  btn.textContent = 'Оплатить через Kaspi';
+  btn.textContent = t('pay_btn');
 }
 
 let pollingInterval = null;
 function startPolling(orderId) {
   let attempts = 0;
   pollingInterval = setInterval(async () => {
-    if (++attempts > 60) { clearInterval(pollingInterval); showStatus('error','⏰','Время истекло','Попробуйте ещё раз'); resetBtn(); return; }
+    if (++attempts > 60) { clearInterval(pollingInterval); showStatus('error','⏰',t('timeout_title'),t('try_again')); resetBtn(); return; }
     try {
       const r = await fetch(`/payment/status/${orderId}`);
       const d = await r.json();
       if (d.status === 'paid') {
         clearInterval(pollingInterval);
-        showStatus('success','✅','Оплачено!', selectedType==='slot' ? 'Слот активирован! Создавайте сайт.' : `+${d.dev_credits || d.tokens} Development Credits зачислено.`);
+        showStatus('success','✅',t('paid_title'), selectedType==='slot' ? t('slot_paid') : t('credits_paid', {n: `+${d.dev_credits || d.tokens}`}));
         setTimeout(() => window.location.href = selectedType==='slot' ? '/dashboard/create' : '/dashboard', 2500);
       } else if (d.status==='payment.failed'||d.status==='payment.expired') {
         clearInterval(pollingInterval);
-        showStatus('error','❌','Платёж отклонён','Попробуйте ещё раз.');
+        showStatus('error','❌',t('rejected_title'),t('try_again'));
         resetBtn();
       }
     } catch {}
   }, 5000);
 }
+(function(){ setLang(localStorage.getItem('lang') || 'ru'); })();
 </script>
 </body>
 </html>

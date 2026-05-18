@@ -366,7 +366,7 @@ async function openUser(uid) {
 
   const fmtK  = n => n ? (n>=1000 ? (n/1000).toFixed(1)+'K' : String(n)) : '—';
   const fmtReason = r => {
-    if (!r) return 'Начальные Development Credits';
+    if (!r) return 'Начальные кредиты разработки';
     if (r.startsWith('site_generate:')) return 'Создание страницы';
     if (r.startsWith('kaspi_payment:')) return 'Пополнение Kaspi';
     if (r === 'admin_grant') return 'Начислено админом';
@@ -434,8 +434,8 @@ async function openUser(uid) {
   const paymentsHtml = d.payments.length
     ? `<div class="pay-list">${d.payments.map(p=>{
         const creditInfo = p.payment_kind === 'promo_credits'
-          ? `+${p.promo_credits||0} Promotion Credits`
-          : `+${p.dev_credits||p.tokens||0} Development Credits`;
+          ? `+${p.promo_credits||0} кредитов продвижения`
+          : `+${p.dev_credits||p.tokens||0} кредитов разработки`;
         return `<div class="pay-row">
           <div class="pay-amount" style="color:${p.status==='paid'?'var(--green)':'var(--muted)'}">${Number(p.amount).toLocaleString('ru')} ₸</div>
           <div class="pay-info">${creditInfo} · <span style="color:${p.status==='paid'?'var(--green)':p.status==='pending'?'var(--yellow)':'var(--red)'}">${p.status}</span></div>
@@ -473,7 +473,7 @@ async function openUser(uid) {
     </div>
 
     <div>
-      <div class="sub-title">Начислить Development Credits</div>
+      <div class="sub-title">Начислить кредиты разработки</div>
       <div class="add-tokens-form">
         <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
         <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
@@ -492,7 +492,7 @@ async function openUser(uid) {
     </div>
 
     <div>
-      <div class="sub-title">История Development Credits</div>
+      <div class="sub-title">История кредитов разработки</div>
       ${logHtml}
     </div>
   `;

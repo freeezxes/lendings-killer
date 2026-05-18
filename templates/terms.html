@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Правила пользования — lendings.kz</title>
+<style>
+body{margin:0;background:#0a0a0f;color:#f4f0ff;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
+main{max-width:860px;margin:0 auto;padding:42px 20px 70px}
+a{color:#8aa0ff}h1{font-size:2rem;margin:0 0 10px}h2{font-size:1.1rem;margin:28px 0 8px}p,li{color:#b8b4cc}ul{padding-left:20px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px}.back{text-decoration:none}.lang-toggle{width:42px;height:38px;border-radius:10px;border:1px solid #25253a;background:#111118;color:#f4f0ff;font-weight:800;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="/" data-i18n="back">← На главную</a>
+    <button class="lang-toggle" id="langToggle" onclick="toggleLang()">RU</button>
+  </div>
+  <h1 data-i18n="title">Правила пользования lendings.kz</h1>
+  <p data-i18n="intro">Это краткая публичная версия условий продукта. Полная юридическая оферта может быть уточнена перед запуском платного продвижения.</p>
+
+  <h2 data-i18n="included_title">Что входит в 5 000 ₸</h2>
+  <ul>
+    <li data-i18n="included_site">Один опубликованный сайт для одного бизнеса или направления.</li>
+    <li data-i18n="included_support">Первый месяц поддержки и хостинга.</li>
+    <li data-i18n="included_credits">1 000 кредитов разработки для будущих AI-правок.</li>
+    <li data-i18n="included_generation">Первая генерация сайта без списания кредитов разработки.</li>
+  </ul>
+
+  <h2 data-i18n="support_title">Поддержка сайта</h2>
+  <p data-i18n="support_body">После первого месяца поддержка стоит 1 000 ₸ в месяц за каждый сайт. Автосписаний нет. При неоплате сайт может быть временно отключён, AI-правки, продвижение, аналитика и восстановление версий блокируются до оплаты.</p>
+
+  <h2 data-i18n="credits_title">Кредиты</h2>
+  <p data-i18n="credits_body">Кредиты разработки используются для AI-изменений и технических операций с сайтом. Кредиты продвижения используются как бюджет кампаний: 1 кредит продвижения = 10 ₸. Кредиты не сгорают.</p>
+
+  <h2 data-i18n="promo_title">Продвижение</h2>
+  <p data-i18n="promo_body">Первичная настройка продвижения стоит 500 кредитов продвижения для каждого сайта. Кредиты, списанные на запуск кампании, не возвращаются. Сервис не гарантирует заявки, клиентов, продажи или конкретный финансовый результат.</p>
+
+  <h2 data-i18n="one_site_title">Один сайт = одно направление</h2>
+  <p data-i18n="one_site_body">Существующий сайт можно улучшать в рамках того же бизнеса: услуги, цены, фото, контакты, стиль и офферы. Нельзя превращать сайт одного бизнеса в другой бизнес, нишу или бренд. Для нового направления нужно купить отдельный сайт.</p>
+
+  <h2 data-i18n="moderation_title">Контент и модерация</h2>
+  <p data-i18n="moderation_body">Клиент отвечает за факты, цены, услуги, обещания и материалы на сайте. Мы не создаём сайты и продвижение для запрещённых или рискованных тематик: азартные игры, adult, финансовые пирамиды, мошенничество, запрещённые товары, политическая реклама, явно незаконные услуги и опасные медицинские обещания.</p>
+</main>
+<script>
+const I18N={
+  ru:{
+    back:'← На главную',title:'Правила пользования lendings.kz',intro:'Это краткая публичная версия условий продукта. Полная юридическая оферта может быть уточнена перед запуском платного продвижения.',
+    included_title:'Что входит в 5 000 ₸',included_site:'Один опубликованный сайт для одного бизнеса или направления.',included_support:'Первый месяц поддержки и хостинга.',included_credits:'1 000 кредитов разработки для будущих AI-правок.',included_generation:'Первая генерация сайта без списания кредитов разработки.',
+    support_title:'Поддержка сайта',support_body:'После первого месяца поддержка стоит 1 000 ₸ в месяц за каждый сайт. Автосписаний нет. При неоплате сайт может быть временно отключён, AI-правки, продвижение, аналитика и восстановление версий блокируются до оплаты.',
+    credits_title:'Кредиты',credits_body:'Кредиты разработки используются для AI-изменений и технических операций с сайтом. Кредиты продвижения используются как бюджет кампаний: 1 кредит продвижения = 10 ₸. Кредиты не сгорают.',
+    promo_title:'Продвижение',promo_body:'Первичная настройка продвижения стоит 500 кредитов продвижения для каждого сайта. Кредиты, списанные на запуск кампании, не возвращаются. Сервис не гарантирует заявки, клиентов, продажи или конкретный финансовый результат.',
+    one_site_title:'Один сайт = одно направление',one_site_body:'Существующий сайт можно улучшать в рамках того же бизнеса: услуги, цены, фото, контакты, стиль и офферы. Нельзя превращать сайт одного бизнеса в другой бизнес, нишу или бренд. Для нового направления нужно купить отдельный сайт.',
+    moderation_title:'Контент и модерация',moderation_body:'Клиент отвечает за факты, цены, услуги, обещания и материалы на сайте. Мы не создаём сайты и продвижение для запрещённых или рискованных тематик: азартные игры, adult, финансовые пирамиды, мошенничество, запрещённые товары, политическая реклама, явно незаконные услуги и опасные медицинские обещания.'
+  },
+  kz:{
+    back:'← Басты бетке',title:'lendings.kz пайдалану ережелері',intro:'Бұл өнім шарттарының қысқа жария нұсқасы. Толық заңды оферта ақылы ілгерілетуді іске қосар алдында нақтылануы мүмкін.',
+    included_title:'5 000 ₸ ішіне не кіреді',included_site:'Бір бизнес немесе бір бағыт үшін бір жарияланған сайт.',included_support:'Қолдау мен хостингтің бірінші айы.',included_credits:'Болашақ AI-түзетулерге 1 000 әзірлеу кредиті.',included_generation:'Алғашқы сайт генерациясы әзірлеу кредиттерінсіз кіреді.',
+    support_title:'Сайт қолдауы',support_body:'Бірінші айдан кейін қолдау әр сайтқа айына 1 000 ₸ тұрады. Автоматты списание жоқ. Төлем болмаса, сайт уақытша өшірілуі мүмкін, ал AI-түзетулер, ілгерілету, аналитика және нұсқаларды қалпына келтіру төлемге дейін бұғатталады.',
+    credits_title:'Кредиттер',credits_body:'Әзірлеу кредиттері сайттағы AI-өзгерістер мен техникалық операцияларға қолданылады. Ілгерілету кредиттері науқан бюджеті ретінде қолданылады: 1 ілгерілету кредиті = 10 ₸. Кредиттер күймейді.',
+    promo_title:'Ілгерілету',promo_body:'Әр сайт үшін бастапқы ілгерілету баптауы 500 ілгерілету кредиті тұрады. Науқанды іске қосуға жұмсалған кредиттер қайтарылмайды. Сервис өтінімдерге, клиенттерге, сатылымдарға немесе нақты қаржылық нәтижеге кепілдік бермейді.',
+    one_site_title:'Бір сайт = бір бағыт',one_site_body:'Қолданыстағы сайтты сол бизнес шеңберінде жақсартуға болады: қызметтер, бағалар, фото, байланыс, стиль және офферлер. Бір бизнестің сайтын басқа бизнеске, нишаға немесе брендке айналдыруға болмайды. Жаңа бағыт үшін бөлек сайт сатып алу керек.',
+    moderation_title:'Контент және модерация',moderation_body:'Клиент сайттағы фактілерге, бағаларға, қызметтерге, уәделерге және материалдарға жауап береді. Біз тыйым салынған немесе тәуекелі жоғары тақырыптарға сайт және ілгерілету жасамаймыз: құмар ойындар, adult, қаржы пирамидалары, алаяқтық, тыйым салынған тауарлар, саяси жарнама, анық заңсыз қызметтер және қауіпті медициналық уәделер.'
+  },
+  en:{
+    back:'← Home',title:'lendings.kz Terms of Use',intro:'This is a short public version of the product terms. The full legal offer may be clarified before paid promotion starts.',
+    included_title:'What is included for 5,000 ₸',included_site:'One published site for one business or direction.',included_support:'First month of support and hosting.',included_credits:'1,000 development credits for future AI edits.',included_generation:'First site generation without charging development credits.',
+    support_title:'Site Support',support_body:'After the first month, support costs 1,000 ₸ per month for each site. There are no automatic charges. If unpaid, the site may be temporarily disabled, and AI edits, promotion, analytics, and version restore are blocked until payment.',
+    credits_title:'Credits',credits_body:'Development credits are used for AI changes and technical site operations. Promotion credits are used as campaign budget: 1 promotion credit = 10 ₸. Credits do not expire.',
+    promo_title:'Promotion',promo_body:'Initial promotion setup costs 500 promotion credits for each site. Credits spent on campaign launch are non-refundable. The service does not guarantee leads, clients, sales, or any specific financial result.',
+    one_site_title:'One site = one direction',one_site_body:'An existing site can be improved within the same business: services, prices, photos, contacts, style, and offers. A site for one business cannot be turned into another business, niche, or brand. A new direction requires a separate site.',
+    moderation_title:'Content and Moderation',moderation_body:'The client is responsible for facts, prices, services, promises, and materials on the site. We do not create sites or promotion for prohibited or risky topics: gambling, adult content, financial pyramids, fraud, prohibited goods, political advertising, clearly illegal services, and dangerous medical promises.'
+  }
+};
+function setLang(lang){document.documentElement.lang=lang;localStorage.setItem('lang',lang);document.getElementById('langToggle').textContent=lang.toUpperCase();const dict=I18N[lang]||I18N.ru;document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.getAttribute('data-i18n');if(dict[key])el.textContent=dict[key]})}
+function toggleLang(){const cur=document.documentElement.lang||'ru';setLang(cur==='ru'?'kz':cur==='kz'?'en':'ru')}
+setLang(localStorage.getItem('lang')||'ru');
+</script>
+</body>
+</html>
