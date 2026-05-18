@@ -1273,7 +1273,7 @@ async def dashboard_create_page(request: Request):
     if not edit_slug_check:
         sites = db.get_user_sites(user["id"])
         if len(sites) >= user.get("site_slots", 0):
-            return RedirectResponse("/payment?reason=no_slots", status_code=302)
+            return RedirectResponse("/dashboard/billing?reason=no_slots", status_code=302)
     # ?edit=slug — load existing site into edit mode
     edit_slug = request.query_params.get("edit", "").strip()
     edit_slug = re.sub(r"[^a-zA-Z0-9_-]", "", edit_slug)
@@ -1710,9 +1710,19 @@ async def dashboard_site_workspace(site_id: int, request: Request):
 @app.get("/dashboard/billing", response_class=HTMLResponse)
 async def dashboard_billing(request: Request):
     # dashboard billing
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
     slot_pkg = next(p for p in PAYMENT_PACKAGES if p["type"] == "slot")
     credit_pkgs = [p for p in PAYMENT_PACKAGES if p["type"] == "credits"]
-    return await dashboard_view(request, "billing", slot_pkg=slot_pkg, credit_pkgs=credit_pkgs)
+    return await dashboard_view(
+        request,
+        "billing",
+        slot_pkg=slot_pkg,
+        credit_pkgs=credit_pkgs,
+        billing_payments=db.list_user_payments(user["id"]),
+        billing_reason=request.query_params.get("reason", ""),
+    )
 
 
 
@@ -2804,6 +2814,8 @@ async def payment_page(request: Request):
     # payment page
     user = _require_auth(request)
     reason = request.query_params.get("reason", "")
+    if reason == "no_slots":
+        return RedirectResponse("/dashboard/billing?reason=no_slots", status_code=302)
     sites  = db.get_user_sites(user["id"]) if user else []
     slot_pkg    = next(p for p in PAYMENT_PACKAGES if p["type"] == "slot")
     credit_pkgs = [p for p in PAYMENT_PACKAGES if p["type"] == "credits"]

@@ -39,6 +39,8 @@
   .sidebar-balances .balance-pill {
     width: 100%;
     justify-content: space-between;
+    align-items: center;
+    gap: 12px;
     min-height: 38px;
     font-size: .7rem;
     line-height: 1.2;
@@ -47,14 +49,20 @@
   }
   .sidebar-balances .balance-pill span {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .sidebar-balances .balance-label {
     display: grid;
     gap: 1px;
+    flex: 1 1 auto;
+    max-width: calc(100% - 64px);
   }
   .sidebar-balances .balance-label-line {
     display: block;
+  }
+  .sidebar-balances .balance-label-line:empty {
+    display: none;
   }
   .sidebar-balances .balance-pill strong {
     flex-shrink: 0;
@@ -318,8 +326,8 @@
     </div>
 
     <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
-      <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Разработка</span><span class="balance-label-line" data-i18n="balance_dev_unit">кредиты</span></span><strong>{{ "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</strong></div>
-      <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_promo_kind">Продвижение</span><span class="balance-label-line" data-i18n="balance_promo_unit">кредиты</span></span><strong>{{ "{:,}".format(user.promo_credits or 0).replace(",", " ") }}</strong></div>
+      <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Кредиты разработки</span><span class="balance-label-line" data-i18n="balance_dev_unit"></span></span><strong>{{ "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</strong></div>
+      <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_promo_kind">Кредиты продвижения</span><span class="balance-label-line" data-i18n="balance_promo_unit"></span></span><strong>{{ "{:,}".format(user.promo_credits or 0).replace(",", " ") }}</strong></div>
     </div>
 
     <div class="sidebar-footer" style="margin-top: 0;">
@@ -543,10 +551,10 @@ const I18N = {
     nav_profile: 'Профиль',
     balance_dev_title: 'Кредиты разработки',
     balance_promo_title: 'Кредиты продвижения',
-    balance_dev_kind: 'Разработка',
-    balance_dev_unit: 'кредиты',
-    balance_promo_kind: 'Продвижение',
-    balance_promo_unit: 'кредиты',
+    balance_dev_kind: 'Кредиты разработки',
+    balance_dev_unit: '',
+    balance_promo_kind: 'Кредиты продвижения',
+    balance_promo_unit: '',
     profile_settings: 'Настройки профиля',
     profile_acc: 'Аккаунт',
     profile_basic_desc: 'Ваши основные данные и настройки профиля.',
@@ -583,10 +591,10 @@ const I18N = {
     nav_profile: 'Профиль',
     balance_dev_title: 'Әзірлеу кредиттері',
     balance_promo_title: 'Ілгерілету кредиттері',
-    balance_dev_kind: 'Әзірлеу',
-    balance_dev_unit: 'кредиттері',
-    balance_promo_kind: 'Ілгерілету',
-    balance_promo_unit: 'кредиттері',
+    balance_dev_kind: 'Әзірлеу кредиттері',
+    balance_dev_unit: '',
+    balance_promo_kind: 'Ілгерілету кредиттері',
+    balance_promo_unit: '',
     profile_settings: 'Профиль баптаулары',
     profile_acc: 'Аккаунт',
     profile_basic_desc: 'Сіздің негізгі деректеріңіз бен профиль баптауларыңыз.',
@@ -623,10 +631,10 @@ const I18N = {
     nav_profile: 'Profile',
     balance_dev_title: 'Development credits',
     balance_promo_title: 'Promotion credits',
-    balance_dev_kind: 'Development',
-    balance_dev_unit: 'credits',
-    balance_promo_kind: 'Promotion',
-    balance_promo_unit: 'credits',
+    balance_dev_kind: 'Development credits',
+    balance_dev_unit: '',
+    balance_promo_kind: 'Promotion credits',
+    balance_promo_unit: '',
     profile_settings: 'Profile Settings',
     profile_acc: 'Account',
     profile_basic_desc: 'Your basic information and profile settings.',

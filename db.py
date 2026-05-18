@@ -1596,6 +1596,21 @@ def get_payment_by_order(order_id: str) -> dict | None:
         row = c.execute("SELECT * FROM payments WHERE order_id=?", (order_id,)).fetchone()
         return dict(row) if row else None
 
+def list_user_payments(user_id: int, limit: int = 25) -> list[dict]:
+    # list payments for one user
+    with get_conn() as c:
+        rows = c.execute(
+            """SELECT id, order_id, invoice_id, amount, tokens, catalog_item_id,
+                      payment_kind, dev_credits, promo_credits, site_id,
+                      support_invoice_id, status, created, updated
+               FROM payments
+               WHERE user_id=?
+               ORDER BY datetime(created) DESC, id DESC
+               LIMIT ?""",
+            (user_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
 def complete_payment(payment_id: int):
     # complete payment
     with get_conn() as c:
