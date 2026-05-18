@@ -2,10 +2,15 @@ import sqlite3, json, re, secrets, hashlib, hmac, time, unicodedata, bcrypt as _
 from pathlib import Path
 from datetime import datetime, timedelta
 from domain import (
+    ACTIVE_DRAFT_STATUSES,
     AnalyticsStatus,
+    DraftValidationError,
+    MAX_DRAFTS,
     PromotionStatus,
     SupportStatus,
     SUPPORT_INCLUDED_DAYS,
+    is_active_draft_status,
+    normalize_draft_title,
 )
 
 class _BcryptWrapper:
@@ -23,6 +28,17 @@ class _BcryptWrapper:
 bcrypt = _BcryptWrapper()
 
 DB_PATH = Path("lendings.db")
+ACTIVE_DRAFT_STATUS_SQL = ",".join("?" for _ in ACTIVE_DRAFT_STATUSES)
+
+
+class DraftLimitError(RuntimeError):
+    # draft limit error
+    pass
+
+
+class DraftConflictError(RuntimeError):
+    # draft sync conflict error
+    pass
 
 def get_conn():
     # get database connection
@@ -215,6 +231,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS onboarding_sessions (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            draft_title TEXT,
+            sort_order  INTEGER DEFAULT 0,
             status      TEXT NOT NULL DEFAULT 'draft',
             history     TEXT NOT NULL DEFAULT '[]',
             collected   TEXT NOT NULL DEFAULT '{}',
@@ -318,6 +336,19 @@ def init_db():
         ]:
             if col not in cols:
                 c.execute(f"ALTER TABLE payments ADD COLUMN {col} {defn}")
+
+    with get_conn() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(onboarding_sessions)").fetchall()}
+        for col, defn in [
+            ("draft_title", "TEXT"),
+            ("sort_order", "INTEGER DEFAULT 0"),
+        ]:
+            if col not in cols:
+                c.execute(f"ALTER TABLE onboarding_sessions ADD COLUMN {col} {defn}")
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_onboarding_user_sort "
+            "ON onboarding_sessions(user_id, sort_order, updated DESC)"
+        )
 
     migrate_credit_logs()
     migrate_add_oauth_columns()
@@ -1078,10 +1109,23 @@ def get_active_onboarding_session(user_id: int) -> dict | None:
         row = c.execute(
             """SELECT * FROM onboarding_sessions
                WHERE user_id=? AND status IN ('draft','ready','generating','failed')
-               ORDER BY updated DESC LIMIT 1""",
+               ORDER BY sort_order ASC, updated DESC LIMIT 1""",
             (user_id,),
         ).fetchone()
         return _present_onboarding_session(row)
+
+def count_active_onboarding_sessions(user_id: int, conn=None) -> int:
+    # count active onboarding sessions
+    c = conn or get_conn()
+    try:
+        return c.execute(
+            f"""SELECT COUNT(*) FROM onboarding_sessions
+                WHERE user_id=? AND status IN ({ACTIVE_DRAFT_STATUS_SQL})""",
+            (user_id, *ACTIVE_DRAFT_STATUSES),
+        ).fetchone()[0]
+    finally:
+        if conn is None:
+            c.close()
 
 def get_onboarding_session(session_id: int, user_id: int) -> dict | None:
     # get onboarding session
@@ -1095,11 +1139,19 @@ def get_onboarding_session(session_id: int, user_id: int) -> dict | None:
 def create_onboarding_session(user_id: int) -> dict:
     # create onboarding session
     with get_conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        active_count = count_active_onboarding_sessions(user_id, c)
+        if active_count >= MAX_DRAFTS:
+            raise DraftLimitError("Draft limit reached")
+        sort_order = c.execute(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM onboarding_sessions WHERE user_id=?",
+            (user_id,),
+        ).fetchone()[0]
         cur = c.execute(
             """INSERT INTO onboarding_sessions
-               (user_id, status, history, collected, photo_urls, created, updated)
-               VALUES (?,?,?,?,?,datetime('now'),datetime('now'))""",
-            (user_id, "draft", "[]", "{}", "[]"),
+               (user_id, sort_order, status, history, collected, photo_urls, created, updated)
+               VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+            (user_id, int(sort_order or 0), "draft", "[]", "{}", "[]"),
         )
     return get_onboarding_session(cur.lastrowid, user_id)
 
@@ -1118,6 +1170,8 @@ def upsert_onboarding_session(
 ) -> dict:
     # upsert onboarding session
     current = get_onboarding_session(session_id, user_id) if session_id else get_active_onboarding_session(user_id)
+    if session_id and not current:
+        raise DraftConflictError("Draft not found")
     if not current:
         current = create_onboarding_session(user_id)
     with get_conn() as c:
@@ -1147,6 +1201,59 @@ def upsert_onboarding_session(
             ),
         )
     return get_onboarding_session(current["id"], user_id)
+
+def delete_onboarding_session(session_id: int, user_id: int) -> bool:
+    # delete onboarding session
+    with get_conn() as c:
+        cur = c.execute(
+            """DELETE FROM onboarding_sessions
+               WHERE id=? AND user_id=? AND status IN ('draft','ready','failed')""",
+            (session_id, user_id),
+        )
+        return cur.rowcount == 1
+
+def rename_onboarding_session(session_id: int, user_id: int, title: str) -> dict:
+    # rename onboarding session
+    normalized = normalize_draft_title(title)
+    with get_conn() as c:
+        cur = c.execute(
+            """UPDATE onboarding_sessions
+               SET draft_title=?, updated=datetime('now')
+               WHERE id=? AND user_id=? AND status IN ('draft','ready','failed')""",
+            (normalized, session_id, user_id),
+        )
+        if cur.rowcount != 1:
+            raise DraftConflictError("Draft not found")
+    return get_onboarding_session(session_id, user_id)
+
+def reorder_onboarding_sessions(user_id: int, session_ids: list[int]) -> None:
+    # reorder onboarding sessions
+    clean_ids = []
+    seen = set()
+    for raw_id in session_ids[:MAX_DRAFTS]:
+        try:
+            sid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if sid > 0 and sid not in seen:
+            clean_ids.append(sid)
+            seen.add(sid)
+    if not clean_ids:
+        return
+    with get_conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        rows = c.execute(
+            f"""SELECT id FROM onboarding_sessions
+                WHERE user_id=? AND status IN ({ACTIVE_DRAFT_STATUS_SQL})""",
+            (user_id, *ACTIVE_DRAFT_STATUSES),
+        ).fetchall()
+        owned = {int(r["id"]) for r in rows}
+        for idx, sid in enumerate(clean_ids):
+            if sid in owned:
+                c.execute(
+                    "UPDATE onboarding_sessions SET sort_order=?, updated=datetime('now') WHERE id=? AND user_id=?",
+                    (idx, sid, user_id),
+                )
 
 def mark_onboarding_generating(session_id: int, user_id: int) -> bool:
     # mark onboarding generating

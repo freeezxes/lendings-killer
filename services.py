@@ -1048,6 +1048,60 @@ class NotificationService:
 class OnboardingService:
     # onboarding service class
     REQUIRED_KEYS = ("name", "services", "city", "vibe")
+    ALLOWED_STATUSES = {"draft", "ready", "generating", "failed", "completed"}
+
+    @staticmethod
+    def _safe_history(value) -> list:
+        # safe history
+        if not isinstance(value, list):
+            return []
+        safe = []
+        for msg in value[-80:]:
+            if not isinstance(msg, dict):
+                continue
+            role = msg.get("role")
+            if role not in {"user", "assistant"}:
+                continue
+            content = str(msg.get("content") or "").strip()
+            if content:
+                safe.append({"role": role, "content": content[:4000]})
+        return safe
+
+    @staticmethod
+    def _safe_collected(value) -> dict:
+        # safe collected
+        if not isinstance(value, dict):
+            return {}
+        return {
+            key: str(value.get(key) or "").strip()[:2000]
+            for key in OnboardingService.REQUIRED_KEYS
+            if value.get(key)
+        }
+
+    @staticmethod
+    def _safe_photo_urls(value) -> list:
+        # safe photo urls
+        if not isinstance(value, list):
+            return []
+        return [
+            str(url)[:500]
+            for url in value[:12]
+            if isinstance(url, str) and url.startswith("/static/uploads/")
+        ]
+
+    @staticmethod
+    def _safe_status(value) -> str:
+        # safe status
+        status = str(value or "draft")
+        return status if status in OnboardingService.ALLOWED_STATUSES else "draft"
+
+    @staticmethod
+    def _safe_int(value) -> int:
+        # safe int
+        try:
+            return max(0, int(value or 0))
+        except (TypeError, ValueError):
+            return 0
 
     @staticmethod
     def current(user_id: int) -> dict:
@@ -1086,13 +1140,13 @@ class OnboardingService:
         session = db.upsert_onboarding_session(
             user_id,
             payload.get("session_id"),
-            status=payload.get("status") or "draft",
-            history=payload.get("history") or [],
-            collected=payload.get("collected") or {},
-            photo_urls=payload.get("photo_urls") or [],
-            chat_in=int(payload.get("chat_in") or 0),
-            chat_out=int(payload.get("chat_out") or 0),
-            chat_cr=int(payload.get("chat_cr") or 0),
+            status=OnboardingService._safe_status(payload.get("status")),
+            history=OnboardingService._safe_history(payload.get("history")),
+            collected=OnboardingService._safe_collected(payload.get("collected")),
+            photo_urls=OnboardingService._safe_photo_urls(payload.get("photo_urls")),
+            chat_in=OnboardingService._safe_int(payload.get("chat_in")),
+            chat_out=OnboardingService._safe_int(payload.get("chat_out")),
+            chat_cr=OnboardingService._safe_int(payload.get("chat_cr")),
         )
         return OnboardingService.present(session)
 
@@ -1101,6 +1155,24 @@ class OnboardingService:
         # reset
         session = db.create_onboarding_session(user_id)
         return OnboardingService.present(session)
+
+    @staticmethod
+    def delete(user_id: int, session_id: int) -> dict:
+        # delete
+        deleted = db.delete_onboarding_session(session_id, user_id)
+        return {"deleted": deleted}
+
+    @staticmethod
+    def rename(user_id: int, session_id: int, title: str) -> dict:
+        # rename
+        session = db.rename_onboarding_session(session_id, user_id, title)
+        return OnboardingService.present(session)
+
+    @staticmethod
+    def reorder(user_id: int, session_ids: list[int]) -> dict:
+        # reorder
+        db.reorder_onboarding_sessions(user_id, session_ids)
+        return {"reordered": True}
 
 
 def build_site_workspace_context(user: dict, site_id: int) -> dict | None:

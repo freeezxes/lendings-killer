@@ -1,4 +1,6 @@
 from enum import Enum
+import re
+import unicodedata
 
 
 class SupportStatus(str, Enum):
@@ -53,3 +55,35 @@ SUPPORT_INCLUDED_DAYS = 30
 SUPPORT_WARNING_DAYS = 7
 SUPPORT_GRACE_DAYS = 1
 VERSION_RESTORE_DEV_CREDITS = 10
+
+MAX_DRAFTS = 5
+ACTIVE_DRAFT_STATUSES = ("draft", "ready", "generating", "failed")
+DRAFT_TITLE_MAX_CHARS = 16
+_DRAFT_FORBIDDEN_CHARS = set("<>/\\{}[]\"'`;|&$`")
+_DRAFT_INVISIBLE_CATEGORIES = {"Cc", "Cf", "Cs", "Co", "Cn"}
+
+
+class DraftValidationError(ValueError):
+    # draft validation error
+    pass
+
+
+def is_active_draft_status(status: str | None) -> bool:
+    # is active draft status
+    return (status or "draft") in ACTIVE_DRAFT_STATUSES
+
+
+def normalize_draft_title(value: str | None) -> str:
+    # normalize and validate a user-provided draft title
+    if not isinstance(value, str):
+        raise DraftValidationError("Invalid draft name")
+    title = unicodedata.normalize("NFKC", value)
+    title = re.sub(r"\s+", " ", title).strip()
+    if not title:
+        raise DraftValidationError("Draft name cannot be empty")
+    if len(title) > DRAFT_TITLE_MAX_CHARS:
+        raise DraftValidationError("Draft name is too long")
+    for ch in title:
+        if unicodedata.category(ch) in _DRAFT_INVISIBLE_CATEGORIES or ch in _DRAFT_FORBIDDEN_CHARS:
+            raise DraftValidationError("Draft name contains invalid characters")
+    return title

@@ -14,6 +14,7 @@ import services
 from domain import (
     CAMPAIGN_MIN_CREDITS,
     CAMPAIGN_MIN_DURATION_HOURS,
+    DraftValidationError,
     PROMO_CREDIT_TENGE,
     PROMO_MIN_PURCHASE,
     PROMO_SETUP_COST,
@@ -78,6 +79,21 @@ EMAIL_RESEND_RATE_LIMIT_WINDOW = 10 * 60
 EMAIL_RESEND_RATE_LIMIT_MAX = 5
 _EMAIL_RESEND_ATTEMPTS: dict[str, list[float]] = {}
 _EMAIL_VERIFY_ATTEMPTS: dict[str, list[float]] = {}
+
+def _api_error(message: str, status_code: int = 400, code: str = "bad_request") -> JSONResponse:
+    # consistent api error response
+    return JSONResponse(
+        {"ok": False, "error": {"code": code, "message": message}},
+        status_code=status_code,
+    )
+
+async def _json_body(request: Request) -> dict:
+    # safe json body
+    try:
+        body = await request.json()
+    except Exception:
+        return {}
+    return body if isinstance(body, dict) else {}
 
 # kaspi pay via kaspi-pos
 KASPI_POS_URL    = "http://92.38.49.113:4001"
@@ -1857,20 +1873,33 @@ async def chat(request: Request):
     # chat
     user = _require_auth(request)
     if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+        return _api_error("Authentication required", 401, "auth_required")
 
-    body           = await request.json()
-    message        = body.get("message", "").strip()
-    session_id     = body.get("session_id")
-    history        = body.get("history", [])
-    photo_urls     = body.get("photo_urls", [])
-    # Accumulated chat tokens from previous turns (client sends back)
-    acc_chat_in    = int(body.get("chat_in", 0))
-    acc_chat_out   = int(body.get("chat_out", 0))
-    acc_chat_cr    = int(body.get("chat_cr", 0))
+    body = await _json_body(request)
+    message = str(body.get("message") or "").strip()
+    raw_session_id = body.get("session_id")
+    session_id = int(raw_session_id) if str(raw_session_id or "").isdigit() else None
+    if len(message) > 4000:
+        return _api_error("Invalid draft payload", 400, "invalid_payload")
+    history = services.OnboardingService._safe_history(body.get("history"))
+    photo_urls = services.OnboardingService._safe_photo_urls(body.get("photo_urls"))
+    try:
+        acc_chat_in = max(0, int(body.get("chat_in") or 0))
+        acc_chat_out = max(0, int(body.get("chat_out") or 0))
+        acc_chat_cr = max(0, int(body.get("chat_cr") or 0))
+    except (TypeError, ValueError):
+        return _api_error("Invalid draft payload", 400, "invalid_payload")
 
     if not message:
-        return JSONResponse({"error": "Пустое сообщение"}, status_code=400)
+        return _api_error("Empty message", 400, "empty_message")
+
+    try:
+        session = db.upsert_onboarding_session(user["id"], session_id)
+        session_id = session["id"]
+    except db.DraftLimitError:
+        return _api_error("Draft limit reached", 409, "draft_limit_reached")
+    except db.DraftConflictError:
+        return _api_error("Draft not found", 404, "draft_not_found")
 
     history.append({"role": "user", "content": message})
 
@@ -1946,8 +1975,11 @@ async def api_onboarding_session(request: Request):
     # api onboarding session
     user = _require_auth(request)
     if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-    return JSONResponse({"ok": True, **services.OnboardingService.current(user["id"])})
+        return _api_error("Authentication required", 401, "auth_required")
+    try:
+        return JSONResponse({"ok": True, **services.OnboardingService.current(user["id"])})
+    except db.DraftLimitError:
+        return _api_error("Draft limit reached", 409, "draft_limit_reached")
 
 
 @app.post("/api/onboarding/session")
@@ -1955,9 +1987,14 @@ async def api_onboarding_autosave(request: Request):
     # api onboarding autosave
     user = _require_auth(request)
     if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-    payload = await request.json()
-    return JSONResponse({"ok": True, **services.OnboardingService.autosave(user["id"], payload)})
+        return _api_error("Authentication required", 401, "auth_required")
+    payload = await _json_body(request)
+    try:
+        return JSONResponse({"ok": True, **services.OnboardingService.autosave(user["id"], payload)})
+    except db.DraftLimitError:
+        return _api_error("Draft limit reached", 409, "draft_limit_reached")
+    except db.DraftConflictError:
+        return _api_error("Draft not found", 404, "draft_not_found")
 
 
 @app.post("/api/onboarding/reset")
@@ -1965,8 +2002,49 @@ async def api_onboarding_reset(request: Request):
     # api onboarding reset
     user = _require_auth(request)
     if not user:
-        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
-    return JSONResponse({"ok": True, **services.OnboardingService.reset(user["id"])})
+        return _api_error("Authentication required", 401, "auth_required")
+    try:
+        return JSONResponse({"ok": True, **services.OnboardingService.reset(user["id"])})
+    except db.DraftLimitError:
+        return _api_error("Draft limit reached", 409, "draft_limit_reached")
+
+
+@app.delete("/api/onboarding/session/{session_id}")
+async def api_onboarding_delete(session_id: int, request: Request):
+    # api onboarding delete
+    user = _require_auth(request)
+    if not user:
+        return _api_error("Authentication required", 401, "auth_required")
+    result = services.OnboardingService.delete(user["id"], session_id)
+    if not result.get("deleted"):
+        return _api_error("Draft not found", 404, "draft_not_found")
+    return JSONResponse({"ok": True, **result})
+
+
+@app.patch("/api/onboarding/session/{session_id}/title")
+async def api_onboarding_rename(session_id: int, request: Request):
+    # api onboarding rename
+    user = _require_auth(request)
+    if not user:
+        return _api_error("Authentication required", 401, "auth_required")
+    payload = await _json_body(request)
+    try:
+        return JSONResponse({"ok": True, **services.OnboardingService.rename(user["id"], session_id, payload.get("title"))})
+    except DraftValidationError:
+        return _api_error("Invalid draft name", 400, "invalid_draft_name")
+    except db.DraftConflictError:
+        return _api_error("Draft not found", 404, "draft_not_found")
+
+
+@app.patch("/api/onboarding/sessions/order")
+async def api_onboarding_reorder(request: Request):
+    # api onboarding reorder
+    user = _require_auth(request)
+    if not user:
+        return _api_error("Authentication required", 401, "auth_required")
+    payload = await _json_body(request)
+    session_ids = payload.get("session_ids") if isinstance(payload.get("session_ids"), list) else []
+    return JSONResponse({"ok": True, **services.OnboardingService.reorder(user["id"], session_ids)})
 
 
 @app.post("/api/onboarding/generate")
