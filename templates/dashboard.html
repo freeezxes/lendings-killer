@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>lendings.kz — Dashboard</title>
+  {% if dashboard_view == 'marketing' %}
+  <link rel="stylesheet" href="/static/dashboard-marketing.css">
+  {% endif %}
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
 
@@ -92,6 +95,18 @@
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
       text-align: right;
+    }
+
+    .sidebar-balances .balance-link {
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 8px;
+      transition: .18s;
+    }
+
+    .sidebar-balances .balance-link:hover {
+      color: var(--brand);
+      transform: translateY(-1px);
     }
 
     *,
@@ -3299,19 +3314,33 @@
             </span>
             <span data-i18n="nav_billing">Billing</span>
           </a>
+          <a href="/dashboard/marketing" class="{{ 'active' if dashboard_view == 'marketing' else '' }}">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
+                <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
+                <line x1="12" y1="22" x2="12" y2="12" />
+                <line x1="12" y1="12" x2="20.5" y2="7.5" />
+                <line x1="12" y1="12" x2="3.5" y2="7.5" />
+              </svg>
+            </span>
+            <span data-i18n="nav_marketing">Marketing</span>
+          </a>
         </nav>
       </div>
 
       <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
         <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span
             class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Кредиты разработки</span><span
-              class="balance-label-line" data-i18n="balance_dev_unit"></span></span><strong>{{
-            "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</strong></div>
+              class="balance-label-line" data-i18n="balance_dev_unit"></span></span><strong><a class="balance-link"
+              href="/dashboard/billing?focus=dev">{{
+            "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</a></strong></div>
         <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span
             class="balance-label"><span class="balance-label-line"
               data-i18n="balance_promo_kind">Кредиты продвижения</span><span class="balance-label-line"
-              data-i18n="balance_promo_unit"></span></span><strong>{{ "{:,}".format(user.promo_credits or
-            0).replace(",", " ") }}</strong></div>
+              data-i18n="balance_promo_unit"></span></span><strong><a class="balance-link"
+              href="/dashboard/billing?focus=promo">{{ "{:,}".format(user.promo_credits or
+            0).replace(",", " ") }}</a></strong></div>
       </div>
 
       <div class="sidebar-footer" style="margin-top: 0;">
@@ -3343,6 +3372,9 @@
           {% elif dashboard_view == 'billing' %}
           <h1 data-i18n="header_billing">Billing</h1>
           <p data-i18n="header_billing_sub">Оплата, поддержка и пакеты</p>
+          {% elif dashboard_view == 'marketing' %}
+          <h1 data-i18n="header_marketing">Marketing</h1>
+          <p data-i18n="header_marketing_sub">AI-кампании, контент и честная аналитика</p>
           {% elif dashboard_view == 'site' and selected_site %}
           <h1>{{ selected_site.title }}</h1>
           <p data-i18n="header_site_edit_sub">Workspace страницы</p>
@@ -3472,6 +3504,9 @@
         {% endif %}
         {% endif %}
 
+        {% if dashboard_view == 'marketing' %}
+        {% include "dashboard/_marketing.html" %}
+        {% endif %}
 
         {% if dashboard_view == 'create' %}
         <section class="create-workspace">
@@ -3697,7 +3732,7 @@
             <h1 class="dbill-title" data-i18n="bill_pricing_title">Выберите пакет</h1>
           </div>
 
-          {% if billing_reason == 'no_slots' %}
+          {% if billing_reason in ['no_slots', 'welcome'] %}
           <div class="billing-alert">
             <div>
               <strong data-i18n="bill_no_slots_title">Нужен слот для нового сайта</strong>
@@ -3941,7 +3976,15 @@
     function kaspiBillingPhone() { return `7${cleanBillingPhone()}` }
     function groupedBillingPhone(digits) { const normalized = digits.replace(/\D/g, '').slice(0, 10); const parts = [normalized.slice(0, 3), normalized.slice(3, 6), normalized.slice(6, 8), normalized.slice(8, 10)].filter(Boolean); return parts.join(' ') }
     function formatBillingPhoneInput(input) { input.value = groupedBillingPhone(normalizeBillingPhone(input.value)); updateBillingPayButton() }
-    function initBillingSelection() { if (!billingSelection) { const first = document.querySelector('.dbill-card[data-bill-kind], .dbill-option[data-bill-kind], .billing-alert [data-bill-kind]'); if (first) selectBillingPackage(first, null, false) } }
+    function initBillingSelection() {
+      if (billingSelection) return;
+      const focus = new URLSearchParams(location.search).get('focus');
+      let first = null;
+      if (focus === 'dev') first = document.querySelector('.dbill-option[data-bill-kind="dev"]');
+      if (focus === 'promo') first = document.querySelector('.dbill-option[data-bill-kind="promo"]');
+      first = first || document.querySelector('.dbill-card[data-bill-kind], .dbill-option[data-bill-kind], .billing-alert [data-bill-kind]');
+      if (first) selectBillingPackage(first, null, false);
+    }
     function groupDigits(value, groups, max) { const digits = String(value || '').replace(/\D/g, '').slice(0, max); const parts = []; let index = 0; for (const size of groups) { const part = digits.slice(index, index + size); if (part) parts.push(part); index += size } return parts.join(' ') }
     function formatBillingCardNumber(input) { input.value = groupDigits(input.value, [4, 4, 4, 4], 16) }
     function formatBillingCardExpiry(input) { const digits = input.value.replace(/\D/g, '').slice(0, 4); input.value = digits.length > 2 ? `${digits.slice(0, 2)} / ${digits.slice(2)}` : digits }
@@ -4059,6 +4102,7 @@
         nav_dashboard: 'Панель',
         nav_create: 'Создать страницу',
         nav_billing: 'Оплата',
+        nav_marketing: 'Маркетинг',
         nav_profile: 'Профиль',
         balance_dev_title: 'Кредиты разработки',
         balance_promo_title: 'Кредиты продвижения',
@@ -4072,6 +4116,8 @@
         header_create_sub: 'AI-помощник для новой бизнес-страницы',
         header_billing: 'Биллинг',
         header_billing_sub: 'Оплата, поддержка и пакеты',
+        header_marketing: 'Маркетинг',
+        header_marketing_sub: 'AI-кампании, контент и честная аналитика',
         header_site_edit_sub: 'Workspace страницы',
         overview_sub: 'Обзор показателей',
         overview_all_pages: 'Все страницы',
@@ -4082,6 +4128,67 @@
         overview_no_data: 'Нет данных',
         overview_my_pages: 'Мои страницы',
         overview_pages_unit: 'страниц',
+        marketing_metric_visitors: 'Посетители',
+        marketing_metric_clicks: 'Клики',
+        marketing_metric_leads: 'Лиды',
+        marketing_metric_conversion: 'Конверсия',
+        marketing_metric_active_campaigns: 'Активные кампании',
+        marketing_growth_title: 'Динамика роста',
+        marketing_growth_sub: '',
+        marketing_insights_title: 'AI-инсайты',
+        marketing_insights_sub: '',
+        marketing_no_data: 'Нет данных',
+        marketing_assistant_title: 'Продвигать автоматически',
+        marketing_assistant_sub: 'Заполните короткий бриф. AI сначала проверит недостающие данные, затем подготовит кампанию.',
+        marketing_field_site: 'Сайт',
+        marketing_site_none: 'Без привязки',
+        marketing_field_goal: 'Цель',
+        marketing_field_audience: 'Аудитория',
+        marketing_field_location: 'Локация',
+        marketing_field_budget: 'Бюджет',
+        marketing_field_platforms: 'Платформы',
+        marketing_field_objective: 'Задача',
+        marketing_goal_placeholder: 'Больше записей на услугу',
+        marketing_audience_placeholder: 'Девушки 18-23 красивые',
+        marketing_location_placeholder: 'Алматы, Бостандыкский район',
+        marketing_platforms_placeholder: 'instagram, google',
+        marketing_objective_placeholder: 'Клики в WhatsApp',
+        marketing_check_brief: 'Проверить бриф',
+        marketing_generate_content: 'Сгенерировать контент',
+        marketing_launch_campaign: 'Запустить внутреннюю кампанию',
+        marketing_assistant_empty: '',
+        marketing_campaigns_title: 'Кампании',
+        marketing_campaigns_sub: 'Внутренние кампании v1. Внешние Ads API подключаются позже.',
+        marketing_pause: 'Пауза',
+        marketing_resume: 'Возобновить',
+        marketing_improve: 'Улучшить',
+        marketing_duplicate: 'Дублировать',
+        marketing_archive: 'Архив',
+        marketing_campaigns_empty: 'Кампаний пока нет.',
+        marketing_content_title: 'Сгенерированный контент',
+        marketing_content_sub: 'История, черновики и версии.',
+        marketing_content_fallback: 'Сохранённый AI-контент',
+        marketing_save: 'Сохранить',
+        marketing_regenerate: 'Перегенерировать',
+        marketing_content_empty: 'AI-контент появится здесь.',
+        marketing_credits_title: 'Маркетинговые кредиты',
+        marketing_credits_sub: 'Отдельный баланс для генерации, оптимизации и запусков.',
+        marketing_activity_title: 'Последняя активность',
+        marketing_activity_sub: 'Маркетинговые списания и пополнения.',
+        marketing_activity_empty: 'История маркетинговых кредитов пока пустая.',
+        marketing_chart_empty: 'Нет данных для графика',
+        marketing_content_ready_summary: 'Новый AI-контент готов',
+        marketing_default_ready: 'Готово',
+        marketing_generating: 'AI готовит креативы...',
+        marketing_need_more: 'Нужно больше данных.',
+        marketing_generated_reply: 'Контент готов. Списано {val} маркетинговых кредитов.',
+        marketing_generated_toast: 'AI-контент готов',
+        marketing_campaign_started: 'Кампания запущена',
+        marketing_improvements_ready: 'AI подготовил улучшения',
+        marketing_campaign_updated: 'Кампания обновлена',
+        marketing_draft_saved: 'Черновик сохранён',
+        marketing_regenerating: 'AI готовит новую версию...',
+        marketing_regenerated_reply: 'Новая версия готова. Списано {val} маркетинговых кредитов.',
         bill_title: 'Баланс и услуги',
         bill_sub: 'Управляйте вашими слотами веб-страниц, балансом кредитов на AI-правки и бюджетом продвижения.',
         bill_pricing_title: 'Выберите пакет',
@@ -4231,6 +4338,7 @@
         nav_dashboard: 'Басқару панелі',
         nav_create: 'Парақша жасау',
         nav_billing: 'Төлем',
+        nav_marketing: 'Маркетинг',
         nav_profile: 'Профиль',
         balance_dev_title: 'Әзірлеу кредиттері',
         balance_promo_title: 'Ілгерілету кредиттері',
@@ -4244,6 +4352,8 @@
         header_create_sub: 'Бизнес-парақшаны жасауға арналған AI-көмекші',
         header_billing: 'Төлем',
         header_billing_sub: 'Төлем, қолдау және пакеттер',
+        header_marketing: 'Маркетинг',
+        header_marketing_sub: 'AI-кампаниялар, контент және нақты аналитика',
         header_site_edit_sub: 'Сайт жұмыс кеңістігі',
         overview_sub: 'Көрсеткіштерді шолу',
         overview_all_pages: 'Барлық парақшалар',
@@ -4254,6 +4364,67 @@
         overview_no_data: 'Деректер жоқ',
         overview_my_pages: 'Менің парақшаларым',
         overview_pages_unit: 'парақша',
+        marketing_metric_visitors: 'Келушілер',
+        marketing_metric_clicks: 'Шертулер',
+        marketing_metric_leads: 'Лидтер',
+        marketing_metric_conversion: 'Конверсия',
+        marketing_metric_active_campaigns: 'Белсенді кампаниялар',
+        marketing_growth_title: 'Өсу динамикасы',
+        marketing_growth_sub: '',
+        marketing_insights_title: 'AI-инсайттар',
+        marketing_insights_sub: '',
+        marketing_no_data: 'Деректер жоқ',
+        marketing_assistant_title: 'Автоматты ілгерілету',
+        marketing_assistant_sub: 'Қысқа брифті толтырыңыз. AI алдымен жетіспейтін деректерді тексеріп, кейін кампания дайындайды.',
+        marketing_field_site: 'Сайт',
+        marketing_site_none: 'Байланыстырмау',
+        marketing_field_goal: 'Мақсат',
+        marketing_field_audience: 'Аудитория',
+        marketing_field_location: 'Локация',
+        marketing_field_budget: 'Бюджет',
+        marketing_field_platforms: 'Платформалар',
+        marketing_field_objective: 'Міндет',
+        marketing_goal_placeholder: 'Қызметке көбірек жазылу',
+        marketing_audience_placeholder: 'Салонға жақын 20-35 жастағы әйелдер',
+        marketing_location_placeholder: 'Алматы, Бостандық ауданы',
+        marketing_platforms_placeholder: 'instagram, google',
+        marketing_objective_placeholder: 'WhatsApp-қа шертулер',
+        marketing_check_brief: 'Брифті тексеру',
+        marketing_generate_content: 'Контент генерациялау',
+        marketing_launch_campaign: 'Ішкі кампанияны іске қосу',
+        marketing_assistant_empty: '',
+        marketing_campaigns_title: 'Кампаниялар',
+        marketing_campaigns_sub: 'v1 ішкі кампаниялар. Сыртқы Ads API кейін қосылады.',
+        marketing_pause: 'Пауза',
+        marketing_resume: 'Жалғастыру',
+        marketing_improve: 'Жақсарту',
+        marketing_duplicate: 'Көшіру',
+        marketing_archive: 'Архив',
+        marketing_campaigns_empty: 'Әзірге кампания жоқ.',
+        marketing_content_title: 'Генерацияланған контент',
+        marketing_content_sub: 'Тарих, черновиктер және нұсқалар.',
+        marketing_content_fallback: 'Сақталған AI-контент',
+        marketing_save: 'Сақтау',
+        marketing_regenerate: 'Қайта генерациялау',
+        marketing_content_empty: 'AI-контент осында шығады.',
+        marketing_credits_title: 'Маркетинг кредиттері',
+        marketing_credits_sub: 'Генерация, оңтайландыру және іске қосуларға арналған бөлек баланс.',
+        marketing_activity_title: 'Соңғы белсенділік',
+        marketing_activity_sub: 'Маркетинг кредиттерінің жұмсалуы және толықтырылуы.',
+        marketing_activity_empty: 'Маркетинг кредиттерінің тарихы әзірге бос.',
+        marketing_chart_empty: 'График үшін деректер жоқ',
+        marketing_content_ready_summary: 'Жаңа AI-контент дайын',
+        marketing_default_ready: 'Дайын',
+        marketing_generating: 'AI креативтер дайындап жатыр...',
+        marketing_need_more: 'Көбірек дерек қажет.',
+        marketing_generated_reply: 'Контент дайын. {val} маркетинг кредиті списание болды.',
+        marketing_generated_toast: 'AI-контент дайын',
+        marketing_campaign_started: 'Кампания іске қосылды',
+        marketing_improvements_ready: 'AI жақсартулар дайындады',
+        marketing_campaign_updated: 'Кампания жаңартылды',
+        marketing_draft_saved: 'Черновик сақталды',
+        marketing_regenerating: 'AI жаңа нұсқаны дайындап жатыр...',
+        marketing_regenerated_reply: 'Жаңа нұсқа дайын. {val} маркетинг кредиті списание болды.',
         bill_title: 'Баланс пен қызметтер',
         bill_sub: 'Веб-парақша ұяшықтарын, AI-түзету несиелерінің балансын және жарнама бюджетін басқарыңыз.',
         bill_pricing_title: 'Пакетті таңдаңыз',
@@ -4403,6 +4574,7 @@
         nav_dashboard: 'Dashboard',
         nav_create: 'Create Page',
         nav_billing: 'Billing',
+        nav_marketing: 'Marketing',
         nav_profile: 'Profile',
         balance_dev_title: 'Development credits',
         balance_promo_title: 'Promotion credits',
@@ -4416,6 +4588,8 @@
         header_create_sub: 'AI workspace for new business page',
         header_billing: 'Billing',
         header_billing_sub: 'Payment, support and packages',
+        header_marketing: 'Marketing',
+        header_marketing_sub: 'AI campaigns, content, and honest analytics',
         header_site_edit_sub: 'Site workspace',
         overview_sub: 'Overview of metrics',
         overview_all_pages: 'All pages',
@@ -4426,6 +4600,67 @@
         overview_no_data: 'No data',
         overview_my_pages: 'My pages',
         overview_pages_unit: 'pages',
+        marketing_metric_visitors: 'Visitors',
+        marketing_metric_clicks: 'Clicks',
+        marketing_metric_leads: 'Leads',
+        marketing_metric_conversion: 'Conversion',
+        marketing_metric_active_campaigns: 'Active campaigns',
+        marketing_growth_title: 'Growth trend',
+        marketing_growth_sub: '',
+        marketing_insights_title: 'AI insights',
+        marketing_insights_sub: '',
+        marketing_no_data: 'No data',
+        marketing_assistant_title: 'Promote Automatically',
+        marketing_assistant_sub: 'Fill a short brief. AI checks missing inputs first, then prepares the campaign.',
+        marketing_field_site: 'Site',
+        marketing_site_none: 'No linked site',
+        marketing_field_goal: 'Goal',
+        marketing_field_audience: 'Audience',
+        marketing_field_location: 'Location',
+        marketing_field_budget: 'Budget',
+        marketing_field_platforms: 'Platforms',
+        marketing_field_objective: 'Objective',
+        marketing_goal_placeholder: 'More bookings for a service',
+        marketing_audience_placeholder: 'Women 20-35 near the salon',
+        marketing_location_placeholder: 'Almaty, Bostandyk district',
+        marketing_platforms_placeholder: 'instagram, google',
+        marketing_objective_placeholder: 'WhatsApp clicks',
+        marketing_check_brief: 'Check brief',
+        marketing_generate_content: 'Generate content',
+        marketing_launch_campaign: 'Launch internal campaign',
+        marketing_assistant_empty: '',
+        marketing_campaigns_title: 'Campaigns',
+        marketing_campaigns_sub: 'Internal campaigns v1. External Ads APIs can connect later.',
+        marketing_pause: 'Pause',
+        marketing_resume: 'Resume',
+        marketing_improve: 'Improve',
+        marketing_duplicate: 'Duplicate',
+        marketing_archive: 'Archive',
+        marketing_campaigns_empty: 'No campaigns yet.',
+        marketing_content_title: 'Generated content',
+        marketing_content_sub: 'History, drafts, and versions.',
+        marketing_content_fallback: 'Saved AI content',
+        marketing_save: 'Save',
+        marketing_regenerate: 'Regenerate',
+        marketing_content_empty: 'AI content will appear here.',
+        marketing_credits_title: 'Marketing credits',
+        marketing_credits_sub: 'Separate balance for generation, optimization, and launches.',
+        marketing_activity_title: 'Recent activity',
+        marketing_activity_sub: 'Marketing credit charges and top-ups.',
+        marketing_activity_empty: 'Marketing credit history is empty.',
+        marketing_chart_empty: 'No chart data',
+        marketing_content_ready_summary: 'New AI content is ready',
+        marketing_default_ready: 'Ready',
+        marketing_generating: 'AI is preparing creatives...',
+        marketing_need_more: 'More details are needed.',
+        marketing_generated_reply: 'Content is ready. {val} marketing credits spent.',
+        marketing_generated_toast: 'AI content ready',
+        marketing_campaign_started: 'Campaign launched',
+        marketing_improvements_ready: 'AI prepared improvements',
+        marketing_campaign_updated: 'Campaign updated',
+        marketing_draft_saved: 'Draft saved',
+        marketing_regenerating: 'AI is preparing a new version...',
+        marketing_regenerated_reply: 'New version is ready. {val} marketing credits spent.',
         bill_title: 'Balance and services',
         bill_sub: 'Manage your web page slots, AI edits credit balance, and promotion campaign budget.',
         bill_pricing_title: 'Choose a package',
@@ -5267,6 +5502,9 @@
     loadCreateInitial();
     {% endif %}
   </script>
+  {% if dashboard_view == 'marketing' %}
+  <script src="/static/dashboard-marketing.js"></script>
+  {% endif %}
 
 </body>
 

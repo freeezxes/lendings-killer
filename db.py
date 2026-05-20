@@ -7,6 +7,7 @@ from domain import (
     DraftValidationError,
     MAX_DRAFTS,
     PromotionStatus,
+    PROMO_CREDIT_TENGE,
     SupportStatus,
     SUPPORT_INCLUDED_DAYS,
     is_active_draft_status,
@@ -243,6 +244,111 @@ def init_db():
             created     TEXT DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS marketing_campaigns (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            site_id     INTEGER REFERENCES sites(id) ON DELETE SET NULL,
+            platform    TEXT NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'draft',
+            objective   TEXT,
+            budget_credits INTEGER DEFAULT 0,
+            budget_amount_kzt INTEGER DEFAULT 0,
+            target_audience TEXT,
+            location    TEXT,
+            campaign_name TEXT,
+            auto_optimize INTEGER DEFAULT 0,
+            external_platform_id TEXT,
+            external_campaign_id TEXT,
+            source      TEXT DEFAULT 'internal',
+            brief_json  TEXT,
+            content_json TEXT,
+            legacy_promotion_campaign_id INTEGER UNIQUE,
+            created     TEXT DEFAULT (datetime('now')),
+            updated     TEXT DEFAULT (datetime('now')),
+            archived_at TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS marketing_campaign_stats (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            campaign_id INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+            snapshot_at TEXT DEFAULT (datetime('now')),
+            impressions INTEGER DEFAULT 0,
+            clicks      INTEGER DEFAULT 0,
+            leads       INTEGER DEFAULT 0,
+            conversions INTEGER DEFAULT 0,
+            spend_credits INTEGER DEFAULT 0,
+            spend_amount_kzt INTEGER DEFAULT 0,
+            ctr         REAL DEFAULT 0,
+            cpc         REAL DEFAULT 0,
+            conversion_rate REAL DEFAULT 0,
+            source_json TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS marketing_credit_logs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            site_id     INTEGER REFERENCES sites(id) ON DELETE SET NULL,
+            campaign_id INTEGER REFERENCES marketing_campaigns(id) ON DELETE SET NULL,
+            content_id  INTEGER,
+            delta       INTEGER NOT NULL,
+            reason      TEXT,
+            balance_after INTEGER,
+            claude_in   INTEGER DEFAULT 0,
+            claude_out  INTEGER DEFAULT 0,
+            cache_read  INTEGER DEFAULT 0,
+            cost_usd    REAL DEFAULT 0,
+            legacy_promo_credit_log_id INTEGER UNIQUE,
+            created     TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS marketing_generated_content (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            site_id     INTEGER REFERENCES sites(id) ON DELETE SET NULL,
+            campaign_id INTEGER REFERENCES marketing_campaigns(id) ON DELETE SET NULL,
+            content_type TEXT NOT NULL,
+            platform    TEXT,
+            prompt_hash TEXT,
+            input_json  TEXT NOT NULL,
+            output_json TEXT NOT NULL,
+            version_no  INTEGER NOT NULL DEFAULT 1,
+            status      TEXT NOT NULL DEFAULT 'draft',
+            parent_content_id INTEGER REFERENCES marketing_generated_content(id) ON DELETE SET NULL,
+            credits_spent INTEGER DEFAULT 0,
+            created     TEXT DEFAULT (datetime('now')),
+            updated     TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS marketing_platform_connections (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            platform    TEXT NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'not_connected',
+            external_account_id TEXT,
+            display_name TEXT,
+            scopes_json TEXT,
+            token_ref   TEXT,
+            connected_at TEXT,
+            updated     TEXT DEFAULT (datetime('now')),
+            UNIQUE(user_id, platform, external_account_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS marketing_analytics_snapshots (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            site_id     INTEGER REFERENCES sites(id) ON DELETE CASCADE,
+            period_start TEXT,
+            period_end   TEXT,
+            visitors    INTEGER DEFAULT 0,
+            clicks      INTEGER DEFAULT 0,
+            leads       INTEGER DEFAULT 0,
+            conversion_rate REAL DEFAULT 0,
+            traffic_sources_json TEXT,
+            funnel_json TEXT,
+            insights_json TEXT,
+            created     TEXT DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS onboarding_sessions (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -279,6 +385,13 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_promotion_campaigns_site_status ON promotion_campaigns(site_id, status);
         CREATE INDEX IF NOT EXISTS idx_dev_credit_log_user_created ON dev_credit_log(user_id, created DESC);
         CREATE INDEX IF NOT EXISTS idx_promo_credit_log_user_created ON promo_credit_log(user_id, created DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_campaigns_user_status ON marketing_campaigns(user_id, status, updated DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_campaigns_site_status ON marketing_campaigns(site_id, status, updated DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_campaign_stats_campaign_snapshot ON marketing_campaign_stats(campaign_id, snapshot_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_credit_logs_user_created ON marketing_credit_logs(user_id, created DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_generated_content_user_created ON marketing_generated_content(user_id, created DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_generated_content_site_created ON marketing_generated_content(site_id, created DESC);
+        CREATE INDEX IF NOT EXISTS idx_marketing_snapshots_user_created ON marketing_analytics_snapshots(user_id, created DESC);
         CREATE INDEX IF NOT EXISTS idx_site_versions_site_created ON site_versions(site_id, created DESC);
         CREATE INDEX IF NOT EXISTS idx_onboarding_user_status_updated ON onboarding_sessions(user_id, status, updated DESC);
         CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON notifications(user_id, is_read, created DESC);
@@ -368,6 +481,7 @@ def init_db():
 
     migrate_credit_logs()
     migrate_add_oauth_columns()
+    migrate_marketing_tables()
     normalize_site_versions()
 
 def _make_user_columns_nullable(columns: list[str]):
@@ -460,6 +574,61 @@ def migrate_credit_logs():
                SELECT user_id, site_id, delta, reason, claude_in, claude_out,
                       cache_read, cost_usd, id, ts
                FROM token_log"""
+        )
+
+
+def migrate_marketing_tables():
+    # copy legacy promotion rows into normalized marketing tables
+    with get_conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        c.execute(
+            """INSERT OR IGNORE INTO marketing_campaigns
+               (user_id, site_id, platform, status, objective, budget_credits,
+                budget_amount_kzt, target_audience, location, campaign_name,
+                auto_optimize, source, brief_json, content_json,
+                legacy_promotion_campaign_id, created, updated)
+               SELECT pc.user_id,
+                      pc.site_id,
+                      'internal',
+                      CASE
+                        WHEN pc.status='completed' THEN 'completed'
+                        WHEN pc.status='paused' THEN 'paused'
+                        WHEN pc.status LIKE 'stopped%' THEN 'archived'
+                        WHEN pc.status='failed' THEN 'failed'
+                        ELSE pc.status
+                      END,
+                      'site_promotion',
+                      pc.credits_spent,
+                      pc.credits_spent * ?,
+                      '',
+                      '',
+                      COALESCE(s.title, 'Promotion campaign'),
+                      0,
+                      'legacy_promotion',
+                      COALESCE(pc.forecast_json, '{}'),
+                      COALESCE(pc.forecast_json, '{}'),
+                      pc.id,
+                      pc.created,
+                      pc.updated
+               FROM promotion_campaigns pc
+               LEFT JOIN sites s ON s.id=pc.site_id""",
+            (PROMO_CREDIT_TENGE,),
+        )
+        c.execute(
+            """INSERT OR IGNORE INTO marketing_credit_logs
+               (user_id, site_id, campaign_id, delta, reason, balance_after,
+                legacy_promo_credit_log_id, created)
+               SELECT pcl.user_id,
+                      pcl.site_id,
+                      mc.id,
+                      pcl.delta,
+                      pcl.reason,
+                      pcl.balance_after,
+                      pcl.id,
+                      pcl.created
+               FROM promo_credit_log pcl
+               LEFT JOIN marketing_campaigns mc
+                 ON mc.legacy_promotion_campaign_id=pcl.campaign_id"""
         )
 
 # users
@@ -991,6 +1160,19 @@ def get_promo_credit_log(user_id: int, limit: int = 20) -> list:
         rows = c.execute(
             """SELECT delta, reason, balance_after, created as ts
                FROM promo_credit_log
+               WHERE user_id=?
+               ORDER BY created DESC LIMIT ?""",
+            (user_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+def get_marketing_credit_log(user_id: int, limit: int = 50) -> list:
+    # get marketing credit log
+    with get_conn() as c:
+        rows = c.execute(
+            """SELECT delta, reason, balance_after, claude_in, claude_out,
+                      cache_read, cost_usd, created as ts
+               FROM marketing_credit_logs
                WHERE user_id=?
                ORDER BY created DESC LIMIT ?""",
             (user_id, limit),

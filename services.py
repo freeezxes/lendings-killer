@@ -410,21 +410,8 @@ class CreditsService:
     @staticmethod
     def apply_promo_payment(payment: dict) -> dict:
         # add promotion credits after external payment succeeds
-        credits = int(payment.get("promo_credits") or 0)
-        user_id = int(payment.get("user_id") or 0)
-        if credits <= 0 or user_id <= 0:
-            return {"ok": False, "error": "invalid_promo_payment"}
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            c.execute("UPDATE users SET promo_credits=promo_credits+? WHERE id=?", (credits, user_id))
-            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO promo_credit_log
-                   (user_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,datetime('now'))""",
-                (user_id, credits, f"promo_credit_purchase:{payment.get('order_id')}", balance),
-            )
-        return {"ok": True, "credits": credits, "balance": balance}
+        import marketing_credit_service
+        return marketing_credit_service.apply_promo_payment(payment)
 
     @staticmethod
     def logs(user_id: int, limit: int = 50) -> dict:
@@ -432,6 +419,7 @@ class CreditsService:
         return {
             "dev": db.get_dev_credit_log(user_id, limit),
             "promo": db.get_promo_credit_log(user_id, limit),
+            "marketing": db.get_marketing_credit_log(user_id, limit),
         }
 
 
@@ -1001,7 +989,6 @@ def build_dashboard_context(user: dict) -> dict:
         "support_monthly_price": SUPPORT_MONTHLY_PRICE,
         "version_restore_dev_credits": VERSION_RESTORE_DEV_CREDITS,
     }
-
 
 class NotificationService:
     # notification service class

@@ -1,0 +1,306 @@
+.marketing-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.marketing-panel p {
+  max-width: 680px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.marketing-primary {
+  background: var(--brand);
+  color: white;
+}
+
+.marketing-shell .btn {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(79, 109, 245, .18);
+}
+
+.marketing-shell .btn:hover {
+  background: #3959e8;
+}
+
+.marketing-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.marketing-metric {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.marketing-metric,
+.marketing-panel {
+  animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.marketing-metric:nth-child(1) { animation-delay: 0.12s; }
+.marketing-metric:nth-child(2) { animation-delay: 0.20s; }
+.marketing-metric:nth-child(3) { animation-delay: 0.28s; }
+.marketing-metric:nth-child(4) { animation-delay: 0.36s; }
+.marketing-metric:nth-child(5) { animation-delay: 0.44s; }
+.marketing-overview-grid .marketing-panel:nth-child(1) { animation-delay: 0.52s; }
+.marketing-overview-grid .marketing-panel:nth-child(2) { animation-delay: 0.60s; }
+#marketingAssistant { animation-delay: 0.68s; }
+.marketing-campaign-grid .marketing-panel:nth-child(1) { animation-delay: 0.76s; }
+.marketing-campaign-grid .marketing-panel:nth-child(2) { animation-delay: 0.84s; }
+
+.marketing-metric span {
+  display: block;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.marketing-metric strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.marketing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
+  gap: 18px;
+}
+
+.marketing-panel {
+  padding: 22px;
+}
+
+.marketing-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.marketing-panel-head h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.marketing-chart {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+}
+
+.marketing-chart-empty {
+  width: 100%;
+  align-self: center;
+  color: var(--muted);
+  font-size: .86rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  opacity: .68;
+}
+
+.marketing-bar {
+  flex: 1;
+  min-width: 10px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
+  transform-origin: bottom;
+  animation: marketingGrow .55s ease both;
+}
+
+.marketing-bar.empty {
+  height: 8px !important;
+  background: var(--line-strong);
+}
+
+@keyframes marketingGrow {
+  from { transform: scaleY(.15); opacity: .45; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+.marketing-insights,
+.marketing-list {
+  display: grid;
+  gap: 10px;
+}
+
+.marketing-insight,
+.marketing-row,
+.marketing-activity,
+.marketing-empty,
+.marketing-assistant-reply {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+}
+
+.marketing-insight strong,
+.marketing-row strong,
+.marketing-activity strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.marketing-insight span,
+.marketing-row span,
+.marketing-activity span,
+.marketing-empty,
+.marketing-assistant-reply {
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.marketing-insight.warn {
+  border-color: rgba(231, 166, 58, .35);
+}
+
+.marketing-insight.good {
+  border-color: rgba(33, 184, 137, .35);
+}
+
+.marketing-insight.neutral {
+  border-color: transparent;
+  background: transparent;
+  padding: 6px 0;
+}
+
+.marketing-assistant {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.marketing-assistant label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.marketing-assistant input,
+.marketing-assistant select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  text-transform: none;
+}
+
+.marketing-assistant input:focus,
+.marketing-assistant select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(79, 109, 245, .12);
+}
+
+.marketing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.marketing-assistant-reply {
+  margin-top: 12px;
+}
+
+.marketing-assistant-reply:empty {
+  display: none;
+}
+
+.marketing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.marketing-content-row {
+  align-items: flex-start;
+}
+
+.marketing-content-row p {
+  margin-top: 8px;
+  font-size: .85rem;
+}
+
+.marketing-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.marketing-row-actions .danger {
+  color: var(--red);
+}
+
+.marketing-list.compact {
+  gap: 8px;
+}
+
+html[data-theme="dark"] .marketing-shell .btn {
+  background: var(--brand);
+  box-shadow: 0 12px 24px rgba(139, 92, 246, .24);
+}
+
+html[data-theme="dark"] .marketing-shell .soft,
+html[data-theme="dark"] .marketing-assistant input,
+html[data-theme="dark"] .marketing-assistant select {
+  background: rgba(139, 92, 246, .08);
+  border-color: rgba(139, 92, 246, .22);
+}
+
+html[data-theme="dark"] .marketing-shell .soft:hover,
+html[data-theme="dark"] .marketing-assistant input:focus,
+html[data-theme="dark"] .marketing-assistant select:focus {
+  border-color: rgba(167, 139, 250, .58);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, .16);
+}
+
+@media (max-width: 1180px) {
+  .marketing-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .marketing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .marketing-panel-head,
+  .marketing-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .marketing-metrics,
+  .marketing-assistant {
+    grid-template-columns: 1fr;
+  }
+}

@@ -11,6 +11,11 @@ import httpx
 import db
 import auth_services
 import services
+import analytics_service
+import campaign_service
+import marketing_ai_service
+import marketing_credit_service
+import marketing_service
 from domain import (
     CAMPAIGN_MIN_CREDITS,
     CAMPAIGN_MIN_DURATION_HOURS,
@@ -558,7 +563,7 @@ def _require_paid(user: dict | None) -> RedirectResponse | None:
     if not user:
         return RedirectResponse("/auth", status_code=302)
     if not user.get("site_slots", 0):
-        return RedirectResponse("/payment?reason=welcome", status_code=302)
+        return RedirectResponse("/dashboard/billing?reason=welcome", status_code=302)
     return None
 
 
@@ -1266,14 +1271,8 @@ async def create_page(request: Request):
 async def dashboard_create_page(request: Request):
     # dashboard create page
     user = _require_auth(request)
-    if blocked := _require_paid(user):
-        return blocked
-    # Check slot availability (only for new site, not edit)
-    edit_slug_check = request.query_params.get("edit", "").strip()
-    if not edit_slug_check:
-        sites = db.get_user_sites(user["id"])
-        if len(sites) >= user.get("site_slots", 0):
-            return RedirectResponse("/dashboard/billing?reason=no_slots", status_code=302)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
     # ?edit=slug — load existing site into edit mode
     edit_slug = request.query_params.get("edit", "").strip()
     edit_slug = re.sub(r"[^a-zA-Z0-9_-]", "", edit_slug)
@@ -1725,8 +1724,198 @@ async def dashboard_billing(request: Request):
     )
 
 
+@app.get("/dashboard/marketing", response_class=HTMLResponse)
+async def dashboard_marketing(request: Request):
+    # dashboard marketing
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    context = marketing_service.dashboard_context(user)
+    context["verification_notice"] = _verification_notice(request, context["user"])
+    context["dashboard_view"] = "marketing"
+    return templates.TemplateResponse(request, "dashboard.html", context)
 
 
+def _marketing_json(result: dict, ok_status: int = 200) -> JSONResponse:
+    # marketing json
+    return JSONResponse(result, status_code=ok_status if result.get("ok") else 400)
+
+
+def _body_site(user: dict, body: dict) -> dict | None:
+    # marketing body site
+    raw_site_id = body.get("site_id")
+    if not raw_site_id:
+        return None
+    try:
+        site_id = int(raw_site_id)
+    except (TypeError, ValueError):
+        return None
+    return db.get_user_site_by_id(user["id"], site_id)
+
+
+@app.get("/api/marketing/overview")
+async def api_marketing_overview(request: Request):
+    # api marketing overview
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, "overview": marketing_service.overview(user)})
+
+
+@app.post("/api/marketing/assistant/message")
+async def api_marketing_assistant_message(request: Request):
+    # api marketing assistant message
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    body = await _json_body(request)
+    return JSONResponse(marketing_ai_service.assistant_message(body))
+
+
+@app.post("/api/marketing/content/generate")
+async def api_marketing_content_generate(request: Request):
+    # api marketing content generate
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    body = await _json_body(request)
+    site = _body_site(user, body)
+    if body.get("site_id") and not site:
+        return JSONResponse({"ok": False, "error": "site_not_found", "message": "Сайт не найден."}, status_code=404)
+    result = marketing_ai_service.generate_content(user["id"], body, site)
+    return _marketing_json(result)
+
+
+@app.get("/api/marketing/content")
+async def api_marketing_content(request: Request):
+    # api marketing content
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, "items": marketing_ai_service.list_content(user["id"])})
+
+
+@app.post("/api/marketing/content/{content_id}/regenerate")
+async def api_marketing_content_regenerate(content_id: int, request: Request):
+    # api marketing content regenerate
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(marketing_ai_service.regenerate_content(user["id"], content_id))
+
+
+@app.post("/api/marketing/content/{content_id}/save")
+async def api_marketing_content_save(content_id: int, request: Request):
+    # api marketing content save
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(marketing_ai_service.save_content(user["id"], content_id))
+
+
+@app.get("/api/marketing/campaigns")
+async def api_marketing_campaigns(request: Request):
+    # api marketing campaigns
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    status = request.query_params.get("status")
+    return JSONResponse({"ok": True, "campaigns": campaign_service.list_campaigns(user["id"], status=status)})
+
+
+@app.post("/api/marketing/campaigns")
+async def api_marketing_campaign_create(request: Request):
+    # api marketing campaign create
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    body = await _json_body(request)
+    return _marketing_json(campaign_service.create_campaign(user["id"], body))
+
+
+@app.post("/api/marketing/campaigns/{campaign_id}/pause")
+async def api_marketing_campaign_pause(campaign_id: int, request: Request):
+    # api marketing campaign pause
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(campaign_service.update_status(user["id"], campaign_id, "paused"))
+
+
+@app.post("/api/marketing/campaigns/{campaign_id}/resume")
+async def api_marketing_campaign_resume(campaign_id: int, request: Request):
+    # api marketing campaign resume
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(campaign_service.update_status(user["id"], campaign_id, "active"))
+
+
+@app.post("/api/marketing/campaigns/{campaign_id}/archive")
+async def api_marketing_campaign_archive(campaign_id: int, request: Request):
+    # api marketing campaign archive
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(campaign_service.update_status(user["id"], campaign_id, "archived"))
+
+
+@app.post("/api/marketing/campaigns/{campaign_id}/duplicate")
+async def api_marketing_campaign_duplicate(campaign_id: int, request: Request):
+    # api marketing campaign duplicate
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(campaign_service.duplicate_campaign(user["id"], campaign_id))
+
+
+@app.post("/api/marketing/campaigns/{campaign_id}/improve")
+async def api_marketing_campaign_improve(campaign_id: int, request: Request):
+    # api marketing campaign improve
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return _marketing_json(campaign_service.improve_campaign(user["id"], campaign_id))
+
+
+@app.get("/api/marketing/analytics")
+async def api_marketing_analytics(request: Request):
+    # api marketing analytics
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, "analytics": analytics_service.aggregate_user(user["id"])})
+
+
+@app.get("/api/marketing/credits/logs")
+async def api_marketing_credit_logs(request: Request):
+    # api marketing credit logs
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    return JSONResponse({"ok": True, "logs": marketing_credit_service.logs(user["id"])})
+
+
+@app.post("/api/sites/{slug}/promotion/generate-ads")
+async def api_generate_ads(slug: str, request: Request):
+    # legacy marketing content generation
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    site = db.get_site_by_slug(slug)
+    if not site or site["user_id"] != user["id"]:
+        return JSONResponse({"error": "Site not found"}, status_code=404)
+    body = await _json_body(request)
+    body.update({
+        "site_id": site["id"],
+        "goal": body.get("goal") or "Получить больше заявок с сайта",
+        "target_audience": body.get("target_audience") or "Потенциальные клиенты малого бизнеса",
+        "location": body.get("location") or (site.get("data") or {}).get("city") or "Казахстан",
+        "budget": body.get("budget") or PROMO_MIN_PURCHASE,
+        "platforms": body.get("platforms") or ["instagram", "google"],
+        "objective": body.get("objective") or "Клики в WhatsApp и переходы на сайт",
+    })
+    return _marketing_json(marketing_ai_service.generate_content(user["id"], body, site))
 
 @app.get("/site/{slug}", response_class=HTMLResponse)
 async def serve_site(slug: str):

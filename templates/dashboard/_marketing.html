@@ -1,0 +1,173 @@
+{% set overview = marketing_overview or {} %}
+<section class="marketing-shell">
+  <div class="marketing-metrics" data-marketing-counters>
+    <article class="marketing-metric">
+      <span data-i18n="marketing_metric_visitors">Visitors</span>
+      <strong data-count="{{ overview.visitors or 0 }}">0</strong>
+    </article>
+    <article class="marketing-metric">
+      <span data-i18n="marketing_metric_clicks">Clicks</span>
+      <strong data-count="{{ overview.clicks or 0 }}">0</strong>
+    </article>
+    <article class="marketing-metric">
+      <span data-i18n="marketing_metric_leads">Leads</span>
+      <strong data-count="{{ overview.leads or 0 }}">0</strong>
+    </article>
+    <article class="marketing-metric">
+      <span data-i18n="marketing_metric_conversion">Conversion</span>
+      <strong data-count="{{ overview.conversion_rate or 0 }}" data-suffix="%">0%</strong>
+    </article>
+    <article class="marketing-metric">
+      <span data-i18n="marketing_metric_active_campaigns">Active campaigns</span>
+      <strong data-count="{{ overview.active_campaigns or 0 }}">0</strong>
+    </article>
+  </div>
+
+  <section class="marketing-grid marketing-overview-grid">
+    <div class="panel marketing-panel marketing-chart-panel">
+      <div class="marketing-panel-head">
+        <div>
+          <h2 data-i18n="marketing_growth_title">Growth trend</h2>
+        </div>
+      </div>
+      <div class="marketing-chart" id="marketingTrendChart"></div>
+      <script type="application/json" id="marketingTimelineData">{{ (overview.timeline or []) | tojson }}</script>
+    </div>
+
+    <div class="panel marketing-panel">
+      <div class="marketing-panel-head">
+        <div>
+          <h2 data-i18n="marketing_insights_title">AI insights</h2>
+        </div>
+      </div>
+      <div class="marketing-insights">
+        {% if not (overview.visitors or overview.clicks or overview.leads) %}
+        <div class="marketing-insight neutral">
+          <strong data-i18n="marketing_no_data">Нет данных</strong>
+        </div>
+        {% else %}
+        {% for insight in overview.insights or [] %}
+        <div class="marketing-insight {{ insight.level or 'neutral' }}">
+          <strong>{{ insight.title }}</strong>
+          <span>{{ insight.body }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel marketing-panel" id="marketingAssistant">
+    <div class="marketing-panel-head">
+      <div>
+        <h2 data-i18n="marketing_assistant_title">Promote Automatically</h2>
+        <p data-i18n="marketing_assistant_sub">Заполните короткий бриф. AI сначала проверит недостающие данные, затем подготовит кампанию.</p>
+      </div>
+    </div>
+    <div class="marketing-assistant">
+      <label>
+        <span data-i18n="marketing_field_site">Сайт</span>
+        <select id="marketingSiteId">
+          <option value="" data-i18n="marketing_site_none">Без привязки</option>
+          {% for site in sites %}
+          <option value="{{ site.id }}">{{ site.title or site.slug }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span data-i18n="marketing_field_goal">Goal</span>
+        <input id="marketingGoal" placeholder="Больше записей на услугу" data-i18n-placeholder="marketing_goal_placeholder">
+      </label>
+      <label>
+        <span data-i18n="marketing_field_audience">Audience</span>
+        <input id="marketingAudience" placeholder="Девушки 18-23 красивые" data-i18n-placeholder="marketing_audience_placeholder">
+      </label>
+      <label>
+        <span data-i18n="marketing_field_location">Location</span>
+        <input id="marketingLocation" placeholder="Алматы, Бостандыкский район" data-i18n-placeholder="marketing_location_placeholder">
+      </label>
+      <label>
+        <span data-i18n="marketing_field_budget">Budget</span>
+        <input id="marketingBudget" type="number" min="10" value="100">
+      </label>
+      <label>
+        <span data-i18n="marketing_field_platforms">Platforms</span>
+        <input id="marketingPlatforms" placeholder="instagram, google" data-i18n-placeholder="marketing_platforms_placeholder">
+      </label>
+      <label>
+        <span data-i18n="marketing_field_objective">Objective</span>
+        <input id="marketingObjective" placeholder="Клики в WhatsApp" data-i18n-placeholder="marketing_objective_placeholder">
+      </label>
+    </div>
+    <div class="marketing-actions">
+      <button class="soft" onclick="marketingAssistantCheck()" data-i18n="marketing_check_brief">Проверить бриф</button>
+      <button class="btn marketing-primary" onclick="marketingGenerateContent()" data-i18n="marketing_generate_content">Generate content</button>
+      <button class="btn" onclick="marketingLaunchCampaign()" data-i18n="marketing_launch_campaign">Launch internal campaign</button>
+    </div>
+    <div class="marketing-assistant-reply" id="marketingAssistantReply" data-i18n="marketing_assistant_empty"></div>
+  </section>
+
+  <section class="marketing-grid marketing-campaign-grid">
+    <div class="panel marketing-panel">
+      <div class="marketing-panel-head">
+        <div>
+          <h2 data-i18n="marketing_campaigns_title">Campaigns</h2>
+          <p data-i18n="marketing_campaigns_sub">Внутренние кампании v1. Внешние Ads API подключаются позже.</p>
+        </div>
+      </div>
+      <div class="marketing-list" id="marketingCampaignList">
+        {% for campaign in marketing_campaigns %}
+        <article class="marketing-row">
+          <div>
+            <strong>{{ campaign.campaign_name or campaign.platform }}</strong>
+            <span>{{ campaign.platform }} · {{ campaign.status_label }} · {{ campaign.budget_credits or 0 }} <span data-i18n="bill_credits_word">credits</span></span>
+          </div>
+          <div class="marketing-row-actions">
+            {% if campaign.status == 'active' %}
+            <button class="soft" onclick="marketingCampaignAction({{ campaign.id }}, 'pause')" data-i18n="marketing_pause">Pause</button>
+            {% elif campaign.status == 'paused' %}
+            <button class="soft" onclick="marketingCampaignAction({{ campaign.id }}, 'resume')" data-i18n="marketing_resume">Resume</button>
+            {% endif %}
+            <button class="soft" onclick="marketingCampaignAction({{ campaign.id }}, 'improve')" data-i18n="marketing_improve">Improve</button>
+            <button class="soft" onclick="marketingCampaignAction({{ campaign.id }}, 'duplicate')" data-i18n="marketing_duplicate">Duplicate</button>
+            <button class="soft danger" onclick="marketingCampaignAction({{ campaign.id }}, 'archive')" data-i18n="marketing_archive">Archive</button>
+          </div>
+        </article>
+        {% else %}
+        <div class="marketing-empty" data-i18n="marketing_campaigns_empty">Кампаний пока нет.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel marketing-panel">
+      <div class="marketing-panel-head">
+        <div>
+          <h2 data-i18n="marketing_content_title">Generated content</h2>
+          <p data-i18n="marketing_content_sub">История, черновики и версии.</p>
+        </div>
+      </div>
+      <div class="marketing-list" id="marketingContentList">
+        {% for item in marketing_content %}
+        <article class="marketing-row marketing-content-row">
+          <div>
+            <strong>{{ item.content_type }} · v{{ item.version_no }}</strong>
+            <span>{{ item.site_title or item.platform or 'General' }} · {{ item.status }} · {{ item.credits_spent or 0 }} <span data-i18n="bill_credits_word">credits</span></span>
+            {% if item.output.summary %}
+            <p>{{ item.output.summary }}</p>
+            {% else %}
+            <p data-i18n="marketing_content_fallback">Сохранённый AI-контент</p>
+            {% endif %}
+          </div>
+          <div class="marketing-row-actions">
+            <button class="soft" onclick="marketingSaveContent({{ item.id }})" data-i18n="marketing_save">Save</button>
+            <button class="soft" onclick="marketingRegenerateContent({{ item.id }})" data-i18n="marketing_regenerate">Regenerate</button>
+          </div>
+        </article>
+        {% else %}
+        <div class="marketing-empty" data-i18n="marketing_content_empty">AI-контент появится здесь.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</section>
