@@ -2431,9 +2431,16 @@ async def site_edit(slug: str, request: Request):
         f"Фото на сайте: {'есть (' + str(len(data.get('photo_urls', []))) + ' шт.)' if data.get('photo_urls') else 'нет'}",
     ]))
 
+    ai_message = message
+    if new_photo_urls:
+        ai_message += f"\n[Системное уведомление: клиент прикрепил {len(new_photo_urls)} фото к сообщению]"
+    
+    # We still want to save the original message in history without the system tag,
+    # but for the AI prompt we'll pass the ai_message
+    ai_history = edit_history + [{"role": "user", "content": ai_message}]
     edit_history = edit_history + [{"role": "user", "content": message}]
 
-    result       = _ai_edit_chat(edit_history, site_context)
+    result       = _ai_edit_chat(ai_history, site_context)
     reply        = result.get("reply", "Понял!")
     ready        = result.get("ready", False)
     needs_photos = result.get("needs_photos", False)
