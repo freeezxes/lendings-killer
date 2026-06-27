@@ -130,8 +130,55 @@ function showConfirmation(summaryRows){status='ready';lockInput(true);renderStep
 function editMore(){document.getElementById('confirmCard')?.remove();status='draft';lockInput(false);setStatus('Дополните информацию');document.getElementById('inp').placeholder='Что изменить или добавить?';renderSteps();autosave()}
 function showGeneration(){lockInput(true);const chat=document.getElementById('chat');const box=document.createElement('div');box.className='generation';box.id='generationBox';box.innerHTML=`<div class="gen-top"><div class="spinner"></div><div><div class="gen-title">Создаём страницу</div><div class="gen-sub">Это может занять до минуты</div></div></div>${GENERATION_STAGES.map((s,i)=>`<div class="gen-stage" id="stage-${i}"><span>${i+1}</span>${s}</div>`).join('')}`;chat.appendChild(box);chat.scrollTop=chat.scrollHeight;let i=0;function tick(){GENERATION_STAGES.forEach((_,idx)=>document.getElementById(`stage-${idx}`)?.classList.toggle('active',idx<=i));i=Math.min(i+1,GENERATION_STAGES.length-1);if(document.getElementById('generationBox'))setTimeout(tick,1300)}tick()}
 async function generateSite(){document.getElementById('confirmCard')?.remove();status='generating';showGeneration();try{const r=await fetch('/api/onboarding/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Не удалось создать сайт');setStatus('Страница готова');window.location.href=data.workspace_url||'/dashboard/sites'}catch(e){document.getElementById('generationBox')?.remove();status='failed';lockInput(false);addMsg(e.message,'bot');renderSteps();autosave()}}
-async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');lockInput(true);showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});const j=await r.json();removeTyping();lockInput(false);if(j.error)throw new Error(j.error);if(j.edit_history)editHistory=j.edit_history;if(!j.done){addMsg(j.message,'bot');return}addMsg('Готово. Страница обновлена.','bot');setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900)}catch(e){removeTyping();lockInput(false);addMsg(e.message||'Ошибка правки','bot')}return}
-  try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,message:text,history,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});const j=await r.json();removeTyping();lockInput(false);if(j.error)throw new Error(j.error);history=j.history||history;sessionId=j.session_id||sessionId;collected=j.collected||collected;chatIn=j.chat_in??chatIn;chatOut=j.chat_out??chatOut;chatCr=j.chat_cr??chatCr;addMsg(j.message,'bot');renderSteps();renderSummary(j.summary);if(j.confirm_required){showConfirmation(j.summary)}else{autosave()}}catch(e){removeTyping();lockInput(false);addMsg(e.message||'Что-то пошло не так, попробуйте ещё раз.','bot')}
+async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');lockInput(true);showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});
+  const j=await r.json();
+  removeTyping();
+  if(j.error){
+    lockInput(false);
+    throw new Error(j.error);
+  }
+  if(j.edit_history)editHistory=j.edit_history;
+  if(!j.done){
+    addMsg(j.message,'bot');
+    lockInput(false);
+    return;
+  }
+  addMsg('Готово. Страница обновлена.','bot');
+  setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900);
+  }catch(e){
+    removeTyping();
+    addMsg(e.message||'Ошибка правки','bot');
+    lockInput(false);
+  }
+  return;
+}
+  try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,message:text,history,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});
+  const j=await r.json();
+  removeTyping();
+  if(j.error){
+    lockInput(false);
+    throw new Error(j.error);
+  }
+  history=j.history||history;
+  sessionId=j.session_id||sessionId;
+  collected=j.collected||collected;
+  chatIn=j.chat_in??chatIn;
+  chatOut=j.chat_out??chatOut;
+  chatCr=j.chat_cr??chatCr;
+  addMsg(j.message,'bot');
+  renderSteps();
+  renderSummary(j.summary);
+  if(j.confirm_required){
+    showConfirmation(j.summary)
+  }else{
+    autosave();
+    lockInput(false);
+  }
+  }catch(e){
+    removeTyping();
+    addMsg(e.message||'Что-то пошло не так, попробуйте ещё раз.','bot');
+    lockInput(false);
+  }
 }
 async function resetDraft(){if(!confirm('Начать новый черновик? Текущий диалог останется в истории браузера, но активный черновик будет новым.'))return;try{const r=await fetch('/api/onboarding/reset',{method:'POST'});const d=await r.json();sessionId=d.session.id;history=[];collected={};photoUrls=[];chatIn=chatOut=chatCr=0;status='draft';document.getElementById('chat').innerHTML='';addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot');lockInput(false);renderPhotos();renderSteps();renderSummary()}catch(e){toast('Не удалось сбросить черновик')}}
 async function loadInitial(){renderSteps();renderSummary();renderPhotos();if(editMode){history=JSON.parse(editConfig.history||'[]');currentSlug=editConfig.slug;for(const msg of history){if(msg.role==='user')addMsg(msg.content,'user');else addMsg(msg.content,'bot')}addMsg(`Страница «${editConfig.title}» открыта. Что изменить?`,'bot');document.getElementById('inp').placeholder='Например: сделай стиль темнее';return}
