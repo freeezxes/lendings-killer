@@ -1,0 +1,44 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+    - name: Add Server to Known Hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy with rsync
+      run: |
+        rsync -avz --delete \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='__pycache__' \
+          --exclude='*.pyc' \
+          --exclude='generated_sites/' \
+          --exclude='lendings.db' \
+          --exclude='static/uploads/' \
+          --exclude='costs.json' \
+          --exclude='venv' \
+          --exclude='venv_playwright' \
+          ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lendings/
+
+    - name: Restart Service
+      run: |
+        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "sudo systemctl restart lendings"
