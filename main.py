@@ -2218,6 +2218,9 @@ async def chat(request: Request):
     body = await _json_body(request)
     message = str(body.get("message") or "").strip()
     raw_session_id = body.get("session_id")
+    import logging
+    logging.info(f"RECEIVED HISTORY LENGTH: {len(body.get('history', []))}")
+    logging.info(f"RECEIVED MESSAGE: {message}")
     session_id = int(raw_session_id) if str(raw_session_id or "").isdigit() else None
     if len(message) > 4000:
         return _api_error("Invalid draft payload", 400, "invalid_payload")
