@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-anthropic
 httpx
 google-auth
 requests

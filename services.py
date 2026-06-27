@@ -873,6 +873,11 @@ class AnalyticsService:
     def metrics(site_id: int) -> dict:
         # aggregate analytics events for dashboard
         with db.get_conn() as c:
+            site_row = c.execute("SELECT slug FROM sites WHERE id=?", (site_id,)).fetchone()
+            if not site_row:
+                return {"visits": 0, "clicks": {}}
+            slug = site_row["slug"]
+            
             rows = c.execute(
                 """SELECT event_type, COUNT(*) as cnt
                    FROM analytics_events
@@ -880,14 +885,53 @@ class AnalyticsService:
                    GROUP BY event_type""",
                 (site_id,),
             ).fetchall()
+            
         counts = {r["event_type"]: int(r["cnt"]) for r in rows}
+        
+        legacy_map = {
+            "whatsapp_click": "WhatsApp",
+            "telegram_click": "Telegram",
+            "instagram_click": "Instagram",
+            "phone_click": "Телефон",
+            "service_click": "Прайс",
+            "cta_click": "Действие"
+        }
+        
+        clicks = {}
+        import re
+        from pathlib import Path
+        GENERATED_DIR = Path("generated_sites")
+        html_path = GENERATED_DIR / f"{slug}.html"
+        
+        if html_path.exists():
+            html_content = html_path.read_text(encoding="utf-8")
+            matches = re.findall(r'data-track="([^"]+)"', html_content)
+            for m in matches:
+                clicks[m] = 0
+            if not matches:
+                if "wa.me" in html_content or "whatsapp" in html_content.lower():
+                    clicks["WhatsApp"] = 0
+                if "t.me" in html_content or "telegram" in html_content.lower():
+                    clicks["Telegram"] = 0
+                if "instagram.com" in html_content:
+                    clicks["Instagram"] = 0
+                clicks["Действие"] = 0
+
+        for event_type, cnt in counts.items():
+            if event_type == "page_view":
+                continue
+            
+            label = event_type
+            if event_type.startswith("click:"):
+                label = event_type.split(":", 1)[1]
+            elif event_type in legacy_map:
+                label = legacy_map[event_type]
+            
+            clicks[label] = clicks.get(label, 0) + cnt
+            
         return {
             "visits": counts.get("page_view", 0),
-            "cta_clicks": counts.get("cta_click", 0) + counts.get("service_click", 0),
-            "whatsapp_clicks": counts.get("whatsapp_click", 0),
-            "telegram_clicks": counts.get("telegram_click", 0),
-            "instagram_clicks": counts.get("instagram_click", 0),
-            "phone_clicks": counts.get("phone_click", 0),
+            "clicks": clicks,
         }
 
 
@@ -984,6 +1028,9 @@ def build_dashboard_context(user: dict) -> dict:
         site["active_campaign"] = active_campaign
         site["campaign_history_count"] = len(campaigns)
         site["needs_analytics_restore"] = site.get("analytics_status") == AnalyticsStatus.OUTDATED.value
+        if site.get("data", {}).get("analytics_purchased"):
+            site["analytics_label"] = "Подключена"
+            site["analytics_metrics"] = AnalyticsService.metrics(site["id"])
         enriched.append(site)
     user = db.get_user_by_id(user["id"]) or user
     notifications = NotificationService.for_user(user["id"])
@@ -1197,7 +1244,7 @@ def build_site_workspace_context(user: dict, site_id: int) -> dict | None:
     versions = VersionService.list_versions(user["id"], site["id"])
     analytics_metrics = (
         AnalyticsService.metrics(site["id"])
-        if site.get("analytics_status") == AnalyticsStatus.ACTIVE.value and int(site.get("promo_setup_done") or 0)
+        if site.get("data", {}).get("analytics_purchased")
         else {
             "visits": 0,
             "cta_clicks": 0,

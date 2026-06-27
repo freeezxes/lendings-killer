@@ -320,6 +320,7 @@
     <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
       <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Разработка</span><span class="balance-label-line" data-i18n="balance_dev_unit">кредиты</span></span><strong>{{ "{:,}".format(user.dev_credits or 0).replace(",", " ") }}</strong></div>
       <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_promo_kind">Продвижение</span><span class="balance-label-line" data-i18n="balance_promo_unit">кредиты</span></span><strong>{{ "{:,}".format(user.promo_credits or 0).replace(",", " ") }}</strong></div>
+      <div class="balance-pill" title="Слоты сайтов" data-i18n-title="balance_slots_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_slots_kind">Создание</span><span class="balance-label-line" data-i18n="balance_slots_unit">сайтов</span></span><strong>{{ ((user.site_slots or 0) - (user.sites_count or 0)) if ((user.site_slots or 0) - (user.sites_count or 0)) > 0 else 0 }}</strong></div>
     </div>
 
     <div class="sidebar-footer" style="margin-top: 0;">

@@ -482,12 +482,22 @@ async function openUser(uid) {
       </div>
     </div>
 
-    <div>
-      <div class="sub-title">Начислить кредиты разработки</div>
-      <div class="add-tokens-form">
-        <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
-        <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
-        <span class="add-tokens-result" id="addResult"></span>
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+      <div>
+        <div class="sub-title">Начислить кредиты разработки</div>
+        <div class="add-tokens-form">
+          <input type="number" class="add-tokens-input" id="addAmt" placeholder="100" min="1" max="9999">
+          <button class="add-tokens-btn" onclick="addTokens(${u.id})">+ Начислить</button>
+          <span class="add-tokens-result" id="addResult"></span>
+        </div>
+      </div>
+      <div>
+        <div class="sub-title">Начислить слоты на создание сайтов</div>
+        <div class="add-tokens-form">
+          <input type="number" class="add-tokens-input" id="addSlotsAmt" placeholder="1" min="1" max="99">
+          <button class="add-tokens-btn" onclick="addSlots(${u.id})">+ Начислить</button>
+          <span class="add-tokens-result" id="addSlotsResult"></span>
+        </div>
       </div>
     </div>
 
@@ -518,6 +528,20 @@ async function addTokens(uid) {
   const d = await r.json();
   if (d.ok) {
     document.getElementById('addResult').textContent = `✓ баланс: ${d.dev_credits ?? d.tokens}`;
+    loadUsers(); loadStats();
+  }
+}
+
+async function addSlots(uid) {
+  const amt = parseInt(document.getElementById('addSlotsAmt').value);
+  if (!amt || amt < 1) return;
+  const r = await fetch(`/admin/api/user/${uid}/add-slots`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({amount: amt})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('addSlotsResult').textContent = `✓ слотов: ${d.site_slots}`;
     loadUsers(); loadStats();
   }
 }

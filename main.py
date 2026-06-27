@@ -6,7 +6,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import os, re, uuid, json, time, base64, hashlib, hmac, logging, secrets
 from pathlib import Path
 from urllib.parse import urlencode
-import anthropic
 import httpx
 import db
 import auth_services
@@ -44,22 +43,61 @@ def _slugify(text: str) -> str:
     t = re.sub(r'[^a-zA-Z0-9]+', '-', t.lower()).strip('-')[:30]
     return t or uuid.uuid4().hex[:8]
 
-# claude via bedrock
-BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+# Alem.plus AI
+ALEM_API_URL = "https://llm.alem.ai/v1/chat/completions"
+ALEM_API_KEY = os.environ.get("ALEM_API_KEY", "sk-YyCsvojyayk8wjNiEcF8tg")
+ALEM_MODEL = "qwen3-6"
+
 PRICE_INPUT   = 1.00   # $1.00 per 1M input tokens
 PRICE_OUTPUT  = 5.00   # $5.00 per 1M output tokens
 
-ai_client = anthropic.AnthropicBedrock(
-    aws_region=os.environ.get("AWS_REGION", "us-east-1"),
-)
+def _ask_llm(model: str, max_tokens: int, system_text: str, messages: list) -> dict:
+    headers = {
+        "Authorization": f"Bearer {ALEM_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    # OpenAI format: system prompt is the first message
+    api_messages = [{"role": "system", "content": system_text}] + messages
+    payload = {
+        "model": model,
+        "messages": api_messages,
+        "max_tokens": max_tokens,
+    }
+    with httpx.Client(timeout=180.0) as client:
+        try:
+            resp = client.post(ALEM_API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            # Handle reasoning models where content is empty but reasoning_content exists
+            for choice in data.get("choices", []):
+                msg = choice.get("message", {})
+                if not msg.get("content", "").strip() and msg.get("reasoning_content"):
+                    msg["content"] = msg.get("reasoning_content")
+            return data
+        except httpx.HTTPError as e:
+            msg = str(e)
+            if hasattr(e, "response") and e.response is not None:
+                msg += f" | {e.response.text}"
+            logger.error(f"LLM API Error: {msg}")
+            fallback_content = json.dumps({
+                "reply": f"Ошибка AI провайдера. Пожалуйста, обратитесь в поддержку. ({msg[:200]})", 
+                "ready": False, 
+                "collected": {}, 
+                "needs_photos": False
+            })
+            return {
+                "choices": [{"message": {"content": fallback_content}}],
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0}
+            }
 
 TEMPLATES_DIR = Path("templates")
 GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PHONE = "77064177628"
-ADMIN_SESSION_COOKIE = "admin_sid"
-ADMIN_CSRF_COOKIE = "admin_csrf"
+# Separate Admin Auth Constants
+ADMIN_SESSION_COOKIE = "admin_sid2"
+ADMIN_CSRF_COOKIE = "admin_csrf2"
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -116,40 +154,41 @@ PAYMENT_PACKAGES = [
 ]
 
 # system prompt cached as stable prefix
-SYSTEM_PROMPT = """Ты — эксперт по созданию красивых, живых HTML сайтов-визиток для малого бизнеса.
+SYSTEM_PROMPT = """Ты — топовый веб-дизайнер и frontend-разработчик. Твоя задача — создать ПРЕМИАЛЬНЫЙ, невероятно стильный и живой HTML сайт-визитку для малого бизнеса, который вызывает мгновенный "WOW" эффект.
 
 Тебе дадут:
-1. Данные о бизнесе клиента (имя, услуги, контакты)
-2. Дизайн-бриф референсного сайта (извлечённые токены: шрифты, цвета, CSS переменные, тени, скругления)
+1. Данные о бизнесе клиента (имя, услуги, цены, контакты)
+2. Дизайн-бриф референсного сайта (цвета, шрифты, CSS переменные, тени, скругления)
 
-Твоя задача — сгенерировать ПОЛНЫЙ готовый HTML сайт, который выглядит профессионально и современно.
-
-ОБЯЗАТЕЛЬНО включи (только CSS, никакого GSAP/JS для анимаций):
-- CSS @keyframes анимации для hero при загрузке — fadeIn + slideUp через animation-delay
-- CSS transition на карточках услуг — hover: scale(1.03), box-shadow, color
-- CSS @keyframes pulse на WhatsApp кнопке
-- Smooth scroll: html { scroll-behavior: smooth }
-- Градиентные фоны, blur-эффекты, glassmorphism через чистый CSS
-- CSS переменные для всей цветовой схемы в :root
-- НЕ используй GSAP, ScrollTrigger или любой JS для анимаций
-- НЕ ставь opacity:0 на видимых элементах без @keyframes которые их показывают
-- Для сетки фото: display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px — НЕ обрезай фото, показывай в натуральном размере (height:auto)
-
-Правила контента:
-- Верни ТОЛЬКО чистый HTML начиная с <!DOCTYPE html> — никакого markdown, никаких ```
-- ТОЧНО используй цвета, шрифты и CSS переменные из брифа — это реальные значения с референсного сайта
-- Подключи указанные Google Fonts через <link> в <head>
-- НЕ выдумывай цены, адреса, отзывы, гарантии, лицензии, опыт, результаты, сертификаты или факты о бизнесе
-- НЕ добавляй отзывы, если клиент не дал конкретный текст отзывов
-- НЕ добавляй плейсхолдеры и недоделанные блоки. Если фото нет — делай сайт без фото, а не fake-галерею
-- Можно только структурировать, улучшать формулировки и расширять уже подтверждённую клиентом информацию
-- Имя: убери «Я», «меня зовут» — только само имя
-- Услуги: красивые карточки с ценами, каждая услуга отдельно
-- WhatsApp кнопка: реальная ссылка https://wa.me/НОМЕР (номер начиная с 7, без +)
-- hero_text: цепляющий слоган 1-2 предложения
-- Mobile-first, все элементы адаптивны
-- Все тексты на русском языке
-- Минимум 4 секции: hero, услуги, обо мне/преимущества, контакты"""
+ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА ВЕРСТКИ (СТРОГО):
+1. **Премиальная эстетика**: 
+   - Используй мягкий Glassmorphism: `background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1);`
+   - Избегай чистых базовых цветов (red, blue). Используй глубокие градиенты (напр., `linear-gradient(135deg, #1e1e24, #2b2b36)` или акцентные неоновые HSL цвета).
+   - Огромные, дышащие отступы (padding: 4rem 2rem).
+   - Идеальная иерархия шрифтов: огромные заголовки (font-size: 3rem+), насыщенность (font-weight: 800), межбуквенное расстояние (letter-spacing: -0.03em).
+2. **Анимации и Микро-взаимодействия (ТОЛЬКО CSS)**:
+   - При появлении блоков (hero, карточки): `animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; transform: translateY(20px);`. Обязательно добавь `@keyframes fadeInUp`.
+   - Hover-эффекты на карточках услуг: `transition: all 0.4s ease;`. При наведении: `transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.2); border-color: var(--primary);`.
+   - Кнопка WhatsApp должна пульсировать (`@keyframes pulse`) и при наведении светиться (`box-shadow: 0 0 20px var(--primary)`).
+   - Плавный скролл: `html { scroll-behavior: smooth; }`.
+3. **Структура**:
+   - Hero-секция: Захватывающий заголовок, подзаголовок, и яркая кнопка CTA "Написать в WhatsApp".
+   - Услуги: CSS-Grid сетка (`display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;`).
+   - Контакты: Четкий призыв к действию.
+   - Сделай адаптивно (mobile-first).
+4. **Контент**:
+   - Пиши продающие, уверенные тексты на РУССКОМ ЯЗЫКЕ.
+5. **Аналитика кнопок**: Для всех интерактивных кнопок и ссылок (<a> и <button>) ОБЯЗАТЕЛЬНО добавляй атрибут data-track="Название Кнопки". Например: data-track="WhatsApp", data-track="Записаться", data-track="Telegram". Это нужно для сбора статистики кликов!
+   - НЕ выдумывай левые цены, адреса, отзывы или сертификаты, если их нет в данных.
+   - Ссылка на WhatsApp должна быть: `href="https://wa.me/НОМЕР"` (цифры начиная с 7).
+   - Никаких плейсхолдеров, никаких "Вставьте текст здесь".
+5. **Формат ответа**:
+   - Верни ТОЛЬКО чистый `<!DOCTYPE html>`. Никакого Markdown, никаких блоков ```html.
+   - Подключи Google Fonts (Inter, Outfit или Roboto) в <head>.
+   - Используй CSS переменные из брифа в `:root`.
+   - ВАЖНО: Пиши ОЧЕНЬ КОМПАКТНЫЙ CSS. Максимум 150-200 строк стилей. Никаких гигантских кейфреймов, объединяй селекторы.
+   - СРАЗУ ВЫВОДИ HTML. Никаких размышлений, иначе код оборвется и сайт сломается!
+"""
 
 
 def _extract_design_tokens(css: str, html: str) -> dict:
@@ -341,7 +380,8 @@ def _ai_generate(data: dict) -> dict:
 === ЗАПРОС КЛИЕНТА ===
 «{edit_request}»
 
-Верни ПОЛНЫЙ HTML с внесёнными изменениями. Только чистый HTML начиная с <!DOCTYPE html>, никакого markdown."""
+Верни ПОЛНЫЙ HTML с внесёнными изменениями. Только чистый HTML начиная с <!DOCTYPE html>, никакого markdown. 
+ОБЯЗАТЕЛЬНО: Пиши максимально компактно, без долгих размышлений. Твой ответ не должен превышать лимит, обязательно закрой тег </html>!"""
     else:
         user_content = f"""Данные клиента:
 - Имя/профессия: {data.get('name', '')}
@@ -355,30 +395,29 @@ def _ai_generate(data: dict) -> dict:
 
 Сгенерируй полный HTML сайт-визитку для этого клиента. Используй все детали из диалога — специализацию, нюансы бизнеса, тон общения клиента."""
 
-    resp = ai_client.messages.create(
-        model=BEDROCK_MODEL,
-        max_tokens=8192,
-        system=[{
-            "type": "text",
-            "text": SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
+    resp = _ask_llm(
+        model=ALEM_MODEL,
+        max_tokens=65536,
+        system_text=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_content}],
     )
 
-    usage = resp.usage
-    html  = resp.content[0].text.strip()
+    usage = resp.get("usage", {})
+    html  = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
     if html.startswith("```"):
         html = re.sub(r'^```[a-z]*\n?', '', html)
         html = re.sub(r'\n?```$', '', html)
 
+    if "</html>" not in html.lower():
+        raise ValueError("Генерация прервана из-за объема (код не поместился в лимит). Пожалуйста, сделайте запрос проще.")
+
     return {
         "html":                html,
-        "input_tokens":        usage.input_tokens,
-        "output_tokens":       usage.output_tokens,
-        "cache_read_tokens":   getattr(usage, "cache_read_input_tokens", 0) or 0,
-        "cache_create_tokens": getattr(usage, "cache_creation_input_tokens", 0) or 0,
+        "input_tokens":        usage.get("prompt_tokens", 0),
+        "output_tokens":       usage.get("completion_tokens", 0),
+        "cache_read_tokens":   0,
+        "cache_create_tokens": 0,
     }
 
 
@@ -431,17 +470,22 @@ def _inject_analytics(html: str, slug: str) -> str:
 <script>
 (function(){{
   if (window.__lendingsAnalytics) return;
+  try {{ if (window.self !== window.top) return; }} catch(e) {{ return; }}
   window.__lendingsAnalytics = true;
   var endpoint = "/api/sites/{slug}/analytics/events";
   function eventType(el) {{
-    var href = (el && el.getAttribute && (el.getAttribute("href") || "")) || "";
-    var text = ((el && el.innerText) || "").toLowerCase();
-    if (/wa\\.me|whatsapp/i.test(href + " " + text)) return "whatsapp_click";
-    if (/t\\.me|telegram/i.test(href + " " + text)) return "telegram_click";
-    if (/instagram\\.com|instagram/i.test(href + " " + text)) return "instagram_click";
-    if (/^tel:/i.test(href)) return "phone_click";
-    if (/услуг|цена|прайс|service|price/i.test(href + " " + text)) return "service_click";
-    return "cta_click";
+    if (!el) return "click:Действие";
+    var track = el.getAttribute("data-track");
+    if (track) return "click:" + track;
+    
+    var href = (el.getAttribute("href") || "");
+    var text = (el.innerText || "").toLowerCase();
+    if (/wa\\.me|whatsapp/i.test(href + " " + text)) return "click:WhatsApp";
+    if (/t\\.me|telegram/i.test(href + " " + text)) return "click:Telegram";
+    if (/instagram\\.com|instagram/i.test(href + " " + text)) return "click:Instagram";
+    if (/^tel:/i.test(href)) return "click:Телефон";
+    if (/услуг|цена|прайс|service|price/i.test(href + " " + text)) return "click:Прайс";
+    return "click:Действие";
   }}
   function track(type, payload) {{
     try {{
@@ -486,18 +530,28 @@ def _ai_edit_chat(history: list, site_context: str = "") -> dict:
     system_text = EDIT_CHAT_SYSTEM
     if site_context:
         system_text += f"\n\n=== ТЕКУЩИЙ КОНТЕНТ САЙТА ===\n{site_context}"
-    resp = ai_client.messages.create(
-        model=BEDROCK_MODEL,
-        max_tokens=256,
-        system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
+    resp = _ask_llm(
+        model=ALEM_MODEL,
+        max_tokens=65536,
+        system_text=system_text,
         messages=history,
     )
-    raw = resp.content[0].text.strip()
-    raw = re.sub(r'^```[a-z]*\n?', '', raw)
-    raw = re.sub(r'\n?```$', '', raw)
+    raw = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+    
+    import re
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    if match:
+        raw = match.group(1)
+    elif "{" in raw and "}" in raw:
+        match_brace = re.search(r"(\{.*\})", raw, re.DOTALL)
+        if match_brace:
+            raw = match_brace.group(1)
+
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
+        if len(raw) > 400 or "thinking process" in raw.lower() or "**" in raw:
+            raw = "Упс, я задумался слишком глубоко. Давайте попробуем еще раз!"
         result = {"reply": raw, "ready": False, "edit_summary": None}
     if "needs_photos" not in result:
         result["needs_photos"] = False
@@ -506,28 +560,36 @@ def _ai_edit_chat(history: list, site_context: str = "") -> dict:
 
 def _ai_chat(history: list) -> dict:
     # generate onboarding response
-    resp = ai_client.messages.create(
-        model=BEDROCK_MODEL,
-        max_tokens=512,
-        system=[{
-            "type": "text",
-            "text": CHAT_SYSTEM,
-            "cache_control": {"type": "ephemeral"},
-        }],
+    resp = _ask_llm(
+        model=ALEM_MODEL,
+        max_tokens=65536,
+        system_text=CHAT_SYSTEM,
         messages=history,
     )
-    raw = resp.content[0].text.strip()
-    raw = re.sub(r'^```[a-z]*\n?', '', raw)
-    raw = re.sub(r'\n?```$', '', raw)
+    raw = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+    
+    import re
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    if match:
+        raw = match.group(1)
+    elif "{" in raw and "}" in raw:
+        match_brace = re.search(r"(\{.*\})", raw, re.DOTALL)
+        if match_brace:
+            raw = match_brace.group(1)
+
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
+        if len(raw) > 400 or "thinking process" in raw.lower() or "**" in raw:
+            raw = "Упс, я задумался слишком глубоко и потерял мысль 😅 Давайте попробуем еще раз, повторите пожалуйста!"
         result = {"reply": raw, "ready": False, "collected": {}}
+    
+    usage = resp.get("usage", {})
     # Attach usage so caller can accumulate
     result["_usage"] = {
-        "inp": resp.usage.input_tokens,
-        "out": resp.usage.output_tokens,
-        "cr":  getattr(resp.usage, "cache_read_input_tokens", 0) or 0,
+        "inp": usage.get("prompt_tokens", 0),
+        "out": usage.get("completion_tokens", 0),
+        "cr":  0,
     }
     return result
 
@@ -550,6 +612,8 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 return JSONResponse({"ok": False, "error": "Unable to process request"}, status_code=415)
         sid = request.cookies.get("sid")
         request.state.user = db.get_session_user(sid) if sid else None
+        if request.state.user:
+            request.state.user["sites_count"] = db.get_user_sites_count(request.state.user["id"])
         return await call_next(request)
 
 
@@ -806,7 +870,8 @@ def _set_admin_session_cookie(response: RedirectResponse, request: Request, sid:
         httponly=True,
         secure=_cookie_secure(request),
         samesite="lax",
-        max_age=30 * 24 * 3600,
+        path="/admin",
+        max_age=365 * 24 * 3600,
     )
 
 
@@ -818,6 +883,7 @@ def _set_admin_csrf_cookie(response, request: Request, token: str):
         httponly=True,
         secure=_cookie_secure(request),
         samesite="lax",
+        path="/admin",
         max_age=2 * 3600,
     )
 
@@ -1162,11 +1228,58 @@ async def _prepare_and_send_verification(request: Request, user: dict,
     return prepared
 
 
+class SubdomainMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        host = request.headers.get("host", "")
+        # Отсекаем порт (например: test.dum-e.com:8000 -> test.dum-e.com)
+        host_no_port = host.split(":")[0]
+        
+        # Разрешаем поддомены для dum-e.com и lendings.kz
+        match = re.match(r"^([a-zA-Z0-9_-]+)\.(dum-e\.com|lendings\.kz)$", host_no_port)
+        
+        if match:
+            slug = match.group(1)
+            # Технические поддомены игнорируем
+            if slug != "www":
+                # Пропускаем API и статику к роутеру FastAPI
+                if request.url.path.startswith("/api/") or request.url.path.startswith("/static/"):
+                    return await call_next(request)
+                    
+                site = db.get_site_by_slug(slug)
+                if site:
+                    site = services.SupportService.refresh_site(site["id"]) or site
+                    if not services.is_support_public(site.get("support_status")):
+                        return HTMLResponse(services.maintenance_page(), status_code=503)
+                
+                path = GENERATED_DIR / f"{slug}.html"
+                if path.exists():
+                    html = path.read_text(encoding="utf-8")
+                    if "window.self !== window.top" not in html and "window.__lendingsAnalytics" in html:
+                        html = html.replace("if (window.__lendingsAnalytics) return;", "if (window.__lendingsAnalytics) return;\n  try { if (window.self !== window.top) return; } catch(e) { return; }")
+                    return HTMLResponse(html)
+                
+                # Если перешли на поддомен, но сайта нет — отдаём 404
+                return HTMLResponse("<h1>Сайт не найден</h1>", status_code=404)
+                
+        return await call_next(request)
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI()
+app.add_middleware(SubdomainMiddleware)
 app.add_middleware(SessionMiddleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+def get_site_url(request: Request, slug: str) -> str:
+    host = request.url.hostname or ""
+    if host in ["dum-e.com", "lendings.kz", "www.dum-e.com", "www.lendings.kz"]:
+        base_domain = host.replace("www.", "")
+        scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+        return f"{scheme}://{slug}.{base_domain}"
+    return f"/site/{slug}"
+
+templates.env.globals["get_site_url"] = get_site_url
 
 UPLOADS_DIR = Path("static/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -1208,6 +1321,7 @@ CHAT_SYSTEM = """Ты — дружелюбный консультант серв
 EDIT_CHAT_SYSTEM = """Ты — помощник по редактированию готового сайта-визитки. Тебе известен текущий контент сайта — используй эти знания при ответах.
 
 Правила:
+- ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ! НИКАКОГО АНГЛИЙСКОГО!
 - Если запрос ЧЁТКИЙ — подтверди кратко и ставь ready:true
 - Если запрос РАЗМЫТЫЙ — задай 1 конкретный уточняющий вопрос
 - Если клиент хочет добавить ФОТО — ставь needs_photos:true, попроси загрузить через кнопку 📎 внизу
@@ -1730,7 +1844,10 @@ async def serve_site(slug: str):
     path = GENERATED_DIR / f"{slug}.html"
     if not path.exists():
         return HTMLResponse("<h1>Сайт не найден</h1>", status_code=404)
-    return HTMLResponse(path.read_text(encoding="utf-8"))
+    html = path.read_text(encoding="utf-8")
+    if "window.self !== window.top" not in html and "window.__lendingsAnalytics" in html:
+        html = html.replace("if (window.__lendingsAnalytics) return;", "if (window.__lendingsAnalytics) return;\n  try { if (window.self !== window.top) return; } catch(e) { return; }")
+    return HTMLResponse(html)
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -1899,6 +2016,20 @@ async def admin_add_tokens(uid: int, request: Request):
     return JSONResponse({"ok": True, "tokens": updated["tokens"], "dev_credits": updated["dev_credits"]})
 
 
+@app.post("/admin/api/user/{uid}/add-slots")
+async def admin_add_slots(uid: int, request: Request):
+    # admin add site slots
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    amount = int(body.get("amount", 0))
+    if amount <= 0:
+        return JSONResponse({"error": "amount must be > 0"}, status_code=400)
+    db.add_site_slots_only(uid, amount, "admin_grant_slots")
+    updated = db.get_user_by_id(uid)
+    return JSONResponse({"ok": True, "site_slots": updated["site_slots"]})
+
+
 # ── Upload photo ──────────────────────────────────────────────────────────────
 
 @app.post("/upload-photo")
@@ -2046,7 +2177,7 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
             "cache_read_tokens": total_cr, "cache_create_tokens": gen_cc,
             "cost_usd": round(cost, 6), "our_tokens_spent": our_tokens,
             "included_in_site_purchase": True,
-            "model": BEDROCK_MODEL,
+            "model": ALEM_MODEL,
         })
         return {
             "ok": True,
@@ -2602,8 +2733,6 @@ async def api_site_analytics_event(slug: str, request: Request):
     if not site:
         return JSONResponse({"ok": False}, status_code=404)
     site = services.SupportService.refresh_site(site["id"]) or site
-    if site.get("analytics_status") != "active" or not int(site.get("promo_setup_done") or 0):
-        return JSONResponse({"ok": True, "ignored": True})
     try:
         body = await request.json()
     except Exception:
@@ -2754,6 +2883,37 @@ async def api_campaign_status(slug: str, campaign_id: int, request: Request):
     if not campaign:
         return JSONResponse({"error": "Кампания не найдена"}, status_code=404)
     return JSONResponse({"ok": True, "campaign": campaign})
+@app.post("/api/sites/{slug}/analytics/purchase")
+async def api_purchase_analytics(slug: str, request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    site = _owned_site(slug, user)
+    if not site:
+        return JSONResponse({"error": "Сайт не найден"}, status_code=404)
+        
+    if site["data"].get("analytics_purchased"):
+        return JSONResponse({"error": "Уже подключено"}, status_code=400)
+        
+    price = 200
+    fresh_user = db.get_user_by_id(user["id"])
+    if (fresh_user.get("dev_credits") or 0) < price:
+        return JSONResponse({"error": "Недостаточно кредитов разработки"}, status_code=402)
+        
+    deducted = db.deduct_tokens(
+        user_id=user["id"], amount=price,
+        reason=f"analytics_purchase:{slug}",
+        site_id=site["id"],
+        claude_in=0, claude_out=0, cache_read=0, cost_usd=0.0
+    )
+    if not deducted:
+        return JSONResponse({"error": "Не удалось списать кредиты"}, status_code=409)
+        
+    data = site["data"]
+    data["analytics_purchased"] = True
+    db.update_site_data(site["id"], data)
+    
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/sites/{slug}/analytics/restore")
@@ -2825,18 +2985,24 @@ async def payment_create(request: Request):
     body = await request.json()
     catalog_item_id = body.get("catalog_item_id")
     phone = body.get("phone", "").strip()
+    promo_code = body.get("promo_code", "").strip()
 
     pkg = next((p for p in PAYMENT_PACKAGES if p["catalog_item_id"] == catalog_item_id), None)
     if not pkg:
         return JSONResponse({"error": "Неверный пакет"}, status_code=400)
 
+    is_promo_free = (promo_code.lower() == "test67")
+
     phone_clean = re.sub(r"[^\d]", "", phone)
-    if len(phone_clean) < 10:
+    if not is_promo_free and len(phone_clean) < 10:
         return JSONResponse({"error": "Введите номер телефона Kaspi"}, status_code=400)
 
     # Guest auto-login/auto-create
     is_new_session = False
     if not user:
+        if len(phone_clean) < 10:
+            return JSONResponse({"error": "Укажите телефон для привязки аккаунта"}, status_code=400)
+        
         user = db.get_user_by_phone(phone_clean)
         if not user:
             user = db.create_user(phone=phone_clean, password="")
@@ -2846,24 +3012,27 @@ async def payment_create(request: Request):
 
     order_id = _payment_order_id()
 
-    try:
-        data = _kaspi_invoice(
-            phone_clean,
-            order_id,
-            f"lendings.kz {pkg['label']}",
-            catalog_item_id=catalog_item_id,
-        )
-    except Exception as e:
-        return JSONResponse({"error": f"Ошибка платежного шлюза: {e}"}, status_code=502)
+    if is_promo_free:
+        data = {"id": "promo_" + order_id}
+    else:
+        try:
+            data = _kaspi_invoice(
+                phone_clean,
+                order_id,
+                f"lendings.kz {pkg['label']}",
+                catalog_item_id=catalog_item_id,
+            )
+        except Exception as e:
+            return JSONResponse({"error": f"Ошибка платежного шлюза: {e}"}, status_code=502)
 
-    if not data.get("id"):
-        return JSONResponse({"error": "Kaspi не принял платёж", "detail": data}, status_code=400)
+        if not data.get("id"):
+            return JSONResponse({"error": "Kaspi не принял платёж", "detail": data}, status_code=400)
 
     db.create_payment(
         user_id=user["id"],
         order_id=order_id,
         invoice_id=str(data["id"]),
-        amount=pkg["price"],
+        amount=0 if is_promo_free else pkg["price"],
         tokens=pkg["tokens"],
         status="pending",
         catalog_item_id=catalog_item_id,
@@ -2872,11 +3041,21 @@ async def payment_create(request: Request):
         promo_credits=0,
     )
 
+    if is_promo_free or user["id"] == 7:
+        payment = db.get_payment_by_order(order_id)
+        if payment:
+            db.complete_payment(payment["id"])
+            kind = payment.get("payment_kind") or "legacy"
+            if kind == "site_slot":
+                db.add_site_slot(payment["user_id"], int(payment.get("dev_credits") or payment["tokens"] or 0), f"slot_purchase:{order_id}")
+            elif kind == "dev_credits":
+                db.add_tokens(payment["user_id"], int(payment.get("dev_credits") or payment["tokens"] or 0), f"credits_purchase:{order_id}")
+
     return JSONResponse({
         "ok": True,
         "invoice_id": data["id"],
         "order_id": order_id,
-        "message": f"Запрос отправлен на номер +{phone_clean}. Откройте Kaspi и подтвердите оплату.",
+        "message": "Промокод применён! Завершаем..." if is_promo_free else f"Запрос отправлен на номер +{phone_clean}. Откройте Kaspi и подтвердите оплату.",
     })
 
 

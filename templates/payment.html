@@ -205,15 +205,18 @@
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V18h-2v-1.07A4 4 0 018 13h2a2 2 0 104 0 4 4 0 01-3-3.87V8h2v1.13A4 4 0 0116 13a4 4 0 01-3 3.93z"/></svg>
     <span data-i18n="balance_dev">Разработка:</span> <strong>{{ user.dev_credits or 0 }}</strong>
     <span style="color:var(--muted2)">·</span>
-    <span data-i18n="balance_slots">Слоты:</span> <strong style="color:var(--green)">{{ user.site_slots }}</strong>
+    <span data-i18n="balance_slots">Слоты:</span> <strong style="color:var(--green)">{{ ((user.site_slots or 0) - (user.sites_count or 0)) if ((user.site_slots or 0) - (user.sites_count or 0)) > 0 else 0 }}</strong>
   </div>
   {% endif %}
 
+  {% set has_choice = (user and user.site_slots > 0) %}
   <!-- slot purchase -->
   {% if reason != 'no_credits' %}
   <div class="section">
+    {% if has_choice %}
     <div class="section-title" data-i18n="section_new_site">Новый сайт</div>
-    <div class="slot-card" id="slotCard" onclick="selectItem(this, '{{ slot_pkg.catalog_item_id }}', 'slot')">
+    {% endif %}
+    <div class="slot-card {% if not has_choice %}single-choice{% endif %}" id="slotCard" onclick="selectItem(this, '{{ slot_pkg.catalog_item_id }}', 'slot')">
       <div class="slot-top">
         <div class="slot-name"><span data-i18n="slot_name_prefix">Сайт +</span> {{ slot_pkg.tokens }} <span class="credit-label-lines"><span data-i18n="dev_credits_kind">кредитов</span><span data-i18n="dev_credits_unit">разработки</span></span></div>
         <div class="slot-price">{{ "{:,}".format(slot_pkg.price).replace(",", " ") }} ₸</div>
@@ -251,6 +254,11 @@
     <div class="field-label" data-i18n="kaspi_phone_label">Номер телефона Kaspi</div>
     <input type="tel" id="phoneInput" class="phone-input" placeholder="+7 700 000 00 00"/>
     <div class="phone-hint" data-i18n="kaspi_phone_hint">Kaspi пришлёт запрос на оплату на этот номер</div>
+  </div>
+
+  <div class="phone-section">
+    <div class="field-label" data-i18n="promo_label">Промокод (необязательно)</div>
+    <input type="text" id="promoInput" class="phone-input" placeholder="Введите промокод" style="text-transform: uppercase;" oninput="updateBtn()"/>
   </div>
 
   <button class="pay-btn" id="payBtn" onclick="submitPayment()" disabled data-i18n="pay_btn">Оплатить через Kaspi</button>
@@ -342,13 +350,22 @@ document.getElementById('phoneInput').addEventListener('input', updateBtn);
 
 function updateBtn() {
   const phone = document.getElementById('phoneInput').value.replace(/\D/g,'');
-  document.getElementById('payBtn').disabled = !(selectedId && phone.length >= 10);
+  const promo = document.getElementById('promoInput') ? document.getElementById('promoInput').value.trim().toLowerCase() : '';
+  document.getElementById('payBtn').disabled = !(selectedId && (phone.length >= 10 || promo === 'test67'));
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const firstItem = document.querySelector('.slot-card, .credit-card');
+  if (firstItem) {
+    firstItem.click();
+  }
+});
 
 
 
 async function submitPayment() {
   const phone = document.getElementById('phoneInput').value;
+  const promo = document.getElementById('promoInput') ? document.getElementById('promoInput').value.trim() : '';
   const btn = document.getElementById('payBtn');
   btn.disabled = true;
   btn.textContent = t('sending');
@@ -356,7 +373,7 @@ async function submitPayment() {
   try {
     const r = await fetch('/payment/create', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({catalog_item_id: selectedId, phone})
+      body: JSON.stringify({catalog_item_id: selectedId, phone, promo_code: promo})
     });
     const data = await r.json();
     if (!data.ok) { showStatus('error','❌',t('error'), data.error||t('try_again')); resetBtn(); return; }

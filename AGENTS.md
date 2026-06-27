@@ -4,6 +4,13 @@
 
 ---
 
+## Главные правила
+После внедрения в продакшн необходимо проверить работу фич внедренных в проект, их работоспособность и отсутствие ошибок. Для этого необходимо создать тестовых пользователей и проверить работу фич от их имени. Если будут обнаружены ошибки, то необходимо их исправить.
+
+Например, если внедряешь платежную систему необходимо проверить работу платежной системы от имени тестовых пользователей ровно до того момента пока не нужен будет human in loop, при случаях где невозможно сделать без человека необходимо попросить, чтобы человек это сделал.
+
+
+
 ## Что это
 
 AI SaaS для создания сайтов-визиток. Малый бизнес (барберы, мастера маникюра, репетиторы, массажисты) отвечает на вопросы в чате — через 30–60 секунд получает готовый HTML-сайт с красивым дизайном, адаптированным под их нишу.
@@ -16,19 +23,21 @@ AI SaaS для создания сайтов-визиток. Малый бизн
 
 ```
 FastAPI (main.py)
-    ├── SessionMiddleware  — cookie-based auth (sid)
+    ├── SessionMiddleware  — cookie-based auth (sid), инжектит `sites_count`
     ├── /chat              — AI-онбординг + генерация сайта
     ├── /site/{slug}/edit  — AI-редактирование готового сайта
-    ├── /payment/*         — Kaspi Pay через kaspi-pos прокси
-    └── /admin/*           — внутренняя аналитика
+    ├── /payment/*         — Kaspi Pay (с поддержкой промокодов)
+    └── /admin/*           — внутренняя админка
 
 db.py — SQLite (синхронный, sqlite3)
-    ├── users, sites, sessions, token_log, payments
+    ├── Основные таблицы: users, sites, sessions, payments
+    ├── Балансы: dev_credit_log, promo_credit_log
+    ├── Фичи: site_versions, support_invoices, promotion_setups, analytics_events
 
-AI: Anthropic Bedrock Haiku 4.5
+AI: Alem.plus (Qwen 3.6)
     ├── CHAT_SYSTEM      — онбординг-диалог (JSON-ответы, ready:bool)
     ├── EDIT_CHAT_SYSTEM — диалог правок (JSON-ответы, ready:bool)
-    └── SYSTEM_PROMPT    — генерация HTML (кешируется как ephemeral)
+    └── SYSTEM_PROMPT    — генерация HTML
 ```
 
 ---
@@ -43,8 +52,8 @@ lendings-killer/
 │   ├── landing.html     # Публичный лендинг
 │   ├── auth.html        # Вход / регистрация
 │   ├── index.html       # Чат-онбординг (create page)
-│   ├── dashboard.html   # Личный кабинет
-│   ├── profile.html     # Профиль + история токенов
+│   ├── dashboard.html   # Личный кабинет, баланс слотов
+│   ├── profile.html     # Профиль + история балансов
 │   ├── payment.html     # Страница оплаты
 │   ├── admin.html       # Админка
 │   ├── site_1/2/3.html  # Референс-шаблоны (не используются в прод)
@@ -61,65 +70,85 @@ lendings-killer/
 
 ## База данных
 
+В базе используется множество таблиц. Основные:
+
 ```sql
 -- Пользователи
 users (
-    id            INTEGER PRIMARY KEY,
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
     phone         TEXT UNIQUE,       -- только цифры, нормализован при регистрации
-    password      TEXT,              -- bcrypt hash (NULL для Google OAuth пользователей)
-    name          TEXT,
-    email         TEXT,              -- из Google профиля
+    password      TEXT,              -- старый формат
+    password_hash TEXT,              -- bcrypt hash (NULL для Google OAuth)
+    email         TEXT UNIQUE,       -- из Google профиля или при регистрации
+    email_verified INTEGER DEFAULT 0,
     google_id     TEXT UNIQUE,       -- sub из Google ID token
-    auth_provider TEXT,              -- 'local' или 'google'
+    auth_provider TEXT DEFAULT 'local', -- 'local' или 'google'
     avatar_url    TEXT,              -- picture из Google профиля
-    tokens        INTEGER DEFAULT 0, -- кредиты для генерации/правок
-    site_slots    INTEGER DEFAULT 0, -- сколько сайтов может создать
-    created       TEXT
+    name          TEXT,
+    tokens        INTEGER DEFAULT 0, -- legacy
+    dev_credits   INTEGER DEFAULT 0, -- кредиты на разработку (правки/генерация)
+    promo_credits INTEGER DEFAULT 0, -- кредиты на продвижение (AI-реклама)
+    site_slots    INTEGER DEFAULT 0, -- сколько всего сайтов может создать (лимит)
+    created/created_at/updated_at TEXT,
+    last_login_at TEXT
 )
 
 -- Сайты
 sites (
-    id          INTEGER PRIMARY KEY,
-    user_id     INTEGER,
-    slug        TEXT UNIQUE,       -- URL-slug, транслитерирован из имени клиента
-    title       TEXT,              -- имя/профессия клиента
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    slug        TEXT UNIQUE NOT NULL, -- URL-slug, транслитерирован из имени
+    title       TEXT,
     data        TEXT,              -- JSON: name, services, city, vibe, photo_urls, chat_history
     html_path   TEXT,              -- путь к generated_sites/<slug>.html
-    tokens_used INTEGER,
-    chat_in/out INTEGER,           -- токены разговора с AI
-    gen_in/out  INTEGER,           -- токены генерации HTML
-    cache_read  INTEGER,
-    cost_usd    REAL,
-    created/updated TEXT
-)
-
--- Лог токенов (дебет/кредит)
-token_log (
-    id, user_id, site_id,
-    delta       INTEGER,           -- отрицательный при списании
-    reason      TEXT,              -- "site_generate:slug", "admin_grant", "slot_purchase:order_id"
-    claude_in, claude_out, cache_read INTEGER,
-    cost_usd    REAL,
-    ts          TEXT
-)
-
--- Платежи (Kaspi)
-payments (
-    id, user_id,
-    order_id        TEXT UNIQUE,   -- lendings-XXXXXXXXXXXX
-    invoice_id      TEXT,          -- ID от kaspi-pos
-    amount          INTEGER,       -- в тенге
-    tokens          INTEGER,       -- сколько кредитов зачислить
-    catalog_item_id TEXT,          -- ID товара в Kaspi каталоге
-    status          TEXT,          -- pending / paid / payment.failed / payment.expired
+    tokens_used INTEGER DEFAULT 0,
+    support_paid_until TEXT,
+    support_status TEXT DEFAULT 'active',
+    promo_status TEXT DEFAULT 'not_configured',
+    analytics_status TEXT DEFAULT 'unavailable',
+    promo_setup_done INTEGER DEFAULT 0,
+    chat_in/chat_out INTEGER DEFAULT 0,
+    gen_in/gen_out   INTEGER DEFAULT 0,
+    cache_read  INTEGER DEFAULT 0,
+    cost_usd    REAL DEFAULT 0,
     created/updated TEXT
 )
 
 -- Сессии
 sessions (
-    id      TEXT PRIMARY KEY,      -- uuid4 hex
-    user_id INTEGER,
-    expires TEXT                   -- +1 год от создания
+    id       TEXT PRIMARY KEY,
+    user_id  INTEGER NOT NULL REFERENCES users(id),
+    expires  TEXT NOT NULL
+)
+
+-- Платежи (Kaspi / Promo)
+payments (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    order_id   TEXT UNIQUE NOT NULL,
+    invoice_id TEXT,
+    amount     INTEGER NOT NULL,
+    tokens     INTEGER NOT NULL, -- legacy
+    payment_kind TEXT DEFAULT 'legacy',
+    promo_credits INTEGER DEFAULT 0,
+    dev_credits INTEGER DEFAULT 0,
+    site_id    INTEGER REFERENCES sites(id),
+    support_invoice_id INTEGER,
+    status     TEXT DEFAULT 'pending',
+    created/updated TEXT
+)
+
+-- Логи кредитов
+dev_credit_log (
+    id, user_id, site_id, delta, reason, claude_in, claude_out, cache_read, cost_usd, balance_after, created
+)
+promo_credit_log (
+    id, user_id, site_id, delta, reason, balance_after, created
+)
+
+-- Версии сайтов (бэкапы при редактировании)
+site_versions (
+    id, site_id, version_no, html, data, reason, created
 )
 ```
 
@@ -128,172 +157,57 @@ sessions (
 ## AI-пайплайн
 
 ### 1. Онбординг (чат до генерации)
-
 **Эндпоинт:** `POST /chat`
 
-AI (`CHAT_SYSTEM`) собирает 4 поля через диалог:
-- `name` — имя и профессия
-- `services` — услуги с ценами
-- `city` — город + контакт (WhatsApp/Telegram)
-- `vibe` — стиль или URL референс-сайта
-
-Каждый ответ AI — валидный JSON:
-```json
-{
-  "reply": "Понял! А услуги с ценами есть?",
-  "ready": false,
-  "collected": {"name": "Айгуль, маникюр", "services": null, "city": null, "vibe": null},
-  "_usage": {"inp": 310, "out": 45, "cr": 280}
-}
-```
-
+AI (`CHAT_SYSTEM`) собирает 4 поля через диалог (`name`, `services`, `city`, `vibe`).
 Когда `ready: true` — сервер сразу запускает `_ai_generate()`.
 
 ### 2. Дизайн-бриф с URL
-
-Если `vibe` — это URL: `_fetch_url()` скачивает HTML/CSS сайта, вытаскивает токены:
-- CSS-переменные (`--primary-color: #...`)
-- Цвета, шрифты, `border-radius`, `box-shadow`, Google Fonts URLs
-
-Бриф передаётся в промпт генерации — Claude точно воспроизводит стилистику референса.
+Если `vibe` — это URL: `_fetch_url()` скачивает HTML/CSS сайта, вытаскивает токены (цвета, шрифты, CSS-переменные). Бриф передаётся в промпт генерации.
 
 ### 3. Генерация HTML
-
 **Функция:** `_ai_generate(data)`
-
-- Модель: `claude-haiku-4-5-20251001-v1:0` через Bedrock
-- `max_tokens: 8192`
-- `SYSTEM_PROMPT` кешируется (`cache_control: ephemeral`) — экономия ~90% на повторных вызовах
-- Результат: полный `<!DOCTYPE html>` сайт, сохраняется в `generated_sites/<slug>.html`
+- Модель: `qwen3-6` через Alem.plus
+- Результат: полный `<!DOCTYPE html>` сайт, сохраняется в `generated_sites/<slug>.html`.
 
 ### 4. Редактирование сайта
-
 **Эндпоинт:** `POST /site/{slug}/edit`
-
 Двухшаговый процесс:
-1. `_ai_edit_chat()` — уточняет запрос (может вернуть `needs_photos: true` если нужны фото)
-2. Когда `ready: true` — `_ai_generate()` с `edit_request` + `prev_html_full` (патчит существующий HTML)
+1. `_ai_edit_chat()` — уточняет запрос.
+2. Когда `ready: true` — `_ai_generate()` с `edit_request` + `prev_html_full`.
+- Перед каждым успешным редактированием сохраняется копия в `site_versions`. Возможен откат версий.
 
 ---
 
-## Платёжная система
+## Платёжная система и Балансы
 
 **Через kaspi-pos** на сервере `92.38.49.113:4001` (astana-gb-project).
+Разделены `dev_credits` (для генерации и правок) и `promo_credits` (для AI-рекламы).  
+Помимо покупок через Kaspi, реализована система промокодов (например, `test67`), которая позволяет обойти оплату и начислить кредиты/слоты бесплатно.
 
-### Пакеты
+**Отображение слотов:**
+В интерфейсе слоты отображаются как **доступный остаток** (`user.site_slots - user.sites_count`), а не общий лимит. Это реализовано через функцию `get_user_sites_count(uid)` и `SessionMiddleware`, которая автоматически добавляет `sites_count` в объект `request.state.user`.
 
-| catalog_item_id        | Тип     | Цена   | Слоты | Кредиты |
-|------------------------|---------|--------|-------|---------|
-| 17785986704184106      | slot    | 5 000₸ | +1    | +1 000  |
-| 17785986704186047      | credits | 990₸   | 0     | +500    |
-| 17785986704193557      | credits | 2 490₸ | 0     | +1 500  |
+**Токены и стоимость:**
+1K qwen tokens = 1 dev_credit.
+Кеш-скидки: cache_read (10% от input price), cache_create (125% от input price).
 
-**Слот** — право создать ещё один сайт + кредиты на правки.  
-**Кредиты** — только кредиты, без нового слота.
-
-### Поток оплаты
-
-1. `POST /payment/create` — создаёт инвойс в kaspi-pos, сохраняет `pending` в payments
-2. Клиент подтверждает в приложении Kaspi на телефоне
-3. Kaspi-pos посылает webhook `POST /payment/webhook` с HMAC-подписью (`X-Apipay-Signature: sha256=<hex>`)
-4. При `payment.success`:
-   - `type=slot` → `db.add_site_slot()` — +1 слот + кредиты
-   - `type=credits` → `db.add_tokens()` — только кредиты
-5. `GET /payment/status/{order_id}` — полинг статуса с фронта
-
-**KASPI_WH_SECRET:** `b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474edf0`  
-**KASPI_API_KEY:** `lendings-kaspi-key`
-
----
-
-## Токены и стоимость
-
-```python
-PRICE_INPUT  = $1.00 / 1M tokens
-PRICE_OUTPUT = $5.00 / 1M tokens
-
-# Конвертация: 1K claude tokens = 1 наш кредит
-our_credits = max(1, round((input_tokens + output_tokens) / 1_000))
-
-# Кеш-скидки:
-# cache_read:   10% от input price
-# cache_create: 125% от input price
-```
-
-Новый пользователь получает **0 кредитов** при регистрации — сразу редиректится на оплату (`/payment?reason=welcome`).
-
----
-
-## Роуты
-
-| Метод  | URL                          | Auth | Описание                                      |
-|--------|------------------------------|------|-----------------------------------------------|
-| GET    | `/`                          | —    | Публичный лендинг                             |
-| GET    | `/auth`                      | —    | Страница входа/регистрации                    |
-| POST   | `/auth/register`             | —    | Регистрация (phone + password + name)         |
-| POST   | `/auth/login`                | —    | Вход                                          |
-| GET    | `/auth/google`               | —    | Старт Google OAuth (redirect to Google)       |
-| GET    | `/auth/google/callback`      | —    | Callback Google OAuth                         |
-| POST   | `/auth/logout`               | ✓    | Удаляет сессию, чистит cookie                 |
-| GET    | `/create`                    | ✓+слот | Чат-онбординг (создать/редактировать сайт)  |
-| GET    | `/dashboard`                 | ✓+слот | Список сайтов пользователя                  |
-| GET    | `/profile`                   | ✓    | Профиль + лог токенов                         |
-| POST   | `/profile/update`            | ✓    | Обновить имя                                  |
-| GET    | `/site/{slug}`               | —    | Показать сгенерированный сайт                 |
-| POST   | `/site/{slug}/edit`          | ✓    | Редактировать сайт через чат                  |
-| POST   | `/site/{slug}/delete`        | ✓    | Удалить сайт и HTML-файл                      |
-| GET    | `/start`                     | ✓    | Начало чата (приветствие)                     |
-| POST   | `/chat`                      | ✓    | Шаг онбординга / запуск генерации             |
-| POST   | `/upload-photo`              | —    | Загрузка фото (→ `static/uploads/`)           |
-| GET    | `/payment`                   | ✓    | Страница покупки пакета                       |
-| POST   | `/payment/create`            | ✓    | Создать инвойс Kaspi                          |
-| GET    | `/payment/status/{order_id}` | ✓    | Статус оплаты                                 |
-| POST   | `/payment/webhook`           | HMAC | Webhook от kaspi-pos                          |
-| GET    | `/admin`                     | admin| Админ-панель                                  |
-| GET    | `/admin/api/stats`           | admin| Статистика (users, sites, costs, payments)    |
-| GET    | `/admin/api/users`           | admin| Список пользователей                          |
-| GET    | `/admin/api/user/{uid}`      | admin| Детали пользователя + сайты + лог             |
-| POST   | `/admin/api/user/{uid}/add-tokens` | admin | Начислить токены вручную             |
-
-**Admin phone:** `77064177628`
+Новый пользователь получает **0 dev_credits** при регистрации и редиректится на оплату (`/payment?reason=welcome`).
 
 ---
 
 ## Сервер и деплой
 
 ### Параметры сервера
-
 | Параметр     | Значение                                       |
 |-------------|------------------------------------------------|
 | IP          | `92.38.48.227`                                 |
 | Домен       | `dum-e.com`                                    |
 | SSH         | `ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227` |
 | App dir     | `/opt/lendings/`                               |
-| Venv        | `/opt/lendings/venv/`                          |
-| Port        | `127.0.0.1:8002` (за nginx)                    |
 | Systemd     | `lendings.service`                             |
-| Nginx conf  | `/etc/nginx/sites-available/dum-e.conf`        |
-| DB          | `/opt/lendings/lendings.db`                    |
-| Uploads     | `/opt/lendings/static/uploads/`                |
-| Sites       | `/opt/lendings/generated_sites/`               |
-
-### Переменные окружения (в systemd unit)
-
-```ini
-Environment=AWS_BEARER_TOKEN_BEDROCK=<base64-token>   # истекает, нужно обновлять
-Environment=AWS_REGION=us-east-1
-```
-
-При ошибке `AuthenticationException` от Bedrock — обновить токен:
-```bash
-ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227
-sudo nano /etc/systemd/system/lendings.service
-# Обновить AWS_BEARER_TOKEN_BEDROCK
-sudo systemctl daemon-reload && sudo systemctl restart lendings
-```
 
 ### Деплой (локалка → прод)
-
 ```bash
 rsync -av \
   --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
@@ -305,86 +219,35 @@ rsync -av \
 ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo systemctl restart lendings"
 ```
 
-### Управление сервисом
-
-```bash
-# Логи live
-ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo journalctl -u lendings -f"
-
-# Статус
-ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo systemctl status lendings"
-
-# Рестарт
-ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo systemctl restart lendings"
-```
-
 ---
 
-## Локальный запуск
+## Тестирование UI (Playwright)
 
-```bash
-cd ~/Documents/GitHub/lendings-killer
-python -m venv venv && source venv/bin/activate
-pip install fastapi uvicorn anthropic httpx pillow bcrypt jinja2 python-multipart aiofiles
+Для автоматического и надежного тестирования веб-интерфейса и бизнес-логики агентам рекомендуется использовать **Playwright**.
 
-export AWS_BEARER_TOKEN_BEDROCK=<token>
-export AWS_REGION=us-east-1
-
-uvicorn main:app --reload --port 8002
-# → http://localhost:8002
-```
-
----
-
-## Auth
-
-- Cookie `sid` (httponly, samesite=lax, 1 год)
-- Middleware `SessionMiddleware` вешает `request.state.user` на каждый запрос
-- `_require_paid(user)` — редиректит на `/payment` если нет слотов
-- Пароли — bcrypt
-
-### Google OAuth 2.0
-
-Опциональный вход через Google. Включается если заданы env vars:
-```ini
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=https://dum-e.com/auth/google/callback
-```
-Если переменные не заданы — кнопка Google не показывается, телефон/пароль работает как обычно.
-
-Поведение при входе:
-- Новый Google пользователь → `auth_provider='google'`, `password=NULL`, `tokens=0`
-- Если `google_id` уже есть → создаётся новая сессия
-- Если есть локальный пользователь с таким же подтверждённым email → привязывается к нему без перезаписи пароля
-- Если `google_id` и email указывают на разных пользователей → `account_conflict`
-
----
-
-## Генерация slug
-
+### Инструкция для AI-агента
+1. **Виртуальное окружение**: В проекте (из-за системных ограничений) используется локальное окружение `venv_playwright`.
+   Перед работой активируйте его: `source venv_playwright/bin/activate`.
+2. **Написание тестов**: Пишите скрипты на Python с использованием синхронного API (`playwright.sync_api`).
+3. **Запуск**: Выполняйте скрипты через терминал, например: `source venv_playwright/bin/activate && python test_playwright.py`.
+4. **Пример базового скрипта**:
 ```python
-# Кириллица → латиница → only [a-z0-9-] → max 30 chars
-slug = _slugify("Айгуль, мастер маникюра")
-# → "aygul"
+from playwright.sync_api import sync_playwright
+
+def test_example():
+    with sync_playwright() as p:
+        # headless=True для запуска без графического окна в терминале
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto("http://localhost:8000") # Замените на нужный URL
+        
+        # Пример взаимодействия:
+        # page.fill("input[name='email']", "test@example.com")
+        # page.click("text=Отправить")
+        
+        print(f"Title: {page.title()}")
+        browser.close()
+
+if __name__ == "__main__":
+    test_example()
 ```
-
-Если slug занят другим пользователем — добавляется `uuid4().hex[:4]`.
-
----
-
-## Загрузка фото
-
-`POST /upload-photo`:
-- Pillow ресайзит до `900×900`, конвертирует в JPEG quality=82
-- Сохраняет как `/static/uploads/<uuid12>.jpg`
-- Возвращает `{"url": "/static/uploads/...", "size": N}`
-- URL вставляется напрямую в HTML через `<img src="...">` (не base64)
-
----
-
-## Связанные проекты
-
-- **kaspi-pos** (`92.38.49.113:4001`) — платёжный прокси, общий с astana-gb-project
-- **astana-gb-project** — живёт на том же kaspi-pos, другой `external_order_id` префикс
-- **NUdatingbot** — на том же VPS `92.38.48.227`, другой systemd unit и порт

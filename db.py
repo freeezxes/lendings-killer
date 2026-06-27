@@ -875,6 +875,13 @@ def add_tokens(user_id: int, amount: int, reason: str):
             (user_id, amount, reason, balance, legacy.lastrowid),
         )
 
+def add_site_slots_only(user_id: int, amount: int, reason: str):
+    # explicitly add site slots (admin)
+    with get_conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        c.execute("UPDATE users SET site_slots=site_slots+? WHERE id=?", (amount, user_id))
+        c.execute("INSERT INTO token_log (user_id,delta,reason) VALUES (?,?,?)", (user_id, 0, reason))
+
 def add_site_slot(user_id: int, credits: int, reason: str):
     # give user +1 site slot and credits
     with get_conn() as c:
@@ -949,6 +956,12 @@ def get_user_sites(user_id: int) -> list:
             d["data"] = json.loads(d["data"] or "{}")
             result.append(d)
         return result
+
+def get_user_sites_count(user_id: int) -> int:
+    # retrieve site count for user
+    with get_conn() as c:
+        row = c.execute("SELECT COUNT(*) FROM sites WHERE user_id=?", (user_id,)).fetchone()
+        return row[0] if row else 0
 
 def update_site_html(site_id: int, html_path: str, tokens_used: int):
     # update site html
@@ -1427,7 +1440,7 @@ def mark_admin_login(admin_id: int):
 def create_admin_session(admin_id: int) -> str:
     # create separate admin session
     sid = secrets.token_urlsafe(32)
-    expires = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    expires = (datetime.utcnow() + timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as c:
         c.execute(
             "INSERT INTO admin_sessions (id, admin_id, expires) VALUES (?,?,?)",

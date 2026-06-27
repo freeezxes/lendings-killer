@@ -6,3 +6,9 @@ costs.json
 generated_sites/
 static/uploads/
 .env
+*.png
+test_*.py
+scratch*.py
+maks.html
+test_script.html
+venv_playwright/

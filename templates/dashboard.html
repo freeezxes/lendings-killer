@@ -2170,239 +2170,7 @@
       animation-delay: 0.3s;
     }
 
-    /* Premium Stacked Onboarding Draft Tabs */
-    .draft-tabs-bar {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      margin: 0 16px;
-      padding: 10px 8px 0;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-      height: 50px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: none;
-      z-index: 10;
-    }
-
-    .draft-tabs-bar::-webkit-scrollbar {
-      display: none;
-    }
-
-    @keyframes tabEnter {
-      0% {
-        opacity: 0;
-        transform: translateY(14px) scale(0.82);
-      }
-
-      60% {
-        opacity: 1;
-        transform: translateY(-3px) scale(1.04);
-      }
-
-      100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
-    @keyframes tabExit {
-      0% {
-        opacity: 1;
-        max-width: 200px;
-        padding-left: 16px;
-        padding-right: 16px;
-        margin-right: 0;
-        border-width: 1px;
-      }
-
-      45% {
-        opacity: 0.4;
-        max-width: 130px;
-        padding-left: 16px;
-        padding-right: 16px;
-        margin-right: 0;
-        border-width: 1px;
-      }
-
-      100% {
-        opacity: 0;
-        max-width: 0;
-        padding-left: 0;
-        padding-right: 0;
-        margin-right: -4px;
-        border-width: 0;
-      }
-    }
-
-    .draft-tab {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px 10px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-radius: 12px 12px 0 0;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-        background 0.3s ease,
-        color 0.3s ease,
-        box-shadow 0.3s ease,
-        border-color 0.3s ease;
-      transform-origin: bottom center;
-      user-select: none;
-      box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.03);
-    }
-
-    .draft-tab>span {
-      white-space: nowrap;
-      overflow: hidden;
-      min-width: 0;
-      flex-shrink: 1;
-      max-width: 126px;
-      text-overflow: ellipsis;
-    }
-
-    .draft-tab.dragging {
-      opacity: .35;
-      transform: scale(.96) translateY(3px);
-    }
-
-    .draft-tab.drag-over {
-      border-color: rgba(124, 92, 255, .55);
-      box-shadow: 0 -7px 22px rgba(124, 92, 255, .16);
-    }
-
-    .draft-title-input {
-      width: 78px;
-      max-width: 78px;
-      height: 17px;
-      border: 1px solid rgba(79, 109, 245, .36);
-      border-radius: 5px;
-      padding: 0 4px;
-      background: rgba(79, 109, 245, .08);
-      color: #314dd2;
-      font: inherit;
-      font-size: .66rem;
-      font-weight: 600;
-      outline: none;
-      line-height: 17px;
-      box-shadow: inset 0 0 0 1px rgba(79, 109, 245, .04);
-      flex: 0 0 78px;
-    }
-
-    .draft-tab:has(.draft-title-input) {
-      gap: 5px;
-      padding-left: 12px;
-      padding-right: 10px;
-    }
-
-    [data-theme="dark"] .draft-title-input {
-      background: rgba(139, 92, 246, .10);
-      color: rgba(238, 232, 255, .95);
-      border-color: rgba(139, 92, 246, .58);
-      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, .06);
-    }
-
-    .draft-tab--enter {
-      animation: tabEnter 0.42s cubic-bezier(0.175, 0.885, 0.32, 1.15) both;
-    }
-
-    .draft-tab--exit {
-      animation: tabExit 0.32s ease-out forwards;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    [data-theme="dark"] .draft-tab:not(.active) {
-      background: rgba(255, 255, 255, 0.02);
-      border-color: rgba(255, 255, 255, 0.06);
-      color: rgba(255, 255, 255, 0.45);
-      box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    [data-theme="light"] .draft-tab:not(.active) {
-      background: #f3f4f6;
-      border-color: #e5e7eb;
-      color: #6b7280;
-      box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .draft-tab:hover {
-      color: var(--text);
-      transform: translateY(-2px);
-      z-index: 5;
-    }
-
-    [data-theme="dark"] .draft-tab:not(.active):hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    [data-theme="light"] .draft-tab:not(.active):hover {
-      background: #e5e7eb;
-      color: #1f2937;
-    }
-
-    .draft-tab.active {
-      z-index: 10;
-      font-weight: 600;
-      transform: scale(1.04) translateY(1px);
-    }
-
-    [data-theme="dark"] .draft-tab.active {
-      background: var(--surface);
-      border-color: rgba(124, 92, 255, 0.4) rgba(255, 255, 255, 0.1) transparent rgba(255, 255, 255, 0.1);
-      color: var(--accent);
-      border-top: 2px solid var(--accent);
-      box-shadow: 0 -6px 20px rgba(124, 92, 255, 0.18), 0 4px 0 var(--surface);
-    }
-
-    [data-theme="light"] .draft-tab.active {
-      background: var(--surface);
-      border-color: var(--accent) #e5e7eb transparent #e5e7eb;
-      color: var(--accent);
-      border-top: 2px solid var(--accent);
-      box-shadow: 0 -6px 15px rgba(124, 92, 255, 0.1), 0 4px 0 var(--surface);
-    }
-
-    .draft-tab:not(.active) {
-      opacity: 0.65;
-      transform: scale(0.95) translateY(2px);
-    }
-
-    .new-draft-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      margin-left: 6px;
-      margin-bottom: 8px;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      font-size: 1.15rem;
-      flex-shrink: 0;
-      opacity: 0.55;
-    }
-
-    .new-draft-btn:hover {
-      color: var(--accent);
-      opacity: 1;
-      transform: scale(1.15) rotate(90deg);
-    }
+    
 
     .close-tab-btn {
       width: 14px;
@@ -2460,13 +2228,26 @@
         <span class="pill info"><span class="dot"></span>{{ site.promotion_label }}</span>
         <span class="pill"><span class="dot"></span>{{ site.analytics_label }}</span>
       </div>
+      {% if site.data.get('analytics_purchased') and site.analytics_metrics %}
+      <div class="kv" style="margin-top: 15px; margin-bottom: 5px; gap: 10px; flex-wrap: wrap;">
+        <div class="stat">
+          <div class="stat-num" style="font-size: 16px;">{{ site.analytics_metrics.visits }}</div>
+          <div class="stat-lbl" style="font-size: 10px;">визитов</div>
+        </div>
+        {% for label, count in site.analytics_metrics.clicks.items() %}
+        <div class="stat">
+          <div class="stat-num" style="font-size: 16px;">{{ count }}</div>
+          <div class="stat-lbl" style="font-size: 10px;">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
       <div class="muted">Обновлено: {{ site.updated[:16] }}</div>
       <div class="card-actions">
-        <a class="soft" href="/dashboard/sites/{{ site.id }}">Workspace</a>
-        <a class="soft" href="/site/{{ site.slug }}" target="_blank">Open</a>
+        <a class="soft" href="{{ get_site_url(request, site.slug) }}" target="_blank">Open</a>
         <a class="soft {{ 'disabled' if not site.support_operational else '' }}"
-          href="/dashboard/sites/{{ site.id }}">Edit</a>
-        <button class="soft" onclick="copyLink('/site/{{ site.slug }}')">Copy</button>
+          href="/dashboard/sites/{{ site.id }}">Workspace</a>
+        <button class="soft" onclick="copyLink('{{ get_site_url(request, site.slug) }}')">Copy</button>
       </div>
     </div>
   </article>
@@ -2510,7 +2291,7 @@
             </span>
             <span data-i18n="nav_dashboard">Dashboard</span>
           </a>
-          <a href="/dashboard/create" class="{{ 'active' if dashboard_view == 'create' else '' }}">
+          <a href="/dashboard/create?new=1" class="{{ 'active' if dashboard_view == 'create' else '' }}">
             <span class="nav-ico">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
@@ -2543,6 +2324,9 @@
               data-i18n="balance_promo_kind">Продвижение</span><span class="balance-label-line"
               data-i18n="balance_promo_unit">кредиты</span></span><strong>{{ "{:,}".format(user.promo_credits or
             0).replace(",", " ") }}</strong></div>
+        <div class="balance-pill" title="Слоты сайтов" data-i18n-title="balance_slots_title"><span
+            class="balance-label"><span class="balance-label-line" data-i18n="balance_slots_kind">Создание</span><span
+              class="balance-label-line" data-i18n="balance_slots_unit">сайтов</span></span><strong>{{ ((user.site_slots or 0) - (user.sites_count or 0)) if ((user.site_slots or 0) - (user.sites_count or 0)) > 0 else 0 }}</strong></div>
       </div>
 
       <div class="sidebar-footer" style="margin-top: 0;">
@@ -2584,7 +2368,7 @@
         </div>
         <div class="top-actions">
           {% if dashboard_view != 'create' %}
-          <a class="btn" href="/dashboard/create">＋ Create Page</a>
+          <a class="btn" href="/dashboard/create?new=1">＋ Create Page</a>
           {% endif %}
         </div>
       </header>
@@ -2714,7 +2498,7 @@
               </div>
             </div>
             {% if not edit_site %}
-            <div class="draft-tabs-bar" id="draftTabsBar"></div>
+            
             {% endif %}
             <div class="create-chat-log" id="chat"></div>
             <div class="create-input-area" id="inputArea">
@@ -2770,13 +2554,13 @@
                   <h2>Overview</h2>
                   <div class="muted">Публичная страница, поддержка, продвижение и аналитика.</div>
                 </div>
-                <div class="card-actions"><a class="soft" href="/site/{{ selected_site.slug }}" target="_blank">Open
-                    Site</a><button class="soft" onclick="copyLink('/site/{{ selected_site.slug }}')">Copy
+                <div class="card-actions"><a class="soft" href="{{ get_site_url(request, selected_site.slug) }}" target="_blank">Open
+                    Site</a><button class="soft" onclick="copyLink('{{ get_site_url(request, selected_site.slug) }}')">Copy
                     Link</button><button class="soft"
-                    onclick="shareSite('/site/{{ selected_site.slug }}')">Share</button></div>
+                    onclick="shareSite('{{ get_site_url(request, selected_site.slug) }}')">Share</button></div>
               </div>
               <div class="url-row">
-                <div class="url">{{ request.base_url|string|trim('/') }}/site/{{ selected_site.slug }}</div>
+                <div class="url">{{ get_site_url(request, selected_site.slug) }}</div>
               </div>
               <iframe class="preview-frame" src="/site/{{ selected_site.slug }}"
                 title="{{ selected_site.title }}"></iframe>
@@ -2807,10 +2591,21 @@
                 <div class="chat-log" id="siteEditLog">
                   <div class="msg bot">Что улучшим на этой странице?</div>
                 </div>
-                <div class="chat-form">
-                  <textarea id="siteEditInput"
-                    placeholder="Например: добавь отзывы и сделай кнопку записи заметнее"></textarea>
-                  <button class="btn" onclick="sendSiteEdit('{{ selected_site.slug }}')">Send</button>
+                <div class="chat-form" style="display: flex; flex-direction: column;">
+                  <div class="create-photos" id="siteEditPhotos"></div>
+                  <div style="display: flex; gap: 8px; width: 100%; align-items: flex-end;">
+                    <label class="create-photo-btn" id="siteEditPhotoBtn" title="Добавить фото" style="flex-shrink: 0;">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <input type="file" id="siteEditPhotoInput" accept="image/*" multiple hidden onchange="handleSiteEditPhotos(this)">
+                    </label>
+                    <textarea id="siteEditInput" style="flex: 1; border-radius: 12px;"
+                      placeholder="Например: добавь отзывы и сделай кнопку записи заметнее"></textarea>
+                    <button class="btn" style="flex-shrink: 0;" onclick="sendSiteEdit('{{ selected_site.slug }}')">Send</button>
+                  </div>
                 </div>
               </div>
               <div class="suggestions">
@@ -2826,34 +2621,23 @@
 
             <div class="panel block">
               <h2>Analytics</h2>
-              {% if selected_site.analytics_status in ['blocked','unavailable'] %}
-              <p class="muted">Аналитика появится после настройки продвижения и активной поддержки.</p>
-              {% elif selected_site.needs_analytics_restore %}
-              <p class="muted">Страница изменилась. Восстановите аналитику перед новым запуском продвижения.</p>
-              <button class="btn warn" style="margin-top:10px"
-                onclick="restoreAnalytics('{{ selected_site.slug }}')">Restore analytics</button>
+              {% if not selected_site.data.get('analytics_purchased') %}
+              <div class="empty-state">
+                <p class="muted">Аналитика пока отключена. Подключите её за 200 кредитов разработки, чтобы видеть статистику посещений и кликов.</p>
+                <button class="btn primary" style="margin-top:10px" onclick="purchaseAnalytics('{{ selected_site.slug }}')">Подключить (200 кредитов)</button>
+              </div>
               {% else %}
-              <div class="kv">
+              <div class="kv" style="flex-wrap: wrap;">
                 <div class="stat">
                   <div class="stat-num">{{ analytics_metrics.visits }}</div>
-                  <div class="stat-lbl">visits</div>
+                  <div class="stat-lbl">визитов</div>
                 </div>
+                {% for label, count in analytics_metrics.clicks.items() %}
                 <div class="stat">
-                  <div class="stat-num">{{ analytics_metrics.cta_clicks }}</div>
-                  <div class="stat-lbl">CTA clicks</div>
+                  <div class="stat-num">{{ count }}</div>
+                  <div class="stat-lbl">{{ label }}</div>
                 </div>
-                <div class="stat">
-                  <div class="stat-num">{{ analytics_metrics.whatsapp_clicks }}</div>
-                  <div class="stat-lbl">WhatsApp clicks</div>
-                </div>
-                <div class="stat">
-                  <div class="stat-num">{{ analytics_metrics.telegram_clicks }}</div>
-                  <div class="stat-lbl">Telegram clicks</div>
-                </div>
-                <div class="stat">
-                  <div class="stat-num">{{ analytics_metrics.instagram_clicks }}</div>
-                  <div class="stat-lbl">Instagram clicks</div>
-                </div>
+                {% endfor %}
               </div>
               {% endif %}
             </div>
@@ -3040,6 +2824,7 @@
   <script>
     const PROMO_TENGE = {{ promo_credit_tenge }};
     let siteEditHistory = [];
+    let siteEditPhotoUrls = [];
     function toast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2800) }
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show') }
     function toggleNotifications() { document.getElementById('notifications').classList.toggle('show') }
@@ -3051,6 +2836,14 @@
 
     function pollPayment(orderId, okMessage) { let attempts = 0; const timer = setInterval(async () => { attempts++; if (attempts > 60) { clearInterval(timer); toast('Время ожидания оплаты истекло'); return } try { const r = await fetch(`/payment/status/${orderId}`); const d = await r.json(); if (d.status === 'paid') { clearInterval(timer); toast(okMessage || 'Оплата прошла'); setTimeout(() => location.reload(), 900) } else if (d.status === 'payment.failed' || d.status === 'payment.expired') { clearInterval(timer); toast('Платёж не прошёл') } } catch (e) { } }, 5000) }
     async function restoreAnalytics(slug) { try { await postJson(`/api/sites/${slug}/analytics/restore`); toast('Аналитика восстановлена'); setTimeout(() => location.reload(), 700) } catch (e) { toast(e.message) } }
+    async function purchaseAnalytics(slug) {
+      if (!confirm('Подключить аналитику за 200 кредитов разработки?')) return;
+      try {
+        await postJson(`/api/sites/${slug}/analytics/purchase`);
+        toast('Аналитика подключена!');
+        setTimeout(() => location.reload(), 700);
+      } catch (e) { toast(e.message); }
+    }
     async function paySupport(slug) { const phone = prompt('Номер телефона Kaspi') || ''; try { const data = await postJson(`/api/sites/${slug}/support/pay`, { phone }); toast('Запрос отправлен в Kaspi'); pollPayment(data.order_id, 'Поддержка оплачена') } catch (e) { toast(e.message) } }
     async function purchasePromoCredits(credits) { const phone = prompt('Номер телефона Kaspi') || ''; try { const data = await postJson('/api/billing/promo-credits/purchase', { credits, phone }); toast('Запрос отправлен в Kaspi'); pollPayment(data.order_id, `+${data.credits} кредитов продвижения зачислено`) } catch (e) { toast(e.message) } }
     let currentPromoAmount = {{ promo_min_purchase }};
@@ -3070,7 +2863,60 @@
     async function restoreVersion(slug, id) { if (!confirm('Восстановить эту версию? Это спишет кредиты разработки.')) return; try { await postJson(`/api/sites/${slug}/versions/${id}/restore`); toast('Версия восстановлена'); setTimeout(() => location.reload(), 800) } catch (e) { toast(e.message) } }
     function appendEditMsg(text, who) { const log = document.getElementById('siteEditLog'); if (!log) return; const div = document.createElement('div'); div.className = `msg ${who}`; div.textContent = text; log.appendChild(div); log.scrollTop = log.scrollHeight }
     function useSuggestion(text) { const inp = document.getElementById('siteEditInput'); if (inp) { inp.value = text; inp.focus() } }
-    async function sendSiteEdit(slug) { const inp = document.getElementById('siteEditInput'); const text = (inp.value || '').trim(); if (!text) return; inp.value = ''; appendEditMsg(text, 'user'); appendEditMsg('Думаю над правкой...', 'bot'); try { const data = await postJson(`/site/${slug}/edit`, { message: text, edit_history: siteEditHistory, photo_urls: [] }); document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); if (data.edit_history) siteEditHistory = data.edit_history; if (!data.done) { appendEditMsg(data.message || 'Уточните деталь', 'bot'); return } appendEditMsg(`Готово. Списано ${data.tokens_spent || 0} кредитов разработки.`, 'bot'); setTimeout(() => location.reload(), 900) } catch (e) { document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); appendEditMsg(e.message, 'bot') } }
+    async function sendSiteEdit(slug) { 
+      const inp = document.getElementById('siteEditInput'); 
+      const text = (inp.value || '').trim(); 
+      if (!text && !siteEditPhotoUrls.length) return; 
+      inp.value = ''; 
+      appendEditMsg(text || 'Отправлено фото', 'user'); 
+      appendEditMsg('Думаю над правкой...', 'bot'); 
+      const sentPhotos = [...siteEditPhotoUrls];
+      siteEditPhotoUrls = [];
+      renderSiteEditPhotos();
+      try { 
+        const data = await postJson(`/site/${slug}/edit`, { message: text, edit_history: siteEditHistory, photo_urls: sentPhotos }); 
+        document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); 
+        if (data.edit_history) siteEditHistory = data.edit_history; 
+        if (!data.done) { appendEditMsg(data.message || 'Уточните деталь', 'bot'); return } 
+        appendEditMsg(`Готово. Списано ${data.tokens_spent || 0} кредитов разработки.`, 'bot'); 
+        setTimeout(() => location.reload(), 900) 
+      } catch (e) { 
+        document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); 
+        appendEditMsg(e.message, 'bot') 
+      } 
+    }
+    async function handleSiteEditPhotos(input) {
+      for (const file of Array.from(input.files || [])) {
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+          const r = await fetch('/upload-photo', { method: 'POST', body: fd });
+          const j = await r.json();
+          if (j.url) siteEditPhotoUrls.push(j.url);
+        } catch (e) {
+          toast('Ошибка загрузки фото');
+        }
+      }
+      input.value = '';
+      renderSiteEditPhotos();
+    }
+    function removeSiteEditPhoto(idx) {
+      siteEditPhotoUrls.splice(idx, 1);
+      renderSiteEditPhotos();
+    }
+    function renderSiteEditPhotos() {
+      const box = document.getElementById('siteEditPhotos');
+      if (!box) return;
+      box.innerHTML = '';
+      siteEditPhotoUrls.forEach((url, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'create-thumb-wrap';
+        wrap.innerHTML = `<img class="create-thumb" src="${url}" alt=""><button class="create-remove" onclick="removeSiteEditPhoto(${idx})">×</button>`;
+        box.appendChild(wrap);
+      });
+      const btn = document.getElementById('siteEditPhotoBtn');
+      if (btn) btn.classList.toggle('has', siteEditPhotoUrls.length > 0);
+    }
     let verifyCooldown = Number(document.getElementById('verifyResendBtn')?.dataset.cooldown || 0);
     function tickVerifyCooldown() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; if (verifyCooldown > 0) { btn.disabled = true; btn.textContent = `${verifyCooldown}с`; verifyCooldown -= 1; setTimeout(tickVerifyCooldown, 1000) } else { btn.disabled = false; btn.textContent = 'Отправить' } }
     async function resendVerification() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; btn.disabled = true; try { const r = await fetch('/auth/resend-email-verification', { method: 'POST' }); const d = await r.json(); toast(d.message || 'Письмо отправлено'); verifyCooldown = d.retry_after || 60 } catch (e) { toast('Не удалось отправить письмо'); verifyCooldown = 0 } tickVerifyCooldown() }
@@ -3608,15 +3454,6 @@
     function renderPhotos() { const box = document.getElementById('inputPhotos'); box.innerHTML = ''; photoUrls.forEach((url, idx) => { const wrap = document.createElement('div'); wrap.className = 'create-thumb-wrap'; wrap.innerHTML = `<img class="create-thumb" src="${url}" alt=""><button class="create-remove" onclick="removePhoto(${idx})">×</button>`; box.appendChild(wrap) }); document.getElementById('photoBtn').classList.toggle('has', photoUrls.length > 0); renderSteps() }
     function removePhoto(idx) { photoUrls.splice(idx, 1); renderPhotos(); autosave() }
     async function handlePhotos(input) { for (const file of Array.from(input.files || [])) { const fd = new FormData(); fd.append('file', file); try { const r = await fetch('/upload-photo', { method: 'POST', body: fd }); const j = await r.json(); if (j.url) photoUrls.push(j.url) } catch (e) { toast(t('create_upload_failed')) } } input.value = ''; renderPhotos(); autosave() }
-    let localDrafts = [];
-    let activeDraftId = '';
-    let editingDraftId = '';
-    let draggingDraftId = '';
-    const deletingDraftIds = new Set();
-    let orderSaveTimer = null;
-    const DRAFT_STORAGE_SCOPE = {{ user.id | tojson }};
-    const DRAFTS_STORAGE_KEY = `local_draft_sessions_${DRAFT_STORAGE_SCOPE}`;
-    const ACTIVE_DRAFT_STORAGE_KEY = `active_draft_id_${DRAFT_STORAGE_SCOPE}`;
 
     function apiErrorMessage(payload, fallback) {
       if (payload && payload.error && typeof payload.error === 'object') return payload.error.message || fallback;
@@ -3631,404 +3468,23 @@
         .slice(0, 16);
     }
 
-    function normalizeDraftTitleInput(value) {
-      return sanitizeDraftTitleLive(value).replace(/\s+/g, ' ').trim();
-    }
-
-    function getDraftDisplayName(draft, index) {
-      if (draft.title) return draft.title;
-      if (draft.collected && draft.collected.name) {
-        const name = draft.collected.name.trim();
-        return name.length > 14 ? name.substring(0, 12) + '...' : name;
-      }
-      return t('create_draft_tab_title', { num: index + 1 });
-    }
-
-    function renderDraftTabs() {
-      const container = document.getElementById('draftTabsBar');
-      if (!container || editMode) return;
-
-      container.innerHTML = '';
-      localDrafts.forEach((draft, idx) => {
-        const isActive = draft.id === activeDraftId;
-        const title = getDraftDisplayName(draft, idx);
-        const showClose = localDrafts.length > 1;
-
-        const tab = document.createElement('div');
-        tab.className = `draft-tab ${isActive ? 'active' : ''}`;
-        tab.dataset.draftId = draft.id;
-        tab.draggable = !editingDraftId;
-        tab.addEventListener('click', () => switchDraftTab(draft.id));
-        tab.addEventListener('dragstart', event => startDraftDrag(event, draft.id));
-        tab.addEventListener('dragover', event => overDraftDrag(event, draft.id));
-        tab.addEventListener('dragleave', () => tab.classList.remove('drag-over'));
-        tab.addEventListener('drop', event => dropDraftDrag(event, draft.id));
-        tab.addEventListener('dragend', endDraftDrag);
-
-        if (editingDraftId === draft.id) {
-          const input = document.createElement('input');
-          input.className = 'draft-title-input';
-          input.maxLength = 16;
-          input.value = draft.title || title;
-          input.addEventListener('click', event => event.stopPropagation());
-          input.addEventListener('beforeinput', event => {
-            if (!event.data) return;
-            if (sanitizeDraftTitleLive(event.data) !== event.data.normalize('NFKC')) event.preventDefault();
-          });
-          input.addEventListener('input', () => {
-            const clean = sanitizeDraftTitleLive(input.value);
-            if (input.value !== clean) input.value = clean;
-          });
-          input.addEventListener('keydown', event => {
-            if (event.key === 'Enter') saveDraftTitle(draft.id, input.value);
-            if (event.key === 'Escape') cancelDraftTitleEdit();
-          });
-          input.addEventListener('blur', () => saveDraftTitle(draft.id, input.value));
-          tab.appendChild(input);
-          requestAnimationFrame(() => { input.focus(); input.select(); });
-        } else {
-          const label = document.createElement('span');
-          label.textContent = title;
-          label.title = title;
-          label.addEventListener('dblclick', event => {
-            event.stopPropagation();
-            startDraftTitleEdit(draft.id);
-          });
-          tab.appendChild(label);
-        }
-
-        if (showClose) {
-          const close = document.createElement('button');
-          close.className = 'close-tab-btn';
-          close.type = 'button';
-          close.textContent = '×';
-          close.disabled = deletingDraftIds.has(draft.id);
-          close.addEventListener('click', event => deleteDraftTab(event, draft.id));
-          tab.appendChild(close);
-        }
-
-        container.appendChild(tab);
-      });
-
-      if (localDrafts.length < MAX_DRAFTS) {
-        const add = document.createElement('button');
-        add.className = 'new-draft-btn';
-        add.type = 'button';
-        add.title = t('create_new_draft');
-        add.textContent = '+';
-        add.addEventListener('click', addNewDraft);
-        container.appendChild(add);
-      }
-    }
-
-    function persistLocalDrafts() {
-      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(localDrafts));
-    }
-
-    function saveDraftOrderSoon() {
-      clearTimeout(orderSaveTimer);
-      orderSaveTimer = setTimeout(persistLocalDrafts, 120);
-    }
-
-    function startDraftDrag(event, id) {
-      if (editingDraftId || deletingDraftIds.has(id)) {
-        event.preventDefault();
-        return;
-      }
-      draggingDraftId = id;
-      event.dataTransfer.effectAllowed = 'move';
-      event.currentTarget.classList.add('dragging');
-    }
-
-    function overDraftDrag(event, overId) {
-      if (!draggingDraftId || draggingDraftId === overId) return;
-      event.preventDefault();
-      event.currentTarget.classList.add('drag-over');
-    }
-
-    function dropDraftDrag(event, overId) {
-      event.preventDefault();
-      document.querySelectorAll('.draft-tab.drag-over').forEach(el => el.classList.remove('drag-over'));
-      if (!draggingDraftId || draggingDraftId === overId) return;
-      const from = localDrafts.findIndex(d => d.id === draggingDraftId);
-      const to = localDrafts.findIndex(d => d.id === overId);
-      if (from === -1 || to === -1) return;
-      const [moved] = localDrafts.splice(from, 1);
-      localDrafts.splice(to, 0, moved);
-      persistLocalDrafts();
-      renderDraftTabs();
-      saveDraftOrderSoon();
-    }
-
-    function endDraftDrag() {
-      draggingDraftId = '';
-      document.querySelectorAll('.draft-tab.dragging,.draft-tab.drag-over').forEach(el => el.classList.remove('dragging', 'drag-over'));
-    }
-
-    function startDraftTitleEdit(id) {
-      if (deletingDraftIds.has(id)) return;
-      editingDraftId = id;
-      renderDraftTabs();
-    }
-
-    function cancelDraftTitleEdit() {
-      editingDraftId = '';
-      renderDraftTabs();
-    }
-
-    function saveDraftTitle(id, rawTitle) {
-      if (editingDraftId !== id) return;
-      const draft = localDrafts.find(d => d.id === id);
-      const title = normalizeDraftTitleInput(rawTitle);
-      if (!draft || !title) {
-        cancelDraftTitleEdit();
-        return;
-      }
-      draft.title = title;
-      editingDraftId = '';
-      persistLocalDrafts();
-      renderDraftTabs();
-    }
-
-    function loadDraftIntoState(id) {
-      const draft = localDrafts.find(d => d.id === id);
-      if (!draft) return;
-
-      activeDraftId = id;
-      localStorage.setItem(ACTIVE_DRAFT_STORAGE_KEY, id);
-
-      sessionId = draft.sessionId;
-      history = draft.history || [];
-      collected = draft.collected || {};
-      photoUrls = draft.photoUrls || [];
-      chatIn = draft.chatIn || 0;
-      chatOut = draft.chatOut || 0;
-      chatCr = draft.chatCr || 0;
-      onboardingStatus = draft.status || 'draft';
-      window.createSummaryRows = draft.summary || [];
-
-      const chat = document.getElementById('chat');
-      if (chat) {
-        chat.innerHTML = '';
-
-        if (history.length) {
-          for (const msg of history) {
-            addMsg(msg.content, msg.role === 'user' ? 'user' : 'bot');
-          }
-          if (onboardingStatus === 'ready') {
-            showConfirmation(window.createSummaryRows);
-          } else if (onboardingStatus === 'generating') {
-            showGeneration();
-          } else {
-            addMsg('', 'bot', 'create_continue');
-          }
-        } else {
-          addMsg('', 'bot', 'create_greeting');
-        }
-      }
-
-      renderPhotos();
-      renderSteps();
-      renderDraftTabs();
-    }
-
-    function initDraftTabs() {
-      if (editMode) return;
-
-      const stored = localStorage.getItem(DRAFTS_STORAGE_KEY);
-      const activeId = localStorage.getItem(ACTIVE_DRAFT_STORAGE_KEY);
-
-      if (stored) {
-        try {
-          localDrafts = JSON.parse(stored);
-        } catch (e) {
-          localDrafts = [];
-        }
-      }
-      if (Array.isArray(localDrafts)) {
-        localDrafts = localDrafts.slice(0, MAX_DRAFTS).map((draft, idx) => ({
-          ...draft,
-          id: String(draft.id || `draft_${Date.now()}_${idx}`),
-          title: normalizeDraftTitleInput(draft.title || '') || ''
-        }));
-        persistLocalDrafts();
-      } else {
-        localDrafts = [];
-      }
-
-      if (!localDrafts || !localDrafts.length) {
-        const initialId = 'draft_' + Date.now();
-        localDrafts = [{
-          id: initialId,
-          ...serverDraft
-        }];
-        persistLocalDrafts();
-        localStorage.setItem(ACTIVE_DRAFT_STORAGE_KEY, initialId);
-        activeDraftId = initialId;
-      } else {
-        const serverHasContent = Boolean(
-          serverDraft.sessionId &&
-          ((serverDraft.history && serverDraft.history.length) ||
-            (serverDraft.collected && Object.keys(serverDraft.collected).length) ||
-            (serverDraft.photoUrls && serverDraft.photoUrls.length))
-        );
-        const serverAlreadyStored = localDrafts.some(d => d.sessionId && d.sessionId === serverDraft.sessionId);
-        if (serverHasContent && !serverAlreadyStored && localDrafts.length < MAX_DRAFTS) {
-          const serverDraftId = 'draft_' + Date.now();
-          localDrafts.unshift({ id: serverDraftId, ...serverDraft });
-          persistLocalDrafts();
-          localStorage.setItem(ACTIVE_DRAFT_STORAGE_KEY, serverDraftId);
-          activeDraftId = serverDraftId;
-        } else {
-          const matched = localDrafts.find(d => d.id === activeId);
-          activeDraftId = matched ? activeId : localDrafts[0].id;
-        }
-      }
-
-      loadDraftIntoState(activeDraftId);
-    }
-
-    function switchDraftTab(id) {
-      if (id === activeDraftId) return;
-
-      const currentDraft = localDrafts.find(d => d.id === activeDraftId);
-      if (currentDraft) {
-        currentDraft.sessionId = sessionId;
-        currentDraft.history = history;
-        currentDraft.collected = collected;
-        currentDraft.photoUrls = photoUrls;
-        currentDraft.chatIn = chatIn;
-        currentDraft.chatOut = chatOut;
-        currentDraft.chatCr = chatCr;
-        currentDraft.status = onboardingStatus;
-        currentDraft.summary = window.createSummaryRows || [];
-      }
-
-      loadDraftIntoState(id);
-      autosave();
-    }
-
-    async function addNewDraft() {
-      if (editMode) return;
-      if (localDrafts.length >= MAX_DRAFTS) {
-        toast(t('create_draft_max_reached'));
-        return;
-      }
-
-      const newId = 'draft_' + Date.now();
-      const newDraft = {
-        id: newId,
-        sessionId: null,
-        history: [],
-        collected: {},
-        photoUrls: [],
-        chatIn: 0,
-        chatOut: 0,
-        chatCr: 0,
-        status: 'draft',
-        title: '',
-        summary: []
-      };
-
-      localDrafts.push(newDraft);
-      persistLocalDrafts();
-
-      loadDraftIntoState(newId);
-
-      // Double-rAF: outer rAF waits for DOM commit, inner waits for first paint,
-      // then forces a reflow to guarantee the animation fires even on rapid clicks.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const newTabEl = document.querySelector(`.draft-tab[data-draft-id="${newId}"]`);
-          if (newTabEl) {
-            newTabEl.classList.remove('draft-tab--enter');
-            void newTabEl.offsetWidth; // force reflow — resets animation
-            newTabEl.classList.add('draft-tab--enter');
-          }
-        });
-      });
-
-      setStatus(t('create_status_saving'));
-      try {
-        const r = await fetch('/api/onboarding/reset', { method: 'POST' });
-        const d = await r.json();
-        if (!r.ok || !d.ok) throw new Error(apiErrorMessage(d, t('create_reset_failed')));
-
-        sessionId = d.session.id;
-        newDraft.sessionId = sessionId;
-        persistLocalDrafts();
-
-        autosave();
-      } catch (e) {
-        const idx = localDrafts.findIndex(d => d.id === newId);
-        if (idx !== -1) localDrafts.splice(idx, 1);
-        persistLocalDrafts();
-        loadDraftIntoState(localDrafts[0]?.id || activeDraftId);
-        toast(e.message || t('create_reset_failed'));
-      }
-    }
-
-    async function deleteDraftTab(event, id) {
-      if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-      }
-      if (deletingDraftIds.has(id)) return;
-      const targetDraft = localDrafts.find(d => d.id === id);
-      if (!targetDraft || localDrafts.length <= 1) return;
-
-      deletingDraftIds.add(id);
-      renderDraftTabs();
-
-      // Animate the tab out first, then splice
-      const tabEl = document.querySelector(`.draft-tab[data-draft-id="${id}"]`);
-      const doDelete = () => {
-        const targetIndex = localDrafts.findIndex(d => d.id === id);
-        if (targetIndex === -1) return;
-
-        localDrafts.splice(targetIndex, 1);
-        deletingDraftIds.delete(id);
-        persistLocalDrafts();
-        saveDraftOrderSoon();
-
-        if (id === activeDraftId) {
-          if (localDrafts.length > 0) {
-            // Always go left (to the previous tab)
-            const nextActiveIdx = Math.max(targetIndex - 1, 0);
-            loadDraftIntoState(localDrafts[nextActiveIdx].id);
-            autosave();
-          } else {
-            addNewDraft();
-          }
-        } else {
-          renderDraftTabs();
-        }
-      };
-
-      if (tabEl) {
-        // If deleting the active tab: pre-light the previous tab so the active
-        // style cross-fades smoothly while the current tab exits.
-        if (id === activeDraftId) {
-          const currentIndex = localDrafts.findIndex(d => d.id === id);
-          if (currentIndex !== -1 && localDrafts.length > 1) {
-            const prevIdx = Math.max(currentIndex - 1, 0);
-            const prevId = localDrafts[prevIdx === currentIndex ? 1 : prevIdx].id;
-            const prevTabEl = document.querySelector(`.draft-tab[data-draft-id="${prevId}"]`);
-            if (prevTabEl) prevTabEl.classList.add('active');
-          }
-        }
-        tabEl.classList.remove('active');
-        tabEl.classList.add('draft-tab--exit');
-        tabEl.addEventListener('animationend', doDelete, { once: true });
-      } else {
-        doDelete();
-      }
-
-      if (targetDraft.sessionId) {
-        fetch(`/api/onboarding/session/${targetDraft.sessionId}`, { method: 'DELETE' }).catch(() => { });
-      }
-    }
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     async function autosave() {
       if (editMode) return;
 
@@ -4104,11 +3560,52 @@
       if (inputLocked) return; const inp = document.getElementById('inp'); const text = inp.value.trim(); if (!text) return; inp.value = ''; inp.style.height = 'auto'; addMsg(text, 'user'); showTyping(); if (editMode && currentSlug) { try { const r = await fetch(`/site/${currentSlug}/edit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history, edit_history: editHistory, photo_urls: photoUrls }) }); const j = await r.json(); removeTyping(); if (j.error) throw new Error(j.error); if (j.edit_history) editHistory = j.edit_history; if (!j.done) { addMsg(j.message, 'bot'); return } addMsg(t('create_edit_done'), 'bot'); setTimeout(() => window.location.href = j.workspace_url || '/dashboard', 900) } catch (e) { removeTyping(); addMsg(e.message || t('create_edit_failed'), 'bot') } return }
       try { const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId, message: text, history, photo_urls: photoUrls, chat_in: chatIn, chat_out: chatOut, chat_cr: chatCr }) }); const j = await r.json(); removeTyping(); if (!r.ok || j.error) throw new Error(apiErrorMessage(j, t('create_generic_error'))); history = j.history || history; sessionId = j.session_id || sessionId; collected = j.collected || collected; chatIn = j.chat_in ?? chatIn; chatOut = j.chat_out ?? chatOut; chatCr = j.chat_cr ?? chatCr; addMsg(j.message, 'bot'); renderSteps(); renderSummary(j.summary); if (j.confirm_required) { showConfirmation(j.summary) } else { autosave() } } catch (e) { removeTyping(); addMsg(e.message || t('create_generic_error'), 'bot') }
     }
-    async function resetDraft() { addNewDraft(); }
-    function renderCreateI18n() { renderSteps(); renderDraftTabs(); document.querySelectorAll('[data-i18n-key]').forEach(el => { el.textContent = t(el.dataset.i18nKey) }); if (document.getElementById('confirmCard')) document.getElementById('confirmCard').innerHTML = confirmationHtml(window.createSummaryRows || []); if (document.getElementById('generationBox')) document.getElementById('generationBox').innerHTML = generationHtml(); }
+    async function resetDraft() { window.location.href = '/dashboard/create?new=1'; }
+    function renderCreateI18n() { renderSteps(); document.querySelectorAll('[data-i18n-key]').forEach(el => { el.textContent = t(el.dataset.i18nKey) }); if (document.getElementById('confirmCard')) document.getElementById('confirmCard').innerHTML = confirmationHtml(window.createSummaryRows || []); if (document.getElementById('generationBox')) document.getElementById('generationBox').innerHTML = generationHtml(); }
     function loadCreateInitial() {
       renderSteps(); renderSummary(); renderPhotos(); if (editMode) { history = JSON.parse(editConfig.history || '[]'); currentSlug = editConfig.slug; for (const msg of history) { if (msg.role === 'user') addMsg(msg.content, 'user'); else addMsg(msg.content, 'bot') } addMsg(t('create_edit_opened', { title: editConfig.title }), 'bot'); document.getElementById('inp').placeholder = t('create_edit_placeholder'); return }
-      initDraftTabs();
+      
+      const isNewForced = window.location.search.includes('new=1');
+      if (isNewForced) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        sessionId = null;
+        history = [];
+        collected = {};
+        photoUrls = [];
+        chatIn = 0; chatOut = 0; chatCr = 0;
+        onboardingStatus = 'draft';
+        window.createSummaryRows = [];
+      } else {
+        sessionId = serverDraft.sessionId;
+        history = serverDraft.history || [];
+        collected = serverDraft.collected || {};
+        photoUrls = serverDraft.photoUrls || [];
+        chatIn = serverDraft.chatIn || 0;
+        chatOut = serverDraft.chatOut || 0;
+        chatCr = serverDraft.chatCr || 0;
+        onboardingStatus = serverDraft.status || 'draft';
+        window.createSummaryRows = serverDraft.summary || [];
+      }
+
+      const chat = document.getElementById('chat');
+      if (chat) {
+        chat.innerHTML = '';
+        if (history.length) {
+          for (const msg of history) {
+            addMsg(msg.content, msg.role === 'user' ? 'user' : 'bot');
+          }
+          if (onboardingStatus === 'ready') {
+            showConfirmation(window.createSummaryRows);
+          } else if (onboardingStatus === 'generating') {
+            showGeneration();
+          } else {
+            addMsg('', 'bot', 'create_continue');
+          }
+        } else {
+          addMsg('', 'bot', 'create_greeting');
+        }
+      }
+
       if (onboardingStatus === 'generating') { showGeneration(); setStatus(t('create_status_generating_retry')) }
     }
     window.createI18nReady = true;
