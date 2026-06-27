@@ -2218,9 +2218,9 @@ async def chat(request: Request):
     body = await _json_body(request)
     message = str(body.get("message") or "").strip()
     raw_session_id = body.get("session_id")
-    import logging
-    logging.info(f"RECEIVED HISTORY LENGTH: {len(body.get('history', []))}")
-    logging.info(f"RECEIVED MESSAGE: {message}")
+    with open("/tmp/chat_debug.log", "a") as f:
+        f.write(f"RECEIVED HISTORY LENGTH: {len(body.get('history', []))}\n")
+        f.write(f"RECEIVED MESSAGE: {message}\n")
     session_id = int(raw_session_id) if str(raw_session_id or "").isdigit() else None
     if len(message) > 4000:
         return _api_error("Invalid draft payload", 400, "invalid_payload")
@@ -2332,6 +2332,8 @@ async def api_onboarding_autosave(request: Request):
     if not user:
         return _api_error("Authentication required", 401, "auth_required")
     payload = await _json_body(request)
+    with open("/tmp/chat_debug.log", "a") as f:
+        f.write(f"AUTOSAVE RECEIVED HISTORY LENGTH: {len(payload.get('history', []))}\n")
     try:
         return JSONResponse({"ok": True, **services.OnboardingService.autosave(user["id"], payload)})
     except db.DraftLimitError:
