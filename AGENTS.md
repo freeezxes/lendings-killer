@@ -5,6 +5,14 @@
 ---
 
 ## Главные правила
+
+**КРИТИЧЕСКОЕ ПРАВИЛО ПО ДЕПЛОЮ:**
+Мы работаем **только** через GitHub Actions. Запрещено использовать ручные команды `rsync` или `scp` для загрузки кода на продакшен-сервер.
+**Процесс деплоя:**
+1. Вносим изменения локально.
+2. Делаем `git commit` и `git push origin main`.
+3. GitHub Actions автоматически заливает код на сервер и перезапускает сервис.
+
 После внедрения в продакшн необходимо проверить работу фич внедренных в проект, их работоспособность и отсутствие ошибок. Для этого необходимо создать тестовых пользователей и проверить работу фич от их имени. Если будут обнаружены ошибки, то необходимо их исправить.
 
 Например, если внедряешь платежную систему необходимо проверить работу платежной системы от имени тестовых пользователей ровно до того момента пока не нужен будет human in loop, при случаях где невозможно сделать без человека необходимо попросить, чтобы человек это сделал.
@@ -207,17 +215,16 @@ AI (`CHAT_SYSTEM`) собирает 4 поля через диалог (`name`, 
 | App dir     | `/opt/lendings/`                               |
 | Systemd     | `lendings.service`                             |
 
-### Деплой (локалка → прод)
-```bash
-rsync -av \
-  --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
-  --exclude='generated_sites/' --exclude='lendings.db' \
-  --exclude='static/uploads/' --exclude='costs.json' \
-  -e "ssh -i ~/.ssh/id_ed25519" \
-  ~/Documents/GitHub/lendings-killer/ deploy@92.38.48.227:/opt/lendings/
+### Деплой (CI/CD через GitHub Actions)
+Деплой полностью автоматизирован. При пуше в ветку `main` срабатывает `.github/workflows/deploy.yml`.
 
-ssh -i ~/.ssh/id_ed25519 deploy@92.38.48.227 "sudo systemctl restart lendings"
+```bash
+# Правильный способ деплоя:
+git add .
+git commit -m "Your feature description"
+git push origin main
 ```
+*Всё остальное (копирование файлов на сервер, исключение папок `generated_sites` и `lendings.db`, перезапуск `sudo systemctl restart lendings`) GitHub Actions сделает сам.*
 
 ---
 
