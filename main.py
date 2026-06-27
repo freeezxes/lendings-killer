@@ -2272,6 +2272,8 @@ async def chat(request: Request):
             chat_cr=acc_chat_cr,
         )
         presented = services.OnboardingService.present(session)
+        with open("/tmp/chat_debug.log", "a") as f:
+            f.write(f"SENDING HISTORY LENGTH: {len(history)}\n")
         return JSONResponse({
             "message":  reply,
             "history":  history,
@@ -2334,6 +2336,7 @@ async def api_onboarding_autosave(request: Request):
     payload = await _json_body(request)
     with open("/tmp/chat_debug.log", "a") as f:
         f.write(f"AUTOSAVE RECEIVED HISTORY LENGTH: {len(payload.get('history', []))}\n")
+        f.write(f"AUTOSAVE PAYLOAD: {payload}\n")
     try:
         return JSONResponse({"ok": True, **services.OnboardingService.autosave(user["id"], payload)})
     except db.DraftLimitError:
