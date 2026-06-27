@@ -412,6 +412,19 @@ def _ai_generate(data: dict) -> dict:
     if "</html>" not in html.lower():
         raise ValueError("Генерация прервана из-за объема (код не поместился в лимит). Пожалуйста, сделайте запрос проще.")
 
+    # Post-process: force AI to use the real photo URLs if it hallucinated dummy src
+    photo_urls = data.get("photo_urls", [])
+    if photo_urls:
+        for u in photo_urls:
+            if u not in html:
+                # Find the first img with a fake src (like logo.png or placeholder) and replace it
+                def repl(m):
+                    src = m.group(1)
+                    if src not in photo_urls and not src.startswith("http"):
+                        return m.group(0).replace(src, u)
+                    return m.group(0)
+                html = re.sub(r'<img\s+[^>]*src="([^"]+)"', repl, html, count=1)
+
     return {
         "html":                html,
         "input_tokens":        usage.get("prompt_tokens", 0),
