@@ -581,6 +581,9 @@ def _ai_chat(history: list) -> dict:
     )
     raw = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
     
+    with open("/tmp/chat_debug.log", "a") as f:
+        f.write(f"RAW AI OUTPUT:\n{raw}\n\n")
+
     import re
     match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if match:
