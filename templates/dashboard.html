@@ -3527,7 +3527,55 @@
     function editMore() { document.getElementById('confirmCard')?.remove(); onboardingStatus = 'draft'; lockInput(false); setStatus(t('create_status_add_more')); document.getElementById('inp').placeholder = t('create_input_placeholder_more'); renderSteps(); autosave() }
     function generationHtml() { const stages = generationStages(); return `<div class="create-gen-top"><div class="create-spinner"></div><div><div class="create-gen-title">${t('create_gen_title')}</div><div class="muted">${t('create_gen_subtitle')}</div></div></div>${stages.map((s, i) => `<div class="create-gen-stage" id="stage-${i}"><span>${i + 1}</span>${s}</div>`).join('')}` }
     function showGeneration() { lockInput(true); const chat = document.getElementById('chat'); document.getElementById('generationBox')?.remove(); const box = document.createElement('div'); box.className = 'create-generation'; box.id = 'generationBox'; box.innerHTML = generationHtml(); chat.appendChild(box); chat.scrollTop = chat.scrollHeight; let i = 0; function tick() { generationStages().forEach((_, idx) => document.getElementById(`stage-${idx}`)?.classList.toggle('active', idx <= i)); i = Math.min(i + 1, generationStages().length - 1); if (document.getElementById('generationBox')) setTimeout(tick, 1300) } tick() }
-    async function generateSite() { document.getElementById('confirmCard')?.remove(); onboardingStatus = 'generating'; showGeneration(); try { const r = await fetch('/api/onboarding/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) }); const data = await r.json(); if (!r.ok || !data.ok) throw new Error(apiErrorMessage(data, t('create_generate_failed'))); setStatus(t('create_status_ready')); window.location.href = data.workspace_url || '/dashboard/sites' } catch (e) { document.getElementById('generationBox')?.remove(); onboardingStatus = 'failed'; lockInput(false); addMsg(e.message, 'bot'); renderSteps(); autosave() } }
+    async function generateSite() { 
+      document.getElementById('confirmCard')?.remove(); 
+      onboardingStatus = 'generating'; 
+      showGeneration(); 
+      try { 
+        const r = await fetch('/api/onboarding/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) }); 
+        const data = await r.json(); 
+        if (!r.ok || !data.ok) throw new Error(apiErrorMessage(data, t('create_generate_failed'))); 
+        
+        const poll = async () => {
+          let isError = false;
+          let errMsg = '';
+          try {
+            const sr = await fetch(`/api/onboarding/status?session_id=${sessionId}`);
+            if(sr.ok) {
+               const sdata = await sr.json();
+               if(sdata.status === 'completed') {
+                 setStatus(t('create_status_ready'));
+                 window.location.href = sdata.workspace_url || '/dashboard/sites';
+                 return;
+               } else if(sdata.status === 'failed') {
+                 isError = true;
+                 errMsg = sdata.error || t('create_generate_failed');
+               }
+            }
+          } catch(err) {}
+          if(isError) {
+             document.getElementById('generationBox')?.remove();
+             onboardingStatus = 'failed';
+             lockInput(false);
+             addMsg(errMsg, 'bot');
+             renderSteps();
+             autosave();
+             return;
+          }
+          if (document.getElementById('generationBox')) {
+             setTimeout(poll, 3000);
+          }
+        };
+        poll();
+      } catch (e) { 
+        document.getElementById('generationBox')?.remove(); 
+        onboardingStatus = 'failed'; 
+        lockInput(false); 
+        addMsg(e.message, 'bot'); 
+        renderSteps(); 
+        autosave(); 
+      } 
+    }
     async function send() {
       if (inputLocked) return; const inp = document.getElementById('inp'); const text = inp.value.trim(); if (!text) return; inp.value = ''; inp.style.height = 'auto'; addMsg(text, 'user'); showTyping(); if (editMode && currentSlug) { try { const r = await fetch(`/site/${currentSlug}/edit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history, edit_history: editHistory, photo_urls: photoUrls }) }); const j = await r.json(); removeTyping(); if (j.error) throw new Error(j.error); if (j.edit_history) editHistory = j.edit_history; if (!j.done) { addMsg(j.message, 'bot'); return } addMsg(t('create_edit_done'), 'bot'); setTimeout(() => window.location.href = j.workspace_url || '/dashboard', 900) } catch (e) { removeTyping(); addMsg(e.message || t('create_edit_failed'), 'bot') } return }
       try { const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId, message: text, history, photo_urls: photoUrls, chat_in: chatIn, chat_out: chatOut, chat_cr: chatCr }) }); const j = await r.json(); removeTyping(); if (!r.ok || j.error) throw new Error(apiErrorMessage(j, t('create_generic_error'))); history = j.history || history; sessionId = j.session_id || sessionId; collected = j.collected || collected; chatIn = j.chat_in ?? chatIn; chatOut = j.chat_out ?? chatOut; chatCr = j.chat_cr ?? chatCr; addMsg(j.message, 'bot'); renderSteps(); renderSummary(j.summary); if (j.confirm_required) { showConfirmation(j.summary) } else { autosave() } } catch (e) { removeTyping(); addMsg(e.message || t('create_generic_error'), 'bot') }
