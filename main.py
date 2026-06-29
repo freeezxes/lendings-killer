@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -2398,21 +2398,65 @@ async def api_onboarding_reorder(request: Request):
     return JSONResponse({"ok": True, **services.OnboardingService.reorder(user["id"], session_ids)})
 
 
+def _background_generate_task(user_id: int, session: dict):
+    try:
+        user = db.get_user_by_id(user_id)
+        if not user:
+            return
+        # `_generate_site_from_session` handles marking the session completed/failed internally.
+        # But we must ensure it doesn't crash silently.
+        result = _generate_site_from_session(user, session)
+        if not result.get("ok"):
+            # It already logged error in _generate_site_from_session
+            pass
+    except Exception as e:
+        logger.exception("Background onboarding generation task failed")
+        db.fail_onboarding_session(session["id"], user_id, f"Внутренняя ошибка: {e}")
+
 @app.post("/api/onboarding/generate")
-async def api_onboarding_generate(request: Request):
+async def api_onboarding_generate(request: Request, background_tasks: BackgroundTasks):
     # api onboarding generate
     user = _require_auth(request)
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
     body = await request.json()
-    session = db.get_onboarding_session(int(body.get("session_id") or 0), user["id"])
+    session_id = int(body.get("session_id") or 0)
+    session = db.get_onboarding_session(session_id, user["id"])
     if not session:
         return JSONResponse({"error": "Черновик не найден"}, status_code=404)
-    if session.get("status") not in {"ready", "failed", "completed"}:
+    if session.get("status") not in {"ready", "failed", "completed", "generating"}:
         return JSONResponse({"error": "Сначала завершите ответы и подтвердите запуск."}, status_code=400)
-    result = _generate_site_from_session(user, session)
-    status_code = 200 if result.get("ok") else int(result.get("status_code") or 400)
-    return JSONResponse(result, status_code=status_code)
+    
+    if session.get("status") == "generating":
+        return JSONResponse({"ok": True, "status": "generating"})
+        
+    # Mark as generating and launch background task
+    with db.get_conn() as c:
+        c.execute("UPDATE onboarding_sessions SET status='generating' WHERE id=? AND user_id=?", (session_id, user["id"]))
+    background_tasks.add_task(_background_generate_task, user["id"], session)
+    return JSONResponse({"ok": True, "status": "generating"})
+
+@app.get("/api/onboarding/status")
+async def api_onboarding_status(request: Request, session_id: int):
+    # api onboarding status
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    session = db.get_onboarding_session(session_id, user["id"])
+    if not session:
+        return JSONResponse({"error": "Черновик не найден"}, status_code=404)
+    
+    status = session.get("status")
+    res = {"ok": True, "status": status}
+    
+    if status == "completed" and session.get("generated_site_id"):
+        site = db.get_site_by_id(session["generated_site_id"], user["id"])
+        if site:
+            res["workspace_url"] = f"/dashboard/sites/{site['id']}"
+    elif status == "failed":
+        res["error"] = session.get("error") or "Не удалось создать сайт"
+        
+    return JSONResponse(res)
 
 
 # ── Site edit ─────────────────────────────────────────────────────────────────

@@ -129,7 +129,52 @@ async function autosave(){if(editMode)return;setStatus('Сохраняю чер�
 function showConfirmation(summaryRows){status='ready';lockInput(true);renderSteps();renderSummary(summaryRows);const chat=document.getElementById('chat');const card=document.createElement('div');card.className='confirm';card.id='confirmCard';card.innerHTML=`<h3>Собрал данные. Делаю сайт?</h3><p class="muted">Проверьте краткое резюме. Если что-то не так, можно вернуться к диалогу и дописать детали.</p><div class="confirm-grid">${(summaryRows||[]).filter(r=>r.key!=='photos').map(r=>`<div class="sum-row"><div class="sum-label">${r.label}</div><div class="sum-value">${r.value||'не заполнено'}</div></div>`).join('')}<div class="sum-row"><div class="sum-label">Фото</div><div class="sum-value">${photoUrls.length} фото</div></div></div><div class="confirm-actions"><button class="btn green" onclick="generateSite()">Да, создать сайт</button><button class="ghost" onclick="editMore()">Дополнить информацию</button></div>`;chat.appendChild(card);chat.scrollTop=chat.scrollHeight}
 function editMore(){document.getElementById('confirmCard')?.remove();status='draft';lockInput(false);setStatus('Дополните информацию');document.getElementById('inp').placeholder='Что изменить или добавить?';renderSteps();autosave()}
 function showGeneration(){lockInput(true);const chat=document.getElementById('chat');const box=document.createElement('div');box.className='generation';box.id='generationBox';box.innerHTML=`<div class="gen-top"><div class="spinner"></div><div><div class="gen-title">Создаём страницу</div><div class="gen-sub">Это может занять до минуты</div></div></div>${GENERATION_STAGES.map((s,i)=>`<div class="gen-stage" id="stage-${i}"><span>${i+1}</span>${s}</div>`).join('')}`;chat.appendChild(box);chat.scrollTop=chat.scrollHeight;let i=0;function tick(){GENERATION_STAGES.forEach((_,idx)=>document.getElementById(`stage-${idx}`)?.classList.toggle('active',idx<=i));i=Math.min(i+1,GENERATION_STAGES.length-1);if(document.getElementById('generationBox'))setTimeout(tick,1300)}tick()}
-async function generateSite(){document.getElementById('confirmCard')?.remove();status='generating';showGeneration();try{const r=await fetch('/api/onboarding/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Не удалось создать сайт');setStatus('Страница готова');window.location.href=data.workspace_url||'/dashboard/sites'}catch(e){document.getElementById('generationBox')?.remove();status='failed';lockInput(false);addMsg(e.message,'bot');renderSteps();autosave()}}
+async function generateSite(){
+  document.getElementById('confirmCard')?.remove();
+  status='generating';
+  showGeneration();
+  try {
+    const r=await fetch('/api/onboarding/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});
+    const data=await r.json();
+    if(!r.ok||!data.ok) throw new Error(data.error||'Не удалось запустить создание сайта');
+    const poll = async () => {
+      let isError = false;
+      let errMsg = '';
+      try {
+        const sr = await fetch(`/api/onboarding/status?session_id=${sessionId}`);
+        if(sr.ok) {
+           const sdata = await sr.json();
+           if(sdata.status === 'completed') {
+             setStatus('Страница готова');
+             window.location.href = sdata.workspace_url || '/dashboard/sites';
+             return;
+           } else if(sdata.status === 'failed') {
+             isError = true;
+             errMsg = sdata.error || 'Ошибка при генерации сайта';
+           }
+        }
+      } catch(err) {}
+      if(isError) {
+         document.getElementById('generationBox')?.remove();
+         status = 'failed';
+         lockInput(false);
+         addMsg(errMsg, 'bot');
+         renderSteps();
+         autosave();
+         return;
+      }
+      setTimeout(poll, 3000);
+    };
+    setTimeout(poll, 3000);
+  } catch(e) {
+    document.getElementById('generationBox')?.remove();
+    status='failed';
+    lockInput(false);
+    addMsg(e.message,'bot');
+    renderSteps();
+    autosave();
+  }
+}
 async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');lockInput(true);showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});
   const j=await r.json();
   removeTyping();
