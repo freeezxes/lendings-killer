@@ -2424,7 +2424,7 @@ async def api_onboarding_generate(request: Request, background_tasks: Background
     session = db.get_onboarding_session(session_id, user["id"])
     if not session:
         return JSONResponse({"error": "Черновик не найден"}, status_code=404)
-    if session.get("status") not in {"ready", "failed", "completed", "generating"}:
+    if session.get("status") not in {"draft", "ready", "failed", "completed", "generating"}:
         return JSONResponse({"error": "Сначала завершите ответы и подтвердите запуск."}, status_code=400)
     
     if session.get("status") == "generating":
