@@ -2450,8 +2450,8 @@ async def api_onboarding_status(request: Request, session_id: int):
     res = {"ok": True, "status": status}
     
     if status == "completed" and session.get("generated_site_id"):
-        site = db.get_site_by_id(session["generated_site_id"], user["id"])
-        if site:
+        site = db.get_site_by_id(session["generated_site_id"])
+        if site and site["user_id"] == user["id"]:
             res["workspace_url"] = f"/dashboard/sites/{site['id']}"
     elif status == "failed":
         res["error"] = session.get("error") or "Не удалось создать сайт"
