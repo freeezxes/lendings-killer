@@ -1290,7 +1290,7 @@ def mark_onboarding_generating(session_id: int, user_id: int) -> bool:
         cur = c.execute(
             """UPDATE onboarding_sessions
                SET status='generating', generation_started_at=datetime('now'), error=NULL, updated=datetime('now')
-               WHERE id=? AND user_id=? AND status IN ('ready','failed')""",
+               WHERE id=? AND user_id=? AND status IN ('draft','ready','failed','generating')""",
             (session_id, user_id),
         )
         return cur.rowcount == 1
