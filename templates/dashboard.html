@@ -3488,21 +3488,6 @@
     async function autosave() {
       if (editMode) return;
 
-      const draft = localDrafts.find(d => d.id === activeDraftId);
-      if (draft) {
-        draft.sessionId = sessionId;
-        draft.history = history;
-        draft.collected = collected;
-        draft.photoUrls = photoUrls;
-        draft.chatIn = chatIn;
-        draft.chatOut = chatOut;
-        draft.chatCr = chatCr;
-        draft.status = onboardingStatus;
-        draft.summary = window.createSummaryRows || [];
-        persistLocalDrafts();
-        renderDraftTabs();
-      }
-
       setStatus(t('create_status_saving'));
       try {
         const r = await fetch('/api/onboarding/session', {
@@ -3528,22 +3513,9 @@
         if (data.session) {
           sessionId = data.session.id;
           onboardingStatus = data.session.status || onboardingStatus;
-          if (draft) {
-            draft.sessionId = sessionId;
-            draft.status = onboardingStatus;
-            persistLocalDrafts();
-          }
         }
         setStatus(t('create_status_saved'))
       } catch (e) {
-        if (e && e.code === 'draft_not_found' && draft) {
-          const idx = localDrafts.findIndex(d => d.id === draft.id);
-          if (idx !== -1 && localDrafts.length > 1) {
-            localDrafts.splice(idx, 1);
-            persistLocalDrafts();
-            loadDraftIntoState(localDrafts[Math.max(idx - 1, 0)].id);
-          }
-        }
         setStatus(t('create_status_failed'))
       }
     }
