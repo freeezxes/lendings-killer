@@ -141,7 +141,7 @@ async function generateSite(){
       let isError = false;
       let errMsg = '';
       try {
-        const sr = await fetch(`/api/onboarding/status?session_id=${sessionId}`);
+        const sr = await fetch(`/api/onboarding/status?session_id=${sessionId}&_t=${Date.now()}`);
         if(sr.ok) {
            const sdata = await sr.json();
            if(sdata.status === 'completed') {
