@@ -3102,7 +3102,7 @@ async def payment_create(request: Request):
         promo_credits=0,
     )
 
-    if is_promo_free or user["id"] == 7:
+    if is_promo_free:
         payment = db.get_payment_by_order(order_id)
         if payment:
             db.complete_payment(payment["id"])
