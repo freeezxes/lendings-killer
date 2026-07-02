@@ -139,8 +139,8 @@ async def _json_body(request: Request) -> dict:
     return body if isinstance(body, dict) else {}
 
 # kaspi pay via kaspi-pos
-KASPI_POS_URL    = "http://92.38.49.113:4001"
-KASPI_API_KEY    = "lendings-kaspi-key"
+KASPI_POS_URL    = "http://100.75.211.119:4001"
+KASPI_API_KEY    = "astanagb-kaspi-key"
 KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474edf0"
 
 # catalog item ids to token amounts
@@ -148,9 +148,9 @@ KASPI_WH_SECRET  = "b8daafada57acef22720443606cacb441bc4bd0228b6374f627a8b75d474
 # type credits = buy extra credits only
 PAYMENT_PACKAGES = [
     {"catalog_item_id": "17785986704184106", "type": "slot",    "slots": 1, "tokens": 1000, "price": 5000, "label": "1 сайт — 5 000 ₸",        "desc": "Сайт + 1 000 кредитов разработки + первый месяц поддержки"},
-    {"catalog_item_id": "17785986704186047", "type": "credits", "slots": 0, "tokens": 200,  "price": 1500, "label": "200 кредитов — 1 500 ₸",  "desc": "Кредиты разработки для AI-правок"},
-    {"catalog_item_id": "17785986704193557", "type": "credits", "slots": 0, "tokens": 500,  "price": 3000, "label": "500 кредитов — 3 000 ₸",  "desc": "Кредиты разработки для AI-правок"},
-    {"catalog_item_id": "17785986704200000", "type": "credits", "slots": 0, "tokens": 1000, "price": 5000, "label": "1 000 кредитов — 5 000 ₸", "desc": "Кредиты разработки для AI-правок"},
+    {"catalog_item_id": "1783007771095454",  "type": "credits", "slots": 0, "tokens": 200,  "price": 1500, "label": "200 кредитов — 1 500 ₸",  "desc": "Кредиты разработки для AI-правок"},
+    {"catalog_item_id": "17830077710963105", "type": "credits", "slots": 0, "tokens": 500,  "price": 3000, "label": "500 кредитов — 3 000 ₸",  "desc": "Кредиты разработки для AI-правок"},
+    {"catalog_item_id": "17830077710967368", "type": "credits", "slots": 0, "tokens": 1000, "price": 5000, "label": "1 000 кредитов — 5 000 ₸", "desc": "Кредиты разработки для AI-правок"},
 ]
 
 # system prompt cached as stable prefix
@@ -238,40 +238,31 @@ def _extract_design_tokens(css: str, html: str) -> dict:
 
 
 def _fetch_url(url: str) -> str:
-    # fetch and parse reference site css
+    # fetch reference site styles via Playwright script
+    import subprocess
+    import json
+    
     if not url.startswith("http"):
         url = "https://" + url
 
-    base = re.match(r'(https?://[^/]+)', url)
-    base_url = base.group(1) if base else url
-
     try:
-        resp = httpx.get(url, timeout=10, follow_redirects=True,
-                         headers={"User-Agent": "Mozilla/5.0"})
-        html = resp.text
-    except Exception:
+        result = subprocess.run(
+            ["venv_playwright/bin/python", "scripts/playwright_scraper.py", url],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            logger.error(f"Playwright scraper error: {result.stderr}")
+            return ""
+            
+        tokens = json.loads(result.stdout)
+        if "error" in tokens:
+            logger.error(f"Playwright scraper JSON error: {tokens['error']}")
+            return ""
+    except Exception as e:
+        logger.error(f"Failed to run playwright scraper: {e}")
         return ""
-
-    css_parts = []
-
-    for m in re.finditer(r'<style[^>]*>(.*?)</style>', html, re.DOTALL):
-        css_parts.append(m.group(1).strip())
-
-    for href in re.findall(r'href=["\']?([^"\'> ]+\.css[^"\'> ]*)', html, re.I):
-        css_url = href if href.startswith("http") else base_url + "/" + href.lstrip("/")
-        try:
-            cr = httpx.get(css_url, timeout=8, follow_redirects=True,
-                           headers={"User-Agent": "Mozilla/5.0"})
-            css_parts.append(cr.text)
-        except Exception:
-            pass
-
-    all_css = "\n".join(css_parts)
-
-    if len(all_css) < 200:
-        return ""
-
-    tokens = _extract_design_tokens(all_css, html)
 
     lines = [f"=== ДИЗАЙН-БРИФ: {url} ===\n"]
 
@@ -283,25 +274,19 @@ def _fetch_url(url: str) -> str:
     if tokens.get("fonts"):
         lines.append(f"\nШРИФТЫ: {', '.join(tokens['fonts'])}")
 
-    if tokens.get("css_variables"):
-        lines.append("\nCSS ПЕРЕМЕННЫЕ (используй в :root):")
-        for k, v in list(tokens["css_variables"].items())[:25]:
-            lines.append(f"  --{k}: {v};")
-
     if tokens.get("colors"):
-        lines.append(f"\nЦВЕТА САЙТА: {', '.join(tokens['colors'][:10])}")
+        lines.append(f"\nТЕКСТОВЫЕ ЦВЕТА САЙТА: {', '.join(tokens['colors'])}")
 
     if tokens.get("backgrounds"):
-        lines.append(f"\nФОНЫ: {'; '.join(tokens['backgrounds'][:3])}")
+        lines.append(f"\nФОНЫ САЙТА (Используй их для секций/карточек): {'; '.join(tokens['backgrounds'])}")
 
     if tokens.get("border_radius"):
-        lines.append(f"\nСКРУГЛЕНИЯ: {', '.join(tokens['border_radius'])}")
+        lines.append(f"\nСКРУГЛЕНИЯ (border-radius): {', '.join(tokens['border_radius'])}")
 
     if tokens.get("shadows"):
-        lines.append(f"\nТЕНИ: {'; '.join(tokens['shadows'])}")
+        lines.append(f"\nТЕНИ (box-shadow): {'; '.join(tokens['shadows'])}")
 
-    if tokens.get("transitions"):
-        lines.append(f"\nПЕРЕХОДЫ: {'; '.join(tokens['transitions'])}")
+    lines.append("\nВАЖНО: Создай свои CSS-переменные (--primary, --bg, --text) на основе этих реальных вычисленных цветов, чтобы сайт выглядел точно так же.")
 
     return "\n".join(lines)
 
