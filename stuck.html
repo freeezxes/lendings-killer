@@ -1,0 +1,3183 @@
+<!DOCTYPE html><html lang="ru" data-theme="light"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>lendings.kz — Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f9fbff;
+      --line: #e3e8f2;
+      --line-strong: #d5deed;
+      --text: #172033;
+      --muted: #66758c;
+      --soft: #8c98ab;
+      --brand: #4f6df5;
+      --brand-2: #21b889;
+      --warn: #e7a63a;
+      --red: #e25566;
+      --violet: #7b61ff;
+      --shadow: 0 24px 60px rgba(34, 48, 84, .10);
+      --radius: 14px;
+      --sidebar: 252px;
+      --header: 70px;
+      --bg-gradient: linear-gradient(180deg, #fff 0, #f5f7fb 52%, #eef3fb 100%);
+    }
+
+    [data-theme="dark"] {
+      --bg: #06060a;
+      --panel: rgba(15, 15, 22, 0.85);
+      --panel-soft: #0f0f16;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --soft: #64748b;
+      --brand: #8b5cf6;
+      --brand-2: #10b981;
+      --warn: #f59e0b;
+      --red: #ef4444;
+      --violet: #8b5cf6;
+      --shadow: 0 32px 100px rgba(0, 0, 0, 0.8);
+      --bg-gradient: radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+    }
+
+    .sidebar-balances {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+
+    .sidebar-balances .balance-pill {
+      width: 100%;
+      justify-content: space-between;
+      min-height: 38px;
+      font-size: .7rem;
+      line-height: 1.2;
+      padding: 7px 10px;
+      white-space: normal;
+    }
+
+    .sidebar-balances .balance-pill span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .sidebar-balances .balance-label {
+      display: grid;
+      gap: 1px;
+    }
+
+    .sidebar-balances .balance-label-line {
+      display: block;
+    }
+
+    .sidebar-balances .balance-pill strong {
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg)
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Unified smooth transitions for simultaneous theme change */
+    html,
+    body,
+    aside,
+    main,
+    header,
+    div,
+    section,
+    p,
+    h1,
+    h2,
+    h3,
+    span,
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    svg,
+    path,
+    circle,
+    rect {
+      transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+        box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar) 1fr
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 24px 18px 24px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar-footer {
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      margin-top: auto;
+    }
+
+    .profile-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      transition: background .2s;
+    }
+
+    .profile-link:hover {
+      background: var(--panel-soft);
+    }
+
+    .avatar-sm {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: .85rem;
+      font-weight: 800;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar-sm img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-info {
+      min-width: 0;
+    }
+
+    .profile-name {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lang-toggle,
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .7rem;
+      font-weight: 800;
+      transition: .2s;
+    }
+
+    .lang-toggle:hover,
+    .theme-toggle:hover {
+      border-color: var(--brand);
+      color: var(--text);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .sun {
+      display: block;
+    }
+
+    [data-theme="dark"] .sun {
+      display: none;
+    }
+
+    .moon {
+      display: none;
+    }
+
+    [data-theme="dark"] .moon {
+      display: block;
+    }
+
+
+    .brand {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .brand span {
+      color: var(--brand)
+    }
+
+    .nav {
+      margin-top: 18px;
+      display: grid;
+      gap: 6px
+    }
+
+    .nav a {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: .84rem;
+      font-weight: 700;
+      transition: .18s
+    }
+
+    .nav a:hover {
+      background: #eef3ff;
+      color: var(--text)
+    }
+
+    .nav a.active {
+      background: #eaf0ff;
+      color: var(--brand);
+      box-shadow: inset 0 0 0 1px #d9e3ff
+    }
+
+    .nav-ico {
+      width: 22px;
+      text-align: center;
+      color: inherit
+    }
+
+    .side-card {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 14px 38px rgba(34, 48, 84, .08)
+    }
+
+    .side-card b {
+      display: block;
+      font-size: .83rem;
+      margin-bottom: 5px
+    }
+
+    .side-card p {
+      font-size: .74rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 10px
+    }
+
+    .main {
+      min-width: 0
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      height: var(--header);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      z-index: 40
+    }
+
+    .mobile-menu {
+      display: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      color: var(--text)
+    }
+
+    .top-title {
+      min-width: 0
+    }
+
+    .crumb {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--soft);
+      font-weight: 800;
+      margin-bottom: 4px
+    }
+
+    .top-title h1 {
+      font-size: 1.12rem;
+      letter-spacing: -.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px
+    }
+
+    .balance-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 800
+    }
+
+    .balance-pill strong {
+      color: var(--text)
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), var(--violet));
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      overflow: hidden
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover
+    }
+
+    .icon-btn,
+    .btn,
+    .ghost,
+    .soft {
+      border: 0;
+      cursor: pointer;
+      border-radius: 12px;
+      font-weight: 800;
+      transition: .18s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      position: relative;
+      color: var(--muted)
+    }
+
+    .icon-btn:hover {
+      border-color: var(--line-strong);
+      color: var(--text);
+      transform: translateY(-1px)
+    }
+
+    .unread {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px #fff
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 0 15px;
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(79, 109, 245, .18)
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: #3959e8
+    }
+
+    .btn.green {
+      background: var(--brand-2);
+      box-shadow: 0 12px 24px rgba(33, 184, 137, .18)
+    }
+
+    .btn.warn {
+      background: var(--warn);
+      color: #2b1b00
+    }
+
+    .btn.red {
+      background: var(--red)
+    }
+
+    .ghost,
+    .soft {
+      min-height: 38px;
+      padding: 0 13px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .8rem
+    }
+
+    .ghost:hover,
+    .soft:hover {
+      border-color: var(--line-strong);
+      color: var(--text);
+      transform: translateY(-1px)
+    }
+
+    .soft {
+      background: var(--panel-soft);
+      color: var(--text)
+    }
+
+    .soft.disabled,
+    .btn:disabled,
+    .soft:disabled,
+    .ghost:disabled {
+      opacity: .45;
+      pointer-events: none;
+      transform: none
+    }
+
+    .content {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 28px 80px
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 20px
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow)
+    }
+
+    .hero-main {
+      padding: 28px;
+      overflow: hidden;
+      position: relative
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -100px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 109, 245, .18), transparent 68%);
+      pointer-events: none
+    }
+
+    .eyebrow {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--brand);
+      font-weight: 800;
+      margin-bottom: 10px
+    }
+
+    .hero h2 {
+      font-size: 1.9rem;
+      letter-spacing: -.06em;
+      line-height: 1.08;
+      max-width: 670px;
+      margin-bottom: 12px
+    }
+
+    .sub {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 660px
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 24px
+    }
+
+    .stat {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px
+    }
+
+    .stat-num {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .stat-lbl {
+      font-size: .72rem;
+      color: var(--muted);
+      line-height: 1.35;
+      margin-top: 3px
+    }
+
+    .ai-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between
+    }
+
+    .ai-orb {
+      height: 128px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #eaf0ff, #e8fbf5 55%, #fff6e6);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      margin-bottom: 14px
+    }
+
+    .ai-card b {
+      font-size: 1rem;
+      letter-spacing: -.03em
+    }
+
+    .ai-card p {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 8px 0 14px
+    }
+
+    .notice {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      background: #fff8eb;
+      border: 1px solid #f2d49b;
+      color: #865c10;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      font-size: .82rem;
+      line-height: 1.45
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 22px 0 12px
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -.03em
+    }
+
+    .count {
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 700
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px
+    }
+
+    .site-card {
+      overflow: hidden;
+      transition: .18s
+    }
+
+    .site-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 26px 70px rgba(34, 48, 84, .13)
+    }
+
+    .preview {
+      height: 128px;
+      background: linear-gradient(135deg, #eaf0ff, #fff 42%, #eafaf4);
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--brand);
+      font-weight: 800;
+      letter-spacing: -.04em
+    }
+
+    .site-body {
+      padding: 15px
+    }
+
+    .site-title {
+      font-size: .98rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 4px
+    }
+
+    .site-niche {
+      font-size: .78rem;
+      color: var(--muted);
+      line-height: 1.35;
+      min-height: 34px
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 25px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      font-size: .67rem;
+      font-weight: 800;
+      color: var(--muted)
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--soft)
+    }
+
+    .pill.ok .dot {
+      background: var(--brand-2)
+    }
+
+    .pill.warn .dot {
+      background: var(--warn)
+    }
+
+    .pill.bad .dot {
+      background: var(--red)
+    }
+
+    .pill.info .dot {
+      background: var(--brand)
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .empty {
+      min-height: 430px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 36px;
+      border-style: dashed
+    }
+
+    .empty-ill {
+      width: 112px;
+      height: 112px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #eaf0ff, #e8fbf5);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      font-size: 2.2rem
+    }
+
+    .empty h2 {
+      font-size: 1.55rem;
+      letter-spacing: -.05em;
+      margin-bottom: 10px
+    }
+
+    .empty p {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.65;
+      max-width: 520px;
+      margin: 0 auto 20px
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+      gap: 16px
+    }
+
+    .workspace-main,
+    .workspace-side {
+      display: grid;
+      gap: 16px
+    }
+
+    .block {
+      padding: 18px
+    }
+
+    .block h2,
+    .block h3 {
+      font-size: 1.02rem;
+      letter-spacing: -.03em;
+      margin-bottom: 10px
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.55
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 470px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px
+    }
+
+    .kv .stat {
+      padding: 12px
+    }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0
+    }
+
+    .url {
+      font-size: .82rem;
+      color: var(--brand);
+      background: #eef3ff;
+      border: 1px solid #dce5ff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      overflow-wrap: anywhere
+    }
+
+    .chatbox {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel-soft)
+    }
+
+    .chat-log {
+      height: 260px;
+      overflow: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px
+    }
+
+    .msg {
+      max-width: 84%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: .82rem;
+      line-height: 1.55;
+      white-space: pre-wrap
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--line)
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--brand);
+      color: #fff
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      background: var(--panel)
+    }
+
+    .chat-form textarea {
+      flex: 1;
+      min-height: 42px;
+      max-height: 110px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline: none
+    }
+
+    .chat-form textarea:focus {
+      border-color: var(--brand)
+    }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .table {
+      display: grid;
+      gap: 8px
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px
+    }
+
+    .row b {
+      font-size: .82rem
+    }
+
+    .row span {
+      font-size: .75rem;
+      color: var(--muted)
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px
+    }
+
+    .billing-shell {
+      display: grid;
+      gap: 16px;
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .billing-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 20px;
+    }
+
+    .billing-stat-box {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 110px;
+    }
+
+    .billing-stat-box .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .billing-stat-box .val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .billing-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .billing-service-row {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .billing-service-row:hover {
+      border-color: var(--brand);
+      transform: translateY(-1px);
+    }
+
+    .billing-service-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .service-badge {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      background: rgba(79, 109, 245, 0.1);
+      color: var(--brand);
+      border-radius: 6px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .service-badge.credits {
+      background: rgba(79, 245, 189, 0.1);
+      color: #12815f;
+    }
+
+    .service-badge.promo {
+      background: rgba(245, 177, 79, 0.1);
+      color: #b56b10;
+    }
+
+    .service-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .credit-title-lines {
+      display: inline-grid;
+      gap: 1px;
+      line-height: 1.12;
+    }
+
+    .credit-title-lines span {
+      display: block;
+    }
+
+    .service-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 580px;
+    }
+
+    .billing-service-pricing {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .service-price {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .action-btn {
+      padding: 10px 18px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 10px;
+    }
+
+    .credits-grid {
+      display: flex;
+      gap: 8px;
+    }
+
+    .credit-buy-card {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+      min-width: 105px;
+    }
+
+    .credit-buy-card:hover {
+      border-color: var(--brand);
+      background: var(--panel);
+      transform: translateY(-1px);
+    }
+
+    .credit-amount {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+
+    .credit-cost {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .promo-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .promo-inputs {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .promo-presets {
+      display: flex;
+      gap: 4px;
+    }
+
+    .soft-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .soft-btn:hover,
+    .soft-btn.active {
+      border-color: var(--brand);
+      background: var(--panel);
+    }
+
+    .soft-btn.active {
+      box-shadow: 0 0 0 1px var(--brand);
+    }
+
+    .billing-note-box {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .create-workspace {
+      height: calc(100vh - var(--header) - 56px);
+      min-height: 640px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+      gap: 16px
+    }
+
+    .create-rail,
+    .create-chat {
+      min-height: 0
+    }
+
+    .create-rail {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: auto
+    }
+
+    .create-rail h1 {
+      font-size: 1.35rem;
+      letter-spacing: -.05em;
+      line-height: 1.15;
+      margin: 10px 0
+    }
+
+    .create-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      overflow: hidden;
+      margin: 18px 0 14px
+    }
+
+    .create-progress .bar {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+      transition: width .25s ease
+    }
+
+    [data-theme="dark"] .create-progress {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .create-steps {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px
+    }
+
+    .create-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800
+    }
+
+    .create-step-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--panel);
+      color: var(--brand);
+      font-size: .7rem;
+      border: 1px solid var(--line)
+    }
+
+    .create-step.done {
+      background: #edfdf7;
+      color: #12815f;
+      border-color: #c9f5e7
+    }
+
+    .create-step.done .create-step-dot {
+      background: #c9f5e7;
+      color: #12815f;
+      border-color: #a3ecd5;
+    }
+
+    .create-step.active {
+      background: #eef3ff;
+      color: var(--brand);
+      border-color: #dce5ff
+    }
+
+    .create-step.active .create-step-dot {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .create-guide {
+      margin-top: auto;
+      display: grid;
+      gap: 10px
+    }
+
+    .create-guide-card {
+      border: 1px solid #dce5ff;
+      background: linear-gradient(135deg, #f7f9ff, #f2fff9);
+      border-radius: 16px;
+      padding: 14px
+    }
+
+    .create-guide-card b {
+      display: block;
+      font-size: .85rem;
+      letter-spacing: -.02em;
+      margin-bottom: 5px
+    }
+
+    .create-guide-card p {
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.55
+    }
+
+    .create-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .create-chip {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 0 9px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800
+    }
+
+    .create-chat {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .create-chat-head {
+      min-height: 64px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .create-chat-head h2 {
+      font-size: 1rem;
+      letter-spacing: -.03em;
+      margin-bottom: 3px
+    }
+
+    .create-chat-log {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth
+    }
+
+    .create-typing {
+      align-self: flex-start;
+      display: flex;
+      gap: 5px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      border-bottom-left-radius: 5px;
+      padding: 13px 15px
+    }
+
+    .create-typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: dashBounce 1.2s infinite
+    }
+
+    .create-typing span:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .create-typing span:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes dashBounce {
+
+      0%,
+      70%,
+      100% {
+        transform: translateY(0)
+      }
+
+      35% {
+        transform: translateY(-5px)
+      }
+    }
+
+    .create-input-area {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      background: var(--panel)
+    }
+
+    .create-photos {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 8px
+    }
+
+    .create-thumb-wrap {
+      position: relative
+    }
+
+    .create-thumb {
+      width: 54px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 2px solid var(--line)
+    }
+
+    .create-remove {
+      position: absolute;
+      right: -6px;
+      top: -6px;
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      cursor: pointer
+    }
+
+    .create-input-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-end
+    }
+
+    .create-photo-btn,
+    .create-send {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      flex: 0 0 auto
+    }
+
+    .create-photo-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-weight: 800
+    }
+
+    .create-photo-btn.has {
+      border-color: var(--brand);
+      color: var(--brand);
+      background: #eef3ff
+    }
+
+    .create-text {
+      flex: 1;
+      min-height: 42px;
+      max-height: 120px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 11px 13px;
+      outline: none;
+      font-size: .88rem;
+      line-height: 1.5;
+      background: var(--panel-soft);
+      color: var(--text);
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease
+    }
+
+    .create-text:focus {
+      border-color: var(--brand);
+      background: var(--panel);
+      box-shadow: 0 0 0 3px rgba(79, 109, 245, .12)
+    }
+
+    [data-theme="dark"] .create-text:focus {
+      border-color: rgba(139, 92, 246, .72);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, .18);
+      background: rgba(18, 18, 27, .96)
+    }
+
+    .create-confirm,
+    .create-generation {
+      align-self: center;
+      width: min(620px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow)
+    }
+
+    .create-confirm h3 {
+      font-size: 1.08rem;
+      letter-spacing: -.04em;
+      margin-bottom: 8px
+    }
+
+    .create-confirm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin: 14px 0
+    }
+
+    .create-confirm-actions {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap
+    }
+
+    .create-generation {
+      border-color: #c9f5e7
+    }
+
+    .create-gen-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 15px
+    }
+
+    .create-spinner {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 3px solid var(--line);
+      border-top-color: var(--brand);
+      animation: spin .8s linear infinite
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .create-gen-title {
+      font-weight: 800
+    }
+
+    .create-gen-stage {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 0;
+      color: var(--muted);
+      font-size: .82rem
+    }
+
+    .create-gen-stage span {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--panel-soft);
+      font-size: .65rem
+    }
+
+    .create-gen-stage.active {
+      color: var(--text)
+    }
+
+    .create-gen-stage.active span {
+      background: var(--brand-2);
+      color: #fff
+    }
+
+    .ledger {
+      display: grid;
+      gap: 8px
+    }
+
+    .ledger-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 12px;
+      padding: 11px;
+      font-size: .8rem
+    }
+
+    .positive {
+      color: var(--brand-2);
+      font-weight: 800
+    }
+
+    .negative {
+      color: var(--red);
+      font-weight: 800
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 84px;
+      transform: translateX(-50%) translateY(-8px);
+      background: #172033;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 15px;
+      font-size: .82rem;
+      box-shadow: 0 18px 50px rgba(23, 32, 51, .24);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0)
+    }
+
+    .dropdown {
+      position: fixed;
+      right: 82px;
+      top: 62px;
+      width: min(360px, calc(100vw - 28px));
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      z-index: 90;
+      display: none;
+      overflow: hidden
+    }
+
+    .dropdown.show {
+      display: block
+    }
+
+    .drop-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 800
+    }
+
+    .notif {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: .8rem
+    }
+
+    .notif:last-child {
+      border-bottom: 0
+    }
+
+    .notif b {
+      display: block;
+      margin-bottom: 4px
+    }
+
+    .notif p {
+      color: var(--muted);
+      line-height: 1.45
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, .58);
+      z-index: 120;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px
+    }
+
+    .modal-backdrop.show {
+      display: flex
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 460px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 30px 90px rgba(17, 24, 39, .25)
+    }
+
+    .modal.wide {
+      max-width: 680px
+    }
+
+    .modal-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 7px
+    }
+
+    .modal-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 14px
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 12px
+    }
+
+    .field label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--soft);
+      font-weight: 800
+    }
+
+    .field input,
+    .field select {
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 12px;
+      outline: none;
+      background: var(--panel-soft);
+      color: var(--text);
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(79, 109, 245, .12)
+    }
+
+    [data-theme="dark"] .field input:focus,
+    [data-theme="dark"] .field select:focus {
+      border-color: rgba(139, 92, 246, .72);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, .18);
+      background: rgba(18, 18, 27, .96)
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px
+    }
+
+    .forecast {
+      display: none;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px
+    }
+
+    .forecast.show {
+      display: block
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .forecast-num {
+      font-weight: 800
+    }
+
+    .forecast-lbl {
+      font-size: .68rem;
+      color: var(--muted)
+    }
+
+    @media(max-width:1080px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+
+      .hero,
+      .workspace,
+      .two-col,
+      .billing-hero,
+      .billing-grid,
+      .create-workspace {
+        grid-template-columns: 1fr
+      }
+
+      .create-workspace {
+        height: auto;
+        min-height: 0
+      }
+
+      .create-rail {
+        max-height: none
+      }
+
+      .create-chat {
+        min-height: 620px
+      }
+
+      .preview-frame {
+        height: 360px
+      }
+    }
+
+    @media(max-width:820px) {
+      .app {
+        grid-template-columns: 1fr
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(290px, 86vw);
+        transform: translateX(-104%);
+        transition: .22s;
+        box-shadow: 20px 0 70px rgba(17, 24, 39, .18)
+      }
+
+      .sidebar.show {
+        transform: translateX(0)
+      }
+
+      .mobile-menu {
+        display: block
+      }
+
+      .topbar {
+        display: flex;
+        padding: 0 14px
+      }
+
+      .top-title h1 {
+        font-size: .96rem
+      }
+
+      .balance-pill.hide-sm,
+      .quick-create-text {
+        display: none
+      }
+
+      .content {
+        padding: 18px 14px 80px
+      }
+
+      .hero-main {
+        padding: 22px
+      }
+
+      .hero h2 {
+        font-size: 1.55rem
+      }
+
+      .stats-grid,
+      .kv {
+        grid-template-columns: 1fr
+      }
+
+      .cards {
+        grid-template-columns: 1fr
+      }
+
+      .billing-hero {
+        padding: 18px
+      }
+
+      .billing-balances,
+      .promo-presets {
+        grid-template-columns: 1fr
+      }
+
+      .side-card {
+        position: static;
+        margin-top: 18px
+      }
+
+      .dropdown {
+        right: 14px
+      }
+
+      .chat-log {
+        height: 220px
+      }
+
+      .create-chat {
+        min-height: calc(100vh - 180px)
+      }
+
+      .create-chat-head {
+        align-items: flex-start;
+        flex-direction: column
+      }
+
+      .create-confirm-grid {
+        grid-template-columns: 1fr
+      }
+
+      .modal-actions {
+        flex-direction: column
+      }
+
+      .modal-actions .btn,
+      .modal-actions .ghost {
+        width: 100%
+      }
+    }
+
+    /* Create page full-height layout overrides */
+    @media(min-width: 1081px) {
+      .content.create-mode {
+        height: 100vh;
+        max-width: 100%;
+        padding: 16px;
+        overflow: hidden;
+      }
+
+      .content.create-mode .create-workspace {
+        height: 100%;
+        min-height: 0;
+      }
+    }
+
+    [data-theme="dark"] .create-step.done {
+      background: rgba(16, 185, 129, 0.08);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    [data-theme="dark"] .create-step.done .create-step-dot {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    [data-theme="dark"] .create-step.active {
+      background: rgba(139, 92, 246, 0.08);
+      color: var(--brand);
+      border-color: rgba(139, 92, 246, 0.2);
+    }
+
+    [data-theme="dark"] .create-photo-btn.has {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    [data-theme="dark"] .nav a.active {
+      background: rgba(139, 92, 246, 0.12);
+      color: var(--brand);
+      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.2);
+    }
+
+    [data-theme="dark"] .nav a:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+
+    /* View Transition for Theme Toggle */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+
+    .no-transitions * {
+      transition: none !important;
+    }
+
+    /* Premium Block Entrance Animations */
+    @keyframes premiumEntrance {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Apply to Dashboard Overview cards & panels */
+    .stats-dashboard>.panel,
+    .cards>.site-card,
+    .section-head,
+    .notice {
+      animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* Staggered delay for overview */
+    .stats-dashboard>.panel:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .stats-dashboard>.panel:nth-child(2) {
+      animation-delay: 0.12s;
+    }
+
+    .stats-dashboard>.panel:nth-child(3) {
+      animation-delay: 0.19s;
+    }
+
+    .cards>.site-card:nth-child(1) {
+      animation-delay: 0.15s;
+    }
+
+    .cards>.site-card:nth-child(2) {
+      animation-delay: 0.22s;
+    }
+
+    .cards>.site-card:nth-child(3) {
+      animation-delay: 0.29s;
+    }
+
+    .cards>.site-card:nth-child(4) {
+      animation-delay: 0.36s;
+    }
+
+    .cards>.site-card:nth-child(5) {
+      animation-delay: 0.43s;
+    }
+
+    .cards>.site-card:nth-child(6) {
+      animation-delay: 0.50s;
+    }
+
+    /* Apply to Create Page workspace panels */
+    .create-workspace .create-rail,
+    .create-workspace .create-chat {
+      animation: premiumEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .create-workspace .create-rail {
+      animation-delay: 0.05s;
+    }
+
+    .create-workspace .create-chat {
+      animation-delay: 0.15s;
+    }
+
+    /* Apply to Billing page elements */
+    .billing-service-row,
+    .billing-note-box {
+      animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .billing-service-row:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .billing-service-row:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .billing-service-row:nth-child(3) {
+      animation-delay: 0.25s;
+    }
+
+    .billing-note-box {
+      animation-delay: 0.35s;
+    }
+
+    .credit-buy-card {
+      animation: premiumEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .credit-buy-card:nth-child(1) {
+      animation-delay: 0.15s;
+    }
+
+    .credit-buy-card:nth-child(2) {
+      animation-delay: 0.22s;
+    }
+
+    .credit-buy-card:nth-child(3) {
+      animation-delay: 0.29s;
+    }
+
+    /* Apply to Site Workspace panels */
+    .workspace-main>.panel,
+    .workspace-side>.panel {
+      animation: premiumEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .workspace-main>.panel:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .workspace-main>.panel:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .workspace-main>.panel:nth-child(3) {
+      animation-delay: 0.25s;
+    }
+
+    .workspace-side>.panel:nth-child(1) {
+      animation-delay: 0.1s;
+    }
+
+    .workspace-side>.panel:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .workspace-side>.panel:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    
+
+    .close-tab-btn {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-left: 4px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0.4;
+    }
+
+    .draft-tab:hover .close-tab-btn {
+      opacity: 0.8;
+    }
+
+    .close-tab-btn:hover {
+      color: var(--text) !important;
+      opacity: 1 !important;
+      transform: scale(1.35);
+    }
+
+    [data-theme="dark"] .close-tab-btn:hover,
+    [data-theme="dark"] .new-draft-btn:hover {
+      color: rgba(216, 205, 255, .92) !important;
+      background: rgba(139, 92, 246, .10);
+    }
+  </style>
+  <script>
+    (function () {
+      const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+
+<body>
+  
+  
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <a class="brand" href="/" style="height:40px; padding:0; display:inline-flex; align-items:center; font-size:1.05rem;">lendings<span>.kz</span></a>
+          <div style="display:flex; gap:6px;">
+            <button class="lang-toggle" id="langToggle" onclick="toggleLang(event)">RU</button>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme(event)" aria-label="Toggle Theme">
+              <svg viewBox="0 0 24 24" class="sun">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg viewBox="0 0 24 24" class="moon">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <nav class="nav" style="margin-top:0;">
+          <a href="/dashboard" class="">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </span>
+            <span data-i18n="nav_dashboard">Панель</span>
+          </a>
+          <a href="/dashboard/create?new=1" class="active">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </span>
+            <span data-i18n="nav_create">Создать страницу</span>
+          </a>
+          <a href="/dashboard/billing" class="">
+            <span class="nav-ico">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </span>
+            <span data-i18n="nav_billing">Оплата</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-balances" style="margin-top: auto; margin-bottom: 16px;">
+        <div class="balance-pill" title="Кредиты разработки" data-i18n-title="balance_dev_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_dev_kind">Разработка</span><span class="balance-label-line" data-i18n="balance_dev_unit">кредиты</span></span><strong>1 000</strong></div>
+        <div class="balance-pill" title="Кредиты продвижения" data-i18n-title="balance_promo_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_promo_kind">Продвижение</span><span class="balance-label-line" data-i18n="balance_promo_unit">кредиты</span></span><strong>0</strong></div>
+        <div class="balance-pill" title="Слоты сайтов" data-i18n-title="balance_slots_title"><span class="balance-label"><span class="balance-label-line" data-i18n="balance_slots_kind">Создание</span><span class="balance-label-line" data-i18n="balance_slots_unit">сайтов</span></span><strong>1</strong></div>
+      </div>
+
+      <div class="sidebar-footer" style="margin-top: 0;">
+        <a class="profile-link" href="/profile">
+          <div class="avatar-sm">
+            
+            C
+            
+          </div>
+          <div class="profile-info">
+            <div class="profile-name">Cafe Owner</div>
+            <div class="profile-sub" style="font-size: .68rem; color: var(--muted); margin-top: 2px;" data-i18n="nav_profile">Профиль</div>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+
+    <div class="main">
+      <header class="topbar">
+        <button class="mobile-menu" onclick="toggleSidebar()">☰</button>
+        <div class="top-title">
+          
+          <h1 data-i18n="header_create">Создать страницу</h1>
+          <p data-i18n="header_create_sub">AI-помощник для новой бизнес-страницы</p>
+          
+        </div>
+        <div class="top-actions">
+          
+        </div>
+      </header>
+
+
+
+      <main class="content create-mode">
+        
+        <div class="notice">
+          <div><b>Подтвердите email.</b> Это нужно для
+            восстановления доступа и безопасности аккаунта.</div>
+          <button class="ghost" id="verifyResendBtn" data-cooldown="0" onclick="resendVerification()">Отправить</button>
+        </div>
+        
+
+        
+
+
+        
+        <section class="create-workspace">
+          <section class="panel create-chat">
+            <div class="create-chat-head">
+              <div>
+                <h2 data-i18n="create_chat_title_new">Расскажите о бизнесе</h2>
+              </div>
+            </div>
+            
+            
+            
+            <div class="create-chat-log" id="chat"><div class="msg bot" data-i18n-key="create_greeting">Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?</div><div class="msg user">Привет! Я открыла кофейню 'Brew &amp; Beans' в Алматы. Атмосфера уютная, деревянные столы. Мне нужен сайт.</div><div class="msg bot">Привет! Brew &amp; Beans звучит заманчиво ☕️. Понял, кофейня в Алматы, делаешь ставку на уют и деревянные элементы.
+
+Чтобы сделать сайт-визитку, мне нужно всего пару вещей:
+1. Как с вами удобнее связаться для заказа или вопросов? (WhatsApp, Telegram или просто телефон).
+2. Нужно ли выносить на сайт меню или выделить пару главных позиций с ценами (например, твой фирменный десерт или авторский кофе)?</div><div class="msg user">Меня зовут Анна. Телефон для брони: +77001234567. Услуги и цены: Эспрессо - 1000 тг, Капучино - 1500 тг. Готово, я прикрепила логотип и фото интерьера. Можешь собирать сайт.</div><div class="msg bot">Понял, Анна! Кофейня Brew &amp; Beans в Алматы, телефон для брони, меню и стиль с деревянными элементами — всё есть.
+
+Собрал: Анна, кофейня Brew &amp; Beans в Алматы, Эспрессо/Капучино с ценами, телефон, стиль «уют + дерево». Делаю сайт?</div><div class="create-confirm" id="confirmCard"><h3>Собрал данные. Делаю сайт?</h3><p class="muted">Проверьте краткое резюме. Если что-то не так, можно вернуться к диалогу и дописать детали.</p><div class="create-confirm-grid"><div class="sum-row"><div class="sum-label">Бизнес</div><div class="sum-value">Анна, кофейня Brew &amp; Beans</div></div><div class="sum-row"><div class="sum-label">Услуги</div><div class="sum-value">Эспрессо - 1000 тг, Капучино - 1500 тг</div></div><div class="sum-row"><div class="sum-label">Контакты</div><div class="sum-value">Алматы, +77001234567</div></div><div class="sum-row"><div class="sum-label">Стиль</div><div class="sum-value">уютная, деревянные столы</div></div><div class="sum-row"><div class="sum-label">Фото</div><div class="sum-value">2 фото</div></div></div><div class="create-confirm-actions"><button class="btn" onclick="generateSite()">Да, создать сайт</button><button class="ghost" onclick="editMore()">Дополнить информацию</button></div></div></div>
+            <div class="create-input-area" id="inputArea">
+              <div class="create-photos" id="inputPhotos"><div class="create-thumb-wrap"><img class="create-thumb" src="/static/uploads/18cc197c7d75.jpg" alt=""><button class="create-remove" onclick="removePhoto(0)">×</button></div><div class="create-thumb-wrap"><img class="create-thumb" src="/static/uploads/fa37bfd7390d.jpg" alt=""><button class="create-remove" onclick="removePhoto(1)">×</button></div></div>
+              <div class="create-input-row">
+                <label class="create-photo-btn has" id="photoBtn" title="Добавить фото" data-i18n-title="create_photo_title" style="pointer-events: none; opacity: 0.5;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <input type="file" id="photoInput" accept="image/*" multiple="" hidden="" onchange="handlePhotos(this)" style="">
+                </label>
+                <textarea id="inp" class="create-text" rows="1" placeholder="Напишите ответ..." maxlength="4000" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&amp;&amp;!event.shiftKey){event.preventDefault();send()}" style="height: auto;" disabled=""></textarea>
+                <button class="btn create-send" id="sendBtn" onclick="send()" disabled="">→</button>
+              </div>
+            </div>
+          </section>
+
+          <aside class="panel create-rail">
+            <h1 data-i18n="create_rail_title_new">Создание бизнес-страницы</h1>
+            <p class="muted">
+              
+              <span data-i18n="create_rail_desc_new">AI проведёт через короткий разговор: бизнес, услуги, контакты, стиль, фото и подтверждение перед генерацией.</span>
+              
+            </p>
+            <div class="create-progress">
+              <div class="bar" id="progressBar" style="width: 100%;"></div>
+            </div>
+            <div class="create-steps" id="steps"><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Бизнес</div><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Услуги</div><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Контакты</div><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Стиль</div><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Фото</div><div class="create-step done"><span class="create-step-dot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"></polyline></svg></span>Готово</div></div>
+          </aside>
+        </section>
+        
+
+
+
+        
+
+
+
+        
+
+
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+
+
+  <script>
+    const PROMO_TENGE = 10;
+    let siteEditHistory = [];
+    let siteEditPhotoUrls = [];
+    function toast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2800) }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show') }
+    function toggleNotifications() { document.getElementById('notifications').classList.toggle('show') }
+    function openModal(id) { document.getElementById(id).classList.add('show') }
+    function closeModal(id) { document.getElementById(id).classList.remove('show') }
+    async function postJson(url, body = {}) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const data = await r.json().catch(() => ({})); if (!r.ok || data.ok === false) throw new Error(data.message || data.error || 'Ошибка запроса'); return data }
+    function copyLink(path) { navigator.clipboard?.writeText(window.location.origin + path).then(() => toast('Ссылка скопирована')).catch(() => toast(window.location.origin + path)) }
+    function shareSite(path) { if (navigator.share) { navigator.share({ url: window.location.origin + path }).catch(() => { }) } else copyLink(path) }
+
+    function pollPayment(orderId, okMessage) { let attempts = 0; const timer = setInterval(async () => { attempts++; if (attempts > 60) { clearInterval(timer); toast('Время ожидания оплаты истекло'); return } try { const r = await fetch(`/payment/status/${orderId}`); const d = await r.json(); if (d.status === 'paid') { clearInterval(timer); toast(okMessage || 'Оплата прошла'); setTimeout(() => location.reload(), 900) } else if (d.status === 'payment.failed' || d.status === 'payment.expired') { clearInterval(timer); toast('Платёж не прошёл') } } catch (e) { } }, 5000) }
+    async function restoreAnalytics(slug) { try { await postJson(`/api/sites/${slug}/analytics/restore`); toast('Аналитика восстановлена'); setTimeout(() => location.reload(), 700) } catch (e) { toast(e.message) } }
+    async function purchaseAnalytics(slug) {
+      if (!confirm('Подключить аналитику за 200 кредитов разработки?')) return;
+      try {
+        await postJson(`/api/sites/${slug}/analytics/purchase`);
+        toast('Аналитика подключена!');
+        setTimeout(() => location.reload(), 700);
+      } catch (e) { toast(e.message); }
+    }
+    async function paySupport(slug) { const phone = prompt('Номер телефона Kaspi') || ''; try { const data = await postJson(`/api/sites/${slug}/support/pay`, { phone }); toast('Запрос отправлен в Kaspi'); pollPayment(data.order_id, 'Поддержка оплачена') } catch (e) { toast(e.message) } }
+    async function purchasePromoCredits(credits) { const phone = prompt('Номер телефона Kaspi') || ''; try { const data = await postJson('/api/billing/promo-credits/purchase', { credits, phone }); toast('Запрос отправлен в Kaspi'); pollPayment(data.order_id, `+${data.credits} кредитов продвижения зачислено`) } catch (e) { toast(e.message) } }
+    let currentPromoAmount = 100;
+    function setPromoAmount(btn, amount) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPromoAmount = amount;
+      updatePromoButtonText(amount);
+    }
+    async function submitPromoCredits() {
+      await purchasePromoCredits(currentPromoAmount);
+    }
+    async function setupPromotion(slug) { try { await postJson(`/api/sites/${slug}/promotion/setup`); toast('Продвижение настроено'); setTimeout(() => location.reload(), 800) } catch (e) { toast(e.message) } }
+    function campaignPayload() { return { credits: Number(document.getElementById('campaignCredits')?.value || 0), duration_hours: Number(document.getElementById('campaignHours')?.value || 0) } }
+    async function forecastCampaign(slug) { try { const data = await postJson(`/api/sites/${slug}/promotion/forecast`, campaignPayload()); const f = data.forecast; const box = document.getElementById('campaignForecast'); if (box) { box.classList.add('show'); box.innerHTML = `<div class="forecast-grid"><div><div class="forecast-num">${f.estimated_views}</div><div class="forecast-lbl">просмотров</div></div><div><div class="forecast-num">${f.estimated_clicks}</div><div class="forecast-lbl">кликов</div></div><div><div class="forecast-num">${f.estimated_contact_clicks}</div><div class="forecast-lbl">переходов в контакты</div></div></div><p class="muted" style="margin-top:8px">Прогноз не гарантирует заявки или продажи.</p>` } } catch (e) { toast(e.message) } }
+    async function launchCampaign(slug) { if (!confirm('Кредиты продвижения спишутся сразу и не возвращаются. Запустить кампанию?')) return; try { await postJson(`/api/sites/${slug}/promotion/campaigns`, campaignPayload()); toast('Кампания запущена'); setTimeout(() => location.reload(), 800) } catch (e) { toast(e.message) } }
+    async function restoreVersion(slug, id) { if (!confirm('Восстановить эту версию? Это спишет кредиты разработки.')) return; try { await postJson(`/api/sites/${slug}/versions/${id}/restore`); toast('Версия восстановлена'); setTimeout(() => location.reload(), 800) } catch (e) { toast(e.message) } }
+    function appendEditMsg(text, who) { const log = document.getElementById('siteEditLog'); if (!log) return; const div = document.createElement('div'); div.className = `msg ${who}`; div.textContent = text; log.appendChild(div); log.scrollTop = log.scrollHeight }
+    function useSuggestion(text) { const inp = document.getElementById('siteEditInput'); if (inp) { inp.value = text; inp.focus() } }
+    async function sendSiteEdit(slug) { 
+      const inp = document.getElementById('siteEditInput'); 
+      const text = (inp.value || '').trim(); 
+      if (!text && !siteEditPhotoUrls.length) return; 
+      inp.value = ''; 
+      appendEditMsg(text || 'Отправлено фото', 'user'); 
+      appendEditMsg('Думаю над правкой...', 'bot'); 
+      const sentPhotos = [...siteEditPhotoUrls];
+      siteEditPhotoUrls = [];
+      renderSiteEditPhotos();
+      try { 
+        const data = await postJson(`/site/${slug}/edit`, { message: text, edit_history: siteEditHistory, photo_urls: sentPhotos }); 
+        document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); 
+        if (data.edit_history) siteEditHistory = data.edit_history; 
+        if (!data.done) { appendEditMsg(data.message || 'Уточните деталь', 'bot'); return } 
+        appendEditMsg(`Готово. Списано ${data.tokens_spent || 0} кредитов разработки.`, 'bot'); 
+        setTimeout(() => location.reload(), 900) 
+      } catch (e) { 
+        document.querySelector('#siteEditLog .msg.bot:last-child')?.remove(); 
+        appendEditMsg(e.message, 'bot') 
+      } 
+    }
+    async function handleSiteEditPhotos(input) {
+      for (const file of Array.from(input.files || [])) {
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+          const r = await fetch('/upload-photo', { method: 'POST', body: fd });
+          const j = await r.json();
+          if (j.url) siteEditPhotoUrls.push(j.url);
+        } catch (e) {
+          toast('Ошибка загрузки фото');
+        }
+      }
+      input.value = '';
+      renderSiteEditPhotos();
+    }
+    function removeSiteEditPhoto(idx) {
+      siteEditPhotoUrls.splice(idx, 1);
+      renderSiteEditPhotos();
+    }
+    function renderSiteEditPhotos() {
+      const box = document.getElementById('siteEditPhotos');
+      if (!box) return;
+      box.innerHTML = '';
+      siteEditPhotoUrls.forEach((url, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'create-thumb-wrap';
+        wrap.innerHTML = `<img class="create-thumb" src="${url}" alt=""><button class="create-remove" onclick="removeSiteEditPhoto(${idx})">×</button>`;
+        box.appendChild(wrap);
+      });
+      const btn = document.getElementById('siteEditPhotoBtn');
+      if (btn) btn.classList.toggle('has', siteEditPhotoUrls.length > 0);
+    }
+    let verifyCooldown = Number(document.getElementById('verifyResendBtn')?.dataset.cooldown || 0);
+    function tickVerifyCooldown() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; if (verifyCooldown > 0) { btn.disabled = true; btn.textContent = `${verifyCooldown}с`; verifyCooldown -= 1; setTimeout(tickVerifyCooldown, 1000) } else { btn.disabled = false; btn.textContent = 'Отправить' } }
+    async function resendVerification() { const btn = document.getElementById('verifyResendBtn'); if (!btn) return; btn.disabled = true; try { const r = await fetch('/auth/resend-email-verification', { method: 'POST' }); const d = await r.json(); toast(d.message || 'Письмо отправлено'); verifyCooldown = d.retry_after || 60 } catch (e) { toast('Не удалось отправить письмо'); verifyCooldown = 0 } tickVerifyCooldown() }
+    if (verifyCooldown > 0) tickVerifyCooldown();
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show') }));
+    document.addEventListener('click', e => { if (!e.target.closest('#notifications') && !e.target.closest('.icon-btn')) document.getElementById('notifications')?.classList.remove('show') });
+    function toggleTheme(event) {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+
+      if (!document.startViewTransition || !event) {
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        return;
+      }
+
+      const x = event.clientX;
+      const y = event.clientY;
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+
+      const transition = document.startViewTransition(() => {
+        document.documentElement.classList.add('no-transitions');
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+
+      transition.ready.then(() => {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`
+        ];
+        document.documentElement.animate(
+          {
+            clipPath: clipPath,
+          },
+          {
+            duration: 450,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+
+        document.documentElement.animate(
+          { opacity: [0, 1] },
+          {
+            duration: 450,
+            easing: 'ease-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      });
+
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove('no-transitions');
+      });
+    }
+    const I18N = {
+      ru: {
+        nav_dashboard: 'Панель',
+        nav_create: 'Создать страницу',
+        nav_billing: 'Оплата',
+        nav_profile: 'Профиль',
+        balance_dev_title: 'Кредиты разработки',
+        balance_promo_title: 'Кредиты продвижения',
+        balance_dev_kind: 'Разработка',
+        balance_dev_unit: 'кредиты',
+        balance_promo_kind: 'Продвижение',
+        balance_promo_unit: 'кредиты',
+        header_dashboard: 'Аналитика',
+        header_dashboard_sub: 'Обзор ваших страниц',
+        header_create: 'Создать страницу',
+        header_create_sub: 'AI-помощник для новой бизнес-страницы',
+        header_billing: 'Биллинг',
+        header_billing_sub: 'Оплата, поддержка и пакеты',
+        header_site_edit_sub: 'Workspace страницы',
+        overview_sub: 'Обзор показателей',
+        overview_all_pages: 'Все страницы',
+        overview_views: 'Просмотры страниц',
+        overview_views_period: '30 дн.',
+        overview_conversions: 'Заявки (Конверсия)',
+        overview_clicks: 'Активность (Клики)',
+        overview_no_data: 'Нет данных',
+        overview_my_pages: 'Мои страницы',
+        overview_pages_unit: 'страниц',
+        bill_title: 'Баланс и услуги',
+        bill_sub: 'Управляйте вашими слотами веб-страниц, балансом кредитов на AI-правки и бюджетом продвижения.',
+        bill_lbl_slots: 'Слоты',
+        bill_badge_new_site: 'Новый сайт',
+        bill_slot_title: 'Слот для дополнительного сайта',
+        bill_slot_desc1: 'Позволяет создать еще одну полноценную бизнес-страницу. Включает',
+        bill_slot_desc2: 'кредитов разработки для будущих AI-правок. Первая генерация и первый месяц поддержки включены.',
+        bill_btn_buy_slot: 'Купить слот',
+        bill_badge_edits: 'AI-правки',
+        bill_dev_desc: 'Используются для редактирования структуры, текстовых блоков, цветовой гаммы и стилистики ваших страниц с помощью AI-ассистента.',
+        bill_badge_promo: 'Реклама',
+        bill_promo_desc: 'Используются как бюджет продвижения сайта. 1 кредит = 10 ₸, списание при запуске кампании не возвращается.',
+        bill_promo_min: 'Минимально',
+        bill_btn_promo: 'Заказать продвижение',
+        bill_note_title: 'Регулярное обслуживание и поддержка сайтов',
+        bill_note_desc: 'Каждая бизнес-страница включает 1 месяц бесплатной технической поддержки и обслуживания. По истечении этого срока публичная страница, аналитика и возможность AI-редактирования временно приостанавливаются (переходят в режим мягкого обслуживания). Вы можете быстро продлить подписку на обслуживание непосредственно в рабочей панели (workspace) нужной вам страницы.',
+        bill_credit_amount: '+{val} кредитов',
+        create_step_name: 'Бизнес',
+        create_step_services: 'Услуги',
+        create_step_city: 'Контакты',
+        create_step_vibe: 'Стиль',
+        create_step_photos: 'Фото',
+        create_step_confirm: 'Готово',
+        create_status_saving: 'Сохраняю черновик...',
+        create_status_saved: 'Черновик сохранён',
+        create_status_failed: 'Черновик не сохранился',
+        create_status_add_more: 'Дополните информацию',
+        create_status_ready: 'Страница готова',
+        create_status_generating_retry: 'Генерация уже запускалась. Если страница не появилась, попробуйте позже.',
+        create_confirm_title: 'Собрал данные. Делаю сайт?',
+        create_confirm_desc: 'Проверьте краткое резюме. Если что-то не так, можно вернуться к диалогу и дописать детали.',
+        create_confirm_empty: 'не заполнено',
+        create_confirm_photos: 'Фото',
+        create_confirm_photo_count: 'фото',
+        create_confirm_create: 'Да, создать сайт',
+        create_confirm_edit: 'Дополнить информацию',
+        create_gen_title: 'Создаём страницу',
+        create_gen_subtitle: 'Это может занять до минуты',
+        create_gen_stage_1: 'Создаём структуру',
+        create_gen_stage_2: 'Подбираем стиль',
+        create_gen_stage_3: 'Оптимизируем мобильную версию',
+        create_gen_stage_4: 'Готовим публикацию',
+        create_greeting: 'Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?',
+        create_continue: 'Продолжим с места, где остановились.',
+        create_reset_confirm: 'Начать новый черновик?',
+        create_reset_failed: 'Не удалось сбросить черновик',
+        create_draft_tab_title: 'Черновик {num}',
+        create_draft_max_reached: 'Максимум 5 черновиков. Пожалуйста, удалите лишние.',
+        overview_views_period: '30 дн.',
+        create_draft_delete_confirm: 'Удалить этот черновик? Все сообщения в нём будут потеряны.',
+        create_generic_error: 'Что-то пошло не так, попробуйте ещё раз.',
+        create_upload_failed: 'Не удалось загрузить фото',
+        create_edit_opened: 'Страница «{title}» открыта. Что изменить?',
+        create_edit_placeholder: 'Например: сделай стиль темнее',
+        create_input_placeholder_more: 'Что изменить или добавить?',
+        create_rail_title_new: 'Создание бизнес-страницы',
+        create_rail_title_edit: 'Улучшение страницы',
+        create_rail_desc_new: 'AI проведёт через короткий разговор: бизнес, услуги, контакты, стиль, фото и подтверждение перед генерацией.',
+        create_rail_desc_edit: 'Напишите, что изменить. AI уточнит детали и обновит страницу без конструктора.',
+        create_chat_title_new: 'Расскажите о бизнесе',
+        create_chat_title_edit: 'AI редактор',
+        create_chat_status_default: 'AI будет вести по шагам, черновик сохраняется',
+        create_new_draft: 'Новый черновик',
+        create_photo_title: 'Добавить фото',
+        create_summary_business: 'Бизнес',
+        create_summary_services: 'Услуги',
+        create_summary_contacts: 'Контакты',
+        create_summary_style: 'Стиль',
+        create_summary_photos: 'Фото',
+        create_generate_failed: 'Не удалось создать сайт',
+        create_edit_done: 'Готово. Страница обновлена.',
+        create_edit_failed: 'Ошибка правки',
+        toast_missing_site: 'Страница не найдена',
+        toast_support_inactive: 'Поддержка сайта не активна'
+      },
+      kz: {
+        nav_dashboard: 'Басқару панелі',
+        nav_create: 'Парақша жасау',
+        nav_billing: 'Төлем',
+        nav_profile: 'Профиль',
+        balance_dev_title: 'Әзірлеу кредиттері',
+        balance_promo_title: 'Ілгерілету кредиттері',
+        balance_dev_kind: 'Әзірлеу',
+        balance_dev_unit: 'кредиттері',
+        balance_promo_kind: 'Ілгерілету',
+        balance_promo_unit: 'кредиттері',
+        header_dashboard: 'Талдау',
+        header_dashboard_sub: 'Бизнес-парақшаларыңызды шолу',
+        header_create: 'Парақша жасау',
+        header_create_sub: 'Бизнес-парақшаны жасауға арналған AI-көмекші',
+        header_billing: 'Төлем',
+        header_billing_sub: 'Төлем, қолдау және пакеттер',
+        header_site_edit_sub: 'Сайт жұмыс кеңістігі',
+        overview_sub: 'Көрсеткіштерді шолу',
+        overview_all_pages: 'Барлық парақшалар',
+        overview_views: 'Парақша көрілімдері',
+        overview_views_period: '30 күн',
+        overview_conversions: 'Өтінімдер (Конверсия)',
+        overview_clicks: 'Белсенділік (Шертулер)',
+        overview_no_data: 'Деректер жоқ',
+        overview_my_pages: 'Менің парақшаларым',
+        overview_pages_unit: 'парақша',
+        bill_title: 'Баланс пен қызметтер',
+        bill_sub: 'Веб-парақша ұяшықтарын, AI-түзету несиелерінің балансын және жарнама бюджетін басқарыңыз.',
+        bill_lbl_slots: 'Ұяшықтар',
+        bill_badge_new_site: 'Жаңа сайт',
+        bill_slot_title: 'Қосымша сайтқа арналған ұяшық',
+        bill_slot_desc1: 'Тағы бір толыққанды бизнес-парақша жасауға мүмкіндік береді. Слотқа',
+        bill_slot_desc2: 'болашақ AI түзетулеріне арналған әзірлеу кредиті. Алғашқы генерация және бірінші ай қолдау қосылған.',
+        bill_btn_buy_slot: 'Ұяшықты сатып алу',
+        bill_badge_edits: 'AI-түзетулер',
+        bill_dev_desc: 'AI-көмекшінің көмегімен парақшаларыңыздың құрылымын, мәтін блоктарын, түс гаммасын және стилін өңдеу үшін қолданылады.',
+        bill_badge_promo: 'Жарнама',
+        bill_promo_desc: 'Сайтты ілгерілету бюджеті ретінде қолданылады. 1 несие = 10 ₸, науқанға жұмсалған кредиттер қайтарылмайды.',
+        bill_promo_min: 'Минималды',
+        bill_btn_promo: 'Жарнамаға тапсырыс беру',
+        bill_note_title: 'Сайттарды тұрақты түрде қолдау және техникалық қызмет көрсету',
+        bill_note_desc: 'Әрбір бизнес-парақшаға 1 ай тегін техникалық қолдау және қызмет көрсету кіреді. Осы мерзім өткеннен кейін жария парақша, талдау және AI-өңдеу мүмкіндігі уақытша тоқтатылады (жұмсақ қызмет көрсету режиміне ауысады). Сіз қызмет көрсетуге жазылуды өзіңізге қажетті парақшаның жұмыс панелінде (workspace) жылдам ұзарта аласыз.',
+        bill_credit_amount: '+{val} кредит',
+        create_step_name: 'Бизнес',
+        create_step_services: 'Қызметтер',
+        create_step_city: 'Байланыс',
+        create_step_vibe: 'Стиль',
+        create_step_photos: 'Фото',
+        create_step_confirm: 'Дайын',
+        create_status_saving: 'Жоба сақталуда...',
+        create_status_saved: 'Жоба сақталды',
+        create_status_failed: 'Жоба сақталмады',
+        create_status_add_more: 'Ақпаратты толықтырыңыз',
+        create_status_ready: 'Парақша дайын',
+        create_status_generating_retry: 'Генерация бұрын басталған. Парақша шықпаса, кейінірек қайталап көріңіз.',
+        create_confirm_title: 'Деректер жиналды. Сайт жасайын ба?',
+        create_confirm_desc: 'Қысқаша мәліметті тексеріңіз. Бірдеңе дұрыс болмаса, диалогқа оралып толықтыра аласыз.',
+        create_confirm_empty: 'толтырылмаған',
+        create_confirm_photos: 'Фото',
+        create_confirm_photo_count: 'фото',
+        create_confirm_create: 'Иә, сайт жасау',
+        create_confirm_edit: 'Ақпарат қосу',
+        create_gen_title: 'Парақша жасалуда',
+        create_gen_subtitle: 'Бұл бір минутқа дейін созылуы мүмкін',
+        create_gen_stage_1: 'Құрылымды жасаймыз',
+        create_gen_stage_2: 'Стиль таңдаймыз',
+        create_gen_stage_3: 'Мобильді нұсқаны оңтайландырамыз',
+        create_gen_stage_4: 'Жариялауға дайындаймыз',
+        create_greeting: 'Сәлем! Бизнесіңіз туралы айтыңыз — кімсіз және немен айналысасыз?',
+        create_continue: 'Тоқтаған жерден жалғастырайық.',
+        create_reset_confirm: 'Жаңа жоба бастайсыз ба?',
+        create_reset_failed: 'Жобаны жаңарту мүмкін болмады',
+        create_draft_tab_title: 'Жоба {num}',
+        create_draft_max_reached: 'Ең көбі 5 жоба сақтауға болады. Артықтарын өшіріңіз.',
+        create_draft_delete_confirm: 'Бұл жобаны өшіруді растайсыз ба? Ішіндегі барлық хабарламалар жойылады.',
+        overview_views_period: '30 күн',
+        create_generic_error: 'Бірдеңе дұрыс болмады, қайталап көріңіз.',
+        create_upload_failed: 'Фото жүктелмеді',
+        create_edit_opened: '«{title}» парақшасы ашылды. Нені өзгертеміз?',
+        create_edit_placeholder: 'Мысалы: стильді қоюырақ жаса',
+        create_input_placeholder_more: 'Нені өзгерту немесе қосу керек?',
+        create_rail_title_new: 'Бизнес-парақша жасау',
+        create_rail_title_edit: 'Парақшаны жақсарту',
+        create_rail_desc_new: 'AI қысқа әңгіме арқылы жүргізеді: бизнес, қызметтер, байланыс, стиль, фото және генерация алдындағы растау.',
+        create_rail_desc_edit: 'Нені өзгерту керегін жазыңыз. AI нақтылап, парақшаны конструкторсыз жаңартады.',
+        create_chat_title_new: 'Бизнес туралы айтыңыз',
+        create_chat_title_edit: 'AI редактор',
+        create_chat_status_default: 'AI қадамдар бойынша жүргізеді, жоба сақталады',
+        create_new_draft: 'Жаңа жоба',
+        create_photo_title: 'Фото қосу',
+        create_summary_business: 'Бизнес',
+        create_summary_services: 'Қызметтер',
+        create_summary_contacts: 'Байланыс',
+        create_summary_style: 'Стиль',
+        create_summary_photos: 'Фото',
+        create_generate_failed: 'Сайт жасау мүмкін болмады',
+        create_edit_done: 'Дайын. Парақша жаңартылды.',
+        create_edit_failed: 'Түзету қатесі',
+        toast_missing_site: 'Парақша табылмады',
+        toast_support_inactive: 'Сайт қолдауы белсенді емес'
+      },
+      en: {
+        nav_dashboard: 'Dashboard',
+        nav_create: 'Create Page',
+        nav_billing: 'Billing',
+        nav_profile: 'Profile',
+        balance_dev_title: 'Development credits',
+        balance_promo_title: 'Promotion credits',
+        balance_dev_kind: 'Development',
+        balance_dev_unit: 'credits',
+        balance_promo_kind: 'Promotion',
+        balance_promo_unit: 'credits',
+        header_dashboard: 'Dashboard',
+        header_dashboard_sub: 'Overview of your pages',
+        header_create: 'Create Page',
+        header_create_sub: 'AI workspace for new business page',
+        header_billing: 'Billing',
+        header_billing_sub: 'Payment, support and packages',
+        header_site_edit_sub: 'Site workspace',
+        overview_sub: 'Overview of metrics',
+        overview_all_pages: 'All pages',
+        overview_views: 'Page views',
+        overview_views_period: '30d',
+        overview_conversions: 'Applications (Conversion)',
+        overview_clicks: 'Activity (Clicks)',
+        overview_no_data: 'No data',
+        overview_my_pages: 'My pages',
+        overview_pages_unit: 'pages',
+        bill_title: 'Balance and services',
+        bill_sub: 'Manage your web page slots, AI edits credit balance, and promotion campaign budget.',
+        bill_lbl_slots: 'Slots',
+        bill_badge_new_site: 'New site',
+        bill_slot_title: 'Slot for an additional site',
+        bill_slot_desc1: 'Allows you to create another fully-featured business page. Includes',
+        bill_slot_desc2: 'development credits for future AI edits. First generation and first support month are included.',
+        bill_btn_buy_slot: 'Buy slot',
+        bill_badge_edits: 'AI edits',
+        bill_dev_desc: 'Used to modify structural layout, text content, color palettes, and visual styling of your pages with the AI assistant.',
+        bill_badge_promo: 'Advertising',
+        bill_promo_desc: 'Used as promotion budget for your site. 1 credit = 10 ₸, campaign spend is non-refundable.',
+        bill_promo_min: 'Minimum',
+        bill_btn_promo: 'Order promotion',
+        bill_note_title: 'Regular site maintenance and technical support',
+        bill_note_desc: 'Each business page includes 1 month of free technical support and maintenance hosting. After this period, the public page, analytics tracking, and AI-editing capabilities are temporarily suspended (switched to soft maintenance mode). You can easily extend your service subscription directly in the workspace of the page you need.',
+        bill_credit_amount: '+{val} credits',
+        create_step_name: 'Business',
+        create_step_services: 'Services',
+        create_step_city: 'Contacts',
+        create_step_vibe: 'Style',
+        create_step_photos: 'Photos',
+        create_step_confirm: 'Ready',
+        create_status_saving: 'Saving draft...',
+        create_status_saved: 'Draft saved',
+        create_status_failed: 'Draft was not saved',
+        create_status_add_more: 'Add more information',
+        create_status_ready: 'Page is ready',
+        create_status_generating_retry: 'Generation was already started. If the page did not appear, try again later.',
+        create_confirm_title: 'I collected the details. Create the site?',
+        create_confirm_desc: 'Check the short summary. If something is off, you can return to the chat and add details.',
+        create_confirm_empty: 'not filled',
+        create_confirm_photos: 'Photos',
+        create_confirm_photo_count: 'photos',
+        create_confirm_create: 'Yes, create site',
+        create_confirm_edit: 'Add details',
+        create_gen_title: 'Creating page',
+        create_gen_subtitle: 'This can take up to a minute',
+        create_gen_stage_1: 'Creating structure',
+        create_gen_stage_2: 'Choosing style',
+        create_gen_stage_3: 'Optimizing mobile version',
+        create_gen_stage_4: 'Preparing publication',
+        create_greeting: 'Hi! Tell me about your business — who are you and what do you do?',
+        create_continue: 'Let’s continue where we left off.',
+        create_reset_confirm: 'Start a new draft?',
+        create_reset_failed: 'Could not reset draft',
+        create_draft_tab_title: 'Draft {num}',
+        create_draft_max_reached: 'Maximum of 5 drafts reached. Please delete some.',
+        create_draft_delete_confirm: 'Delete this draft? All messages inside will be permanently lost.',
+        overview_views_period: '30d',
+        create_generic_error: 'Something went wrong, try again.',
+        create_upload_failed: 'Could not upload photo',
+        create_edit_opened: 'Page “{title}” is open. What should we change?',
+        create_edit_placeholder: 'For example: make the style darker',
+        create_input_placeholder_more: 'What should be changed or added?',
+        create_rail_title_new: 'Create business page',
+        create_rail_title_edit: 'Improve page',
+        create_rail_desc_new: 'AI will guide you through a short chat: business, services, contacts, style, photos, and confirmation before generation.',
+        create_rail_desc_edit: 'Write what to change. AI will clarify details and update the page without a builder.',
+        create_chat_title_new: 'Tell us about the business',
+        create_chat_title_edit: 'AI editor',
+        create_chat_status_default: 'AI will guide you step by step, draft is saved',
+        create_new_draft: 'New draft',
+        create_photo_title: 'Add photo',
+        create_summary_business: 'Business',
+        create_summary_services: 'Services',
+        create_summary_contacts: 'Contacts',
+        create_summary_style: 'Style',
+        create_summary_photos: 'Photos',
+        create_generate_failed: 'Could not create the site',
+        create_edit_done: 'Done. Page updated.',
+        create_edit_failed: 'Edit failed',
+        toast_missing_site: 'Page not found',
+        toast_support_inactive: 'Site support is not active'
+      }
+    };
+
+    function t(key, vars = {}) {
+      const lang = document.documentElement.getAttribute('lang') || localStorage.getItem('lang') || 'ru';
+      let text = (I18N[lang] && I18N[lang][key]) || I18N.ru[key] || key;
+      Object.entries(vars).forEach(([name, value]) => {
+        text = text.replaceAll(`{${name}}`, value);
+      });
+      return text;
+    }
+
+    function updatePromoButtonText(amount) {
+      const submitBtn = document.getElementById('promoSubmitBtn');
+      if (!submitBtn) return;
+      const lang = document.documentElement.getAttribute('lang') || 'ru';
+      const formattedAmount = (amount * PROMO_TENGE).toLocaleString('ru-RU');
+      if (lang === 'en') {
+        submitBtn.textContent = `Buy for ${formattedAmount} ₸`;
+      } else if (lang === 'kz') {
+        submitBtn.textContent = `${formattedAmount} ₸ бағасына сатып алу`;
+      } else {
+        submitBtn.textContent = `Купить за ${formattedAmount} ₸`;
+      }
+    }
+
+    function setLang(lang) {
+      document.documentElement.setAttribute('lang', lang);
+      localStorage.setItem('lang', lang);
+      const btn = document.getElementById('langToggle');
+      if (btn) btn.textContent = lang.toUpperCase();
+
+      const dict = I18N[lang] || I18N.ru;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (el.hasAttribute('data-i18n-val')) {
+          el.textContent = t(key, { val: el.getAttribute('data-i18n-val') });
+        } else if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (dict[key]) el.setAttribute('title', dict[key]);
+      });
+
+      const activePreset = document.querySelector('.preset-btn.active');
+      if (activePreset) {
+        updatePromoButtonText(Number(activePreset.dataset.val));
+      }
+      if (window.createI18nReady && typeof renderCreateI18n === 'function') {
+        renderCreateI18n();
+      }
+    }
+
+    function toggleLang(event) {
+      const cur = document.documentElement.getAttribute('lang') || 'ru';
+      const next = cur === 'ru' ? 'kz' : (cur === 'kz' ? 'en' : 'ru');
+
+      if (!document.startViewTransition || !event) {
+        setLang(next);
+        return;
+      }
+
+      const x = event.clientX;
+      const y = event.clientY;
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+
+      const transition = document.startViewTransition(() => {
+        document.documentElement.classList.add('no-transitions');
+        setLang(next);
+      });
+
+      transition.ready.then(() => {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`
+        ];
+        document.documentElement.animate(
+          {
+            clipPath: clipPath,
+          },
+          {
+            duration: 450,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+
+        document.documentElement.animate(
+          { opacity: [0, 1] },
+          {
+            duration: 450,
+            easing: 'ease-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      });
+
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove('no-transitions');
+      });
+    }
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const l = localStorage.getItem('lang') || 'ru';
+      setLang(l);
+      if (params.get('missing') === 'site') toast(t('toast_missing_site'));
+      if (params.get('support') === 'inactive') toast(t('toast_support_inactive'));
+    })();
+    
+    const editConfig = null;
+    let sessionId = 25;
+    let history = [];
+    let collected = {};
+    let photoUrls = [];
+    let chatIn = 0;
+    let chatOut = 0;
+    let chatCr = 0;
+    let onboardingStatus = "draft";
+    let editMode = Boolean(editConfig);
+    let currentSlug = editConfig ? editConfig.slug : null;
+    let editHistory = [];
+    let inputLocked = false;
+    const MAX_DRAFTS = 5;
+    const serverDraft = {
+      sessionId: sessionId,
+      history: history,
+      collected: collected,
+      photoUrls: photoUrls,
+      chatIn: chatIn,
+      chatOut: chatOut,
+      chatCr: chatCr,
+      status: onboardingStatus,
+      title: '',
+      summary: [{"key": "name", "label_key": "create_summary_business", "value": ""}, {"key": "services", "label_key": "create_summary_services", "value": ""}, {"key": "city", "label_key": "create_summary_contacts", "value": ""}, {"key": "vibe", "label_key": "create_summary_style", "value": ""}, {"key": "photos", "label_key": "create_summary_photos", "value": ""}]
+    };
+    const STEP_KEYS = [
+      ['name', 'create_step_name'],
+      ['services', 'create_step_services'],
+      ['city', 'create_step_city'],
+      ['vibe', 'create_step_vibe'],
+      ['photos', 'create_step_photos'],
+      ['confirm', 'create_step_confirm']
+    ];
+    const GENERATION_STAGE_KEYS = ['create_gen_stage_1', 'create_gen_stage_2', 'create_gen_stage_3', 'create_gen_stage_4'];
+    function createSteps() { return STEP_KEYS.map(([key, labelKey]) => [key, t(labelKey)]) }
+    function generationStages() { return GENERATION_STAGE_KEYS.map(key => t(key)) }
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px' }
+    function addMsg(text, who, i18nKey) { const chat = document.getElementById('chat'); const div = document.createElement('div'); div.className = `msg ${who}`; if (i18nKey) div.dataset.i18nKey = i18nKey; div.textContent = i18nKey ? t(i18nKey) : text; chat.appendChild(div); chat.scrollTop = chat.scrollHeight; return div }
+    function showTyping() { const chat = document.getElementById('chat'); const div = document.createElement('div'); div.className = 'create-typing'; div.id = 'typing'; div.innerHTML = '<span></span><span></span><span></span>'; chat.appendChild(div); chat.scrollTop = chat.scrollHeight }
+    function removeTyping() { document.getElementById('typing')?.remove() }
+    function lockInput(lock = true) { inputLocked = lock; document.getElementById('inp').disabled = lock; document.getElementById('sendBtn').disabled = lock; document.getElementById('photoBtn').style.pointerEvents = lock ? 'none' : ''; document.getElementById('photoBtn').style.opacity = lock ? '.5' : '' }
+    function setStatus(text) { const el = document.getElementById('chatStatus'); if (el) el.textContent = text }
+    const STEP_ICONS = {
+      done: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="20 6 9 17 4 12"/></svg>`,
+      name: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+      services: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+      city: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+      vibe: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12c0 2.7 1 5.2 2.8 7a.5.5 0 0 0 .2.6l-.3 1c-.1.5.3 1.1.9 1l1-.2c.2 0 .4.1.6.2C8.6 21.8 10.2 22 12 22z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1" fill="currentColor"/><circle cx="16.5" cy="9.5" r="1" fill="currentColor"/><circle cx="15.5" cy="14.5" r="1" fill="currentColor"/></svg>`,
+      photos: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+      confirm: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+    };
+    function progress() { const steps = createSteps(); let done = 0; for (const [key] of steps) { if (key === 'photos') { if (photoUrls.length) done++ } else if (key === 'confirm') { if (onboardingStatus === 'ready' || onboardingStatus === 'generating' || onboardingStatus === 'completed') done++ } else if (collected[key]) done++ } return Math.round(done / steps.length * 100) }
+    function renderSteps() { const steps = createSteps(); const p = progress(); document.getElementById('progressBar').style.width = p + '%'; const current = steps.find(([k]) => !((k === 'photos' && photoUrls.length) || (k === 'confirm' && ['ready', 'generating', 'completed'].includes(onboardingStatus)) || collected[k]))?.[0] || 'confirm'; document.getElementById('steps').innerHTML = steps.map(([key, label], i) => { const done = (key === 'photos' && photoUrls.length) || (key === 'confirm' && ['ready', 'generating', 'completed'].includes(onboardingStatus)) || collected[key]; const iconHtml = done ? STEP_ICONS.done : (STEP_ICONS[key] || i + 1); return `<div class="create-step ${done ? 'done' : key === current ? 'active' : ''}"><span class="create-step-dot">${iconHtml}</span>${label}</div>` }).join('') }
+    function renderSummary(summaryRows) { }
+    function renderPhotos() { const box = document.getElementById('inputPhotos'); box.innerHTML = ''; photoUrls.forEach((url, idx) => { const wrap = document.createElement('div'); wrap.className = 'create-thumb-wrap'; wrap.innerHTML = `<img class="create-thumb" src="${url}" alt=""><button class="create-remove" onclick="removePhoto(${idx})">×</button>`; box.appendChild(wrap) }); document.getElementById('photoBtn').classList.toggle('has', photoUrls.length > 0); renderSteps() }
+    function removePhoto(idx) { photoUrls.splice(idx, 1); renderPhotos(); autosave() }
+    async function handlePhotos(input) { for (const file of Array.from(input.files || [])) { const fd = new FormData(); fd.append('file', file); try { const r = await fetch('/upload-photo', { method: 'POST', body: fd }); const j = await r.json(); if (j.url) photoUrls.push(j.url) } catch (e) { toast(t('create_upload_failed')) } } input.value = ''; renderPhotos(); autosave() }
+
+    function apiErrorMessage(payload, fallback) {
+      if (payload && payload.error && typeof payload.error === 'object') return payload.error.message || fallback;
+      if (payload && typeof payload.error === 'string') return payload.error;
+      return fallback;
+    }
+
+    function sanitizeDraftTitleLive(value) {
+      return String(value || '')
+        .normalize('NFKC')
+        .replace(/[\p{C}<>{}\[\]"'`;|&$\\/]/gu, '')
+        .slice(0, 16);
+    }
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    async function autosave() {
+      if (editMode) return;
+
+      const draft = localDrafts.find(d => d.id === activeDraftId);
+      if (draft) {
+        draft.sessionId = sessionId;
+        draft.history = history;
+        draft.collected = collected;
+        draft.photoUrls = photoUrls;
+        draft.chatIn = chatIn;
+        draft.chatOut = chatOut;
+        draft.chatCr = chatCr;
+        draft.status = onboardingStatus;
+        draft.summary = window.createSummaryRows || [];
+        persistLocalDrafts();
+        renderDraftTabs();
+      }
+
+      setStatus(t('create_status_saving'));
+      try {
+        const r = await fetch('/api/onboarding/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            status: onboardingStatus,
+            history,
+            collected,
+            photo_urls: photoUrls,
+            chat_in: chatIn,
+            chat_out: chatOut,
+            chat_cr: chatCr
+          })
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) {
+          const err = new Error(apiErrorMessage(data, t('create_status_failed')));
+          err.code = data?.error?.code;
+          throw err;
+        }
+        if (data.session) {
+          sessionId = data.session.id;
+          onboardingStatus = data.session.status || onboardingStatus;
+          if (draft) {
+            draft.sessionId = sessionId;
+            draft.status = onboardingStatus;
+            persistLocalDrafts();
+          }
+        }
+        setStatus(t('create_status_saved'))
+      } catch (e) {
+        if (e && e.code === 'draft_not_found' && draft) {
+          const idx = localDrafts.findIndex(d => d.id === draft.id);
+          if (idx !== -1 && localDrafts.length > 1) {
+            localDrafts.splice(idx, 1);
+            persistLocalDrafts();
+            loadDraftIntoState(localDrafts[Math.max(idx - 1, 0)].id);
+          }
+        }
+        setStatus(t('create_status_failed'))
+      }
+    }
+
+    const SUMMARY_LABEL_KEYS = { name: 'create_summary_business', services: 'create_summary_services', city: 'create_summary_contacts', vibe: 'create_summary_style', photos: 'create_summary_photos' };
+    function summaryLabel(row) { return t(row.label_key || SUMMARY_LABEL_KEYS[row.key] || row.label || row.key) }
+    function confirmationHtml(summaryRows) { return `<h3>${t('create_confirm_title')}</h3><p class="muted">${t('create_confirm_desc')}</p><div class="create-confirm-grid">${(summaryRows || []).filter(r => r.key !== 'photos').map(r => `<div class="sum-row"><div class="sum-label">${summaryLabel(r)}</div><div class="sum-value">${r.value || t('create_confirm_empty')}</div></div>`).join('')}<div class="sum-row"><div class="sum-label">${t('create_summary_photos')}</div><div class="sum-value">${photoUrls.length} ${t('create_confirm_photo_count')}</div></div></div><div class="create-confirm-actions"><button class="btn" onclick="generateSite()">${t('create_confirm_create')}</button><button class="ghost" onclick="editMore()">${t('create_confirm_edit')}</button></div>` }
+    function showConfirmation(summaryRows) { onboardingStatus = 'ready'; window.createSummaryRows = summaryRows || []; lockInput(true); renderSteps(); renderSummary(summaryRows); const chat = document.getElementById('chat'); document.getElementById('confirmCard')?.remove(); const card = document.createElement('div'); card.className = 'create-confirm'; card.id = 'confirmCard'; card.innerHTML = confirmationHtml(window.createSummaryRows); chat.appendChild(card); chat.scrollTop = chat.scrollHeight }
+    function editMore() { document.getElementById('confirmCard')?.remove(); onboardingStatus = 'draft'; lockInput(false); setStatus(t('create_status_add_more')); document.getElementById('inp').placeholder = t('create_input_placeholder_more'); renderSteps(); autosave() }
+    function generationHtml() { const stages = generationStages(); return `<div class="create-gen-top"><div class="create-spinner"></div><div><div class="create-gen-title">${t('create_gen_title')}</div><div class="muted">${t('create_gen_subtitle')}</div></div></div>${stages.map((s, i) => `<div class="create-gen-stage" id="stage-${i}"><span>${i + 1}</span>${s}</div>`).join('')}` }
+    function showGeneration() { lockInput(true); const chat = document.getElementById('chat'); document.getElementById('generationBox')?.remove(); const box = document.createElement('div'); box.className = 'create-generation'; box.id = 'generationBox'; box.innerHTML = generationHtml(); chat.appendChild(box); chat.scrollTop = chat.scrollHeight; let i = 0; function tick() { generationStages().forEach((_, idx) => document.getElementById(`stage-${idx}`)?.classList.toggle('active', idx <= i)); i = Math.min(i + 1, generationStages().length - 1); if (document.getElementById('generationBox')) setTimeout(tick, 1300) } tick() }
+    async function generateSite() { document.getElementById('confirmCard')?.remove(); onboardingStatus = 'generating'; showGeneration(); try { const r = await fetch('/api/onboarding/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) }); const data = await r.json(); if (!r.ok || !data.ok) throw new Error(apiErrorMessage(data, t('create_generate_failed'))); setStatus(t('create_status_ready')); window.location.href = data.workspace_url || '/dashboard/sites' } catch (e) { document.getElementById('generationBox')?.remove(); onboardingStatus = 'failed'; lockInput(false); addMsg(e.message, 'bot'); renderSteps(); autosave() } }
+    async function send() {
+      if (inputLocked) return; const inp = document.getElementById('inp'); const text = inp.value.trim(); if (!text) return; inp.value = ''; inp.style.height = 'auto'; addMsg(text, 'user'); showTyping(); if (editMode && currentSlug) { try { const r = await fetch(`/site/${currentSlug}/edit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history, edit_history: editHistory, photo_urls: photoUrls }) }); const j = await r.json(); removeTyping(); if (j.error) throw new Error(j.error); if (j.edit_history) editHistory = j.edit_history; if (!j.done) { addMsg(j.message, 'bot'); return } addMsg(t('create_edit_done'), 'bot'); setTimeout(() => window.location.href = j.workspace_url || '/dashboard', 900) } catch (e) { removeTyping(); addMsg(e.message || t('create_edit_failed'), 'bot') } return }
+      try { const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId, message: text, history, photo_urls: photoUrls, chat_in: chatIn, chat_out: chatOut, chat_cr: chatCr }) }); const j = await r.json(); removeTyping(); if (!r.ok || j.error) throw new Error(apiErrorMessage(j, t('create_generic_error'))); history = j.history || history; sessionId = j.session_id || sessionId; collected = j.collected || collected; chatIn = j.chat_in ?? chatIn; chatOut = j.chat_out ?? chatOut; chatCr = j.chat_cr ?? chatCr; addMsg(j.message, 'bot'); renderSteps(); renderSummary(j.summary); if (j.confirm_required) { showConfirmation(j.summary) } else { autosave() } } catch (e) { removeTyping(); addMsg(e.message || t('create_generic_error'), 'bot') }
+    }
+    async function resetDraft() { window.location.href = '/dashboard/create?new=1'; }
+    function renderCreateI18n() { renderSteps(); document.querySelectorAll('[data-i18n-key]').forEach(el => { el.textContent = t(el.dataset.i18nKey) }); if (document.getElementById('confirmCard')) document.getElementById('confirmCard').innerHTML = confirmationHtml(window.createSummaryRows || []); if (document.getElementById('generationBox')) document.getElementById('generationBox').innerHTML = generationHtml(); }
+    function loadCreateInitial() {
+      renderSteps(); renderSummary(); renderPhotos(); if (editMode) { history = JSON.parse(editConfig.history || '[]'); currentSlug = editConfig.slug; for (const msg of history) { if (msg.role === 'user') addMsg(msg.content, 'user'); else addMsg(msg.content, 'bot') } addMsg(t('create_edit_opened', { title: editConfig.title }), 'bot'); document.getElementById('inp').placeholder = t('create_edit_placeholder'); return }
+      
+      const isNewForced = window.location.search.includes('new=1');
+      if (isNewForced) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        sessionId = null;
+        history = [];
+        collected = {};
+        photoUrls = [];
+        chatIn = 0; chatOut = 0; chatCr = 0;
+        onboardingStatus = 'draft';
+        window.createSummaryRows = [];
+      } else {
+        sessionId = serverDraft.sessionId;
+        history = serverDraft.history || [];
+        collected = serverDraft.collected || {};
+        photoUrls = serverDraft.photoUrls || [];
+        chatIn = serverDraft.chatIn || 0;
+        chatOut = serverDraft.chatOut || 0;
+        chatCr = serverDraft.chatCr || 0;
+        onboardingStatus = serverDraft.status || 'draft';
+        window.createSummaryRows = serverDraft.summary || [];
+      }
+
+      const chat = document.getElementById('chat');
+      if (chat) {
+        chat.innerHTML = '';
+        if (history.length) {
+          for (const msg of history) {
+            addMsg(msg.content, msg.role === 'user' ? 'user' : 'bot');
+          }
+          if (onboardingStatus === 'ready') {
+            showConfirmation(window.createSummaryRows);
+          } else if (onboardingStatus === 'generating') {
+            showGeneration();
+          } else {
+            addMsg('', 'bot', 'create_continue');
+          }
+        } else {
+          addMsg('', 'bot', 'create_greeting');
+        }
+      }
+
+      if (onboardingStatus === 'generating') { showGeneration(); setStatus(t('create_status_generating_retry')) }
+    }
+    window.createI18nReady = true;
+    loadCreateInitial();
+    
+  </script>
+
+
+
+</body></html>

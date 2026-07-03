@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --panel-soft: #f9fbff;
+  --line: #e3e8f2;
+  --line-strong: #d5deed;
+  --text: #172033;
+  --muted: #66758c;
+  --soft: #8c98ab;
+  --brand: #4f6df5;
+  --brand-dark: #314dd2;
+  --brand-2: #21b889;
+  --green: #21b889;
+  --warn: #e7a63a;
+  --red: #e25566;
+  --violet: #7b61ff;
+  --shadow: 0 24px 60px rgba(34, 48, 84, .10);
+  --shadow-lg: 0 24px 80px rgba(28, 39, 73, .16);
+  --radius: 14px;
+  --radius-lg: 20px;
+  --sidebar: 252px;
+  --header: 70px;
+  --grid-color: rgba(79, 109, 245, .06);
+  --bg-gradient: linear-gradient(180deg, #fff 0, #f5f7fb 52%, #eef3fb 100%);
+  --input-bg: #fbfcff;
+  
+  --flow-active: #ffffff; 
+  --flow-idle: rgba(255,255,255,0.6);
+  --flow-num-active: #eaf1ff; 
+  --flow-num-idle: #f0f4fb;
+  --flow-title-active: #152033; 
+  --flow-title-idle: #7b8495;
+}
+
+[data-theme="dark"] {
+  --bg: #06060a;
+  --panel: rgba(15, 15, 22, 0.85);
+  --panel-soft: #0f0f16;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --soft: #64748b;
+  --brand: #8b5cf6;
+  --brand-dark: #7c3aed;
+  --brand-2: #10b981;
+  --green: #10b981;
+  --warn: #f59e0b;
+  --red: #ef4444;
+  --violet: #8b5cf6;
+  --shadow: 0 32px 100px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 32px 100px rgba(0, 0, 0, 0.8);
+  --grid-color: rgba(139, 92, 246, .05);
+  --bg-gradient: radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+  --input-bg: #0f0f16;
+  
+  --flow-active: #1e1e2e; 
+  --flow-idle: rgba(30,30,46,0.4);
+  --flow-num-active: #2d2d3f; 
+  --flow-num-idle: #161621;
+  --flow-title-active: #f8fafc; 
+  --flow-title-idle: #64748b;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg-gradient);
+  overflow-x: hidden;
+  transition: background .5s cubic-bezier(0.4, 0, 0.2, 1), color .5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.with-grid::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, #000 0, transparent 70%);
+  z-index: 0;
+  transition: opacity .5s;
+}
+
+button, input, a, select, textarea {
+  font-family: inherit;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Unified smooth transitions for simultaneous theme change */
+html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+  transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* View Transition for Theme Toggle */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.no-transitions * {
+  transition: none !important;
+}
+
+/* Base Buttons */
+.btn {
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 14px;
+  font-size: .95rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .2s, background .2s, box-shadow .2s;
+  cursor: pointer;
+  border: 0;
+  gap: 8px;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(79, 109, 245, .18);
+}
+[data-theme="dark"] .btn {
+  box-shadow: 0 12px 24px rgba(139, 92, 246, .18);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  background: var(--brand-dark);
+}
+.btn.green {
+  background: var(--green);
+  box-shadow: 0 12px 24px rgba(33, 184, 137, .18);
+}
+.btn.green:hover {
+  background: #1ca379;
+}
+.btn.warn {
+  background: var(--warn);
+  color: #2b1b00;
+}
+.btn.red {
+  background: var(--red);
+}
+
+.ghost {
+  min-height: 38px;
+  padding: 0 13px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  font-size: .85rem;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: .18s;
+  gap: 8px;
+}
+.ghost:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, .06);
+}
+
+.soft {
+  min-height: 38px;
+  padding: 0 13px;
+  background: var(--panel-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-size: .8rem;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: .18s;
+  gap: 8px;
+}
+.soft:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.soft.disabled,
+.btn:disabled,
+.ghost:disabled {
+  opacity: .45;
+  pointer-events: none;
+  transform: none;
+}
+
+/* Theme / Lang toggles */
+.theme-toggle, .lang-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .5s, border-color .5s, transform .3s;
+  backdrop-filter: blur(14px);
+  font-size: .7rem;
+  font-weight: 800;
+}
+.theme-toggle:hover, .lang-toggle:hover {
+  transform: scale(1.05);
+  border-color: var(--brand);
+}
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform .6s cubic-bezier(.34, 1.56, .64, 1);
+}
+[data-theme="dark"] .theme-toggle svg {
+  transform: rotate(360deg);
+}
+.sun { display: block; }
+[data-theme="dark"] .sun { display: none; }
+.moon { display: none; }
+[data-theme="dark"] .moon { display: block; }

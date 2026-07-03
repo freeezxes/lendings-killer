@@ -424,6 +424,52 @@ def _ai_generate(data: dict) -> dict:
         "cache_create_tokens": 0,
     }
 
+def _agent_generate(data: dict, slug: str) -> dict:
+    import openhands_client
+    
+    ref_url = data.get("ref_url", "").strip()
+    vibe    = data.get("vibe", "").strip()
+    extra   = data.get("extra", "").strip()
+    edit_request = data.get("edit_request", "").strip()
+
+    prompt_lines = []
+    
+    if edit_request:
+        prompt_lines.append(f"ЗАПРОС НА ПРАВКУ СУЩЕСТВУЮЩЕГО КОДА:\n{edit_request}")
+        prompt_lines.append("Внимательно изучи существующий код в директории src/, исправь ошибки или добавь запрошенный функционал.")
+    else:
+        prompt_lines.append("ЗАДАЧА: Создать новое веб-приложение на React/Vite.")
+        prompt_lines.append(f"Данные бизнеса:\n- Имя: {data.get('name')}\n- Услуги: {data.get('services')}\n- Город: {data.get('city')}")
+        
+        if ref_url:
+            from main import _fetch_url
+            brief = _fetch_url(ref_url)
+            if brief:
+                prompt_lines.append(f"Дизайн-бриф ({ref_url}):\n{brief}")
+                
+        if vibe:
+            prompt_lines.append(f"Пожелания по стилю: {vibe}")
+            
+        if extra:
+            prompt_lines.append(f"Дополнительно: {extra}")
+            
+        prompt_lines.append("ТРЕБОВАНИЯ:\n1. Если папка пустая, разверни базовый Vite+React проект (npm create vite@latest . -- --template react).\n2. ВАЖНО: В файле vite.config.js или vite.config.ts ОБЯЗАТЕЛЬНО установи `base: './'` (относительные пути), иначе статика не загрузится.\n3. Установи tailwindcss.\n4. Напиши красивый UI с использованием Phosphor Icons.\n5. Выполни npm run build когда всё будет готово.")
+
+    prompt = "\n\n".join(prompt_lines)
+    
+    success = openhands_client.run_openhands_task(slug, prompt)
+    
+    # Generate dummy HTML to satisfy legacy db/routing until we refactor routing fully
+    dummy_html = f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0; url=/static/sites/{slug}/dist/index.html'></head><body>Loading App...</body></html>"
+    
+    return {
+        "html": dummy_html if success else "<html><body>Error generating site</body></html>",
+        "input_tokens": 10000, # Stub for billing
+        "output_tokens": 2000, # Stub for billing
+        "cache_read_tokens": 0,
+        "cache_create_tokens": 0,
+    }
+
 
 def _calc_cost(inp: int, out: int, cr: int = 0, cc: int = 0) -> float:
     # calc cost
@@ -1276,6 +1322,8 @@ app = FastAPI()
 app.add_middleware(SubdomainMiddleware)
 app.add_middleware(SessionMiddleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+GENERATED_DIR.mkdir(exist_ok=True)
+app.mount("/static/sites", StaticFiles(directory="generated_sites"), name="static_sites")
 templates = Jinja2Templates(directory="templates")
 
 def get_site_url(request: Request, slug: str) -> str:
@@ -2121,7 +2169,13 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
         return {"ok": False, "status_code": 409, "error": "Генерация уже запущена. Обновите страницу через несколько секунд."}
 
     try:
-        gen = _ai_generate(data)
+        name = data["name"]
+        clean_name = re.sub(r'^я\s+', '', name.lower().strip())
+        slug = _slugify(clean_name.split(',')[0].strip())
+        if db.get_site_by_slug(slug):
+            slug = f"{slug}-{uuid.uuid4().hex[:4]}"
+
+        gen = _agent_generate(data, slug)
         gen_in = gen["input_tokens"]
         gen_out = gen["output_tokens"]
         gen_cr = gen["cache_read_tokens"]
@@ -2132,12 +2186,6 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
         total_cr = acc_chat_cr + gen_cr
         cost = _calc_cost(total_in, total_out, total_cr, gen_cc)
         our_tokens = _tokens_to_ours(total_in, total_out)
-
-        name = data["name"]
-        clean_name = re.sub(r'^я\s+', '', name.lower().strip())
-        slug = _slugify(clean_name.split(',')[0].strip())
-        if db.get_site_by_slug(slug):
-            slug = f"{slug}-{uuid.uuid4().hex[:4]}"
 
         generated_html = _inject_analytics(gen["html"], slug)
         (GENERATED_DIR / f"{slug}.html").write_text(generated_html, encoding="utf-8")
@@ -2550,7 +2598,7 @@ async def site_edit(slug: str, request: Request):
     data["chat_history"]   = combined_history
     data["prev_html_full"] = prev_html
 
-    gen = _ai_generate(data)
+    gen = _agent_generate(data, slug)
 
     gen_in  = gen["input_tokens"]
     gen_out = gen["output_tokens"]

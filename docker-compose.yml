@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  openhands:
+    image: docker.all-hands.dev/all-hands-ai/openhands:0.13
+    container_name: lendings_openhands
+    environment:
+      - LLM_MODEL=openai/qwen3-6
+      - LLM_API_KEY=${ALEM_API_KEY:-sk-YyCsvojyayk8wjNiEcF8tg} # Alem.plus default fallback
+      - LLM_BASE_URL=https://llm.alem.ai/v1
+      - WORKSPACE_BASE=/opt/lendings/generated_sites
+      - SANDBOX_USER_ID=1000
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the actual generated_sites directory where OpenHands will write code
+      - /opt/lendings/generated_sites:/opt/workspace_base
+      # Mount docker socket so OpenHands can spin up sandboxes
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
