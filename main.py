@@ -90,6 +90,44 @@ def _ask_llm(model: str, max_tokens: int, system_text: str, messages: list) -> d
                 "usage": {"prompt_tokens": 0, "completion_tokens": 0}
             }
 
+OCR_API_KEY = os.environ.get("OCR_API_KEY", "sk-j-lrw4OFHBVXeF174HRszg")
+
+async def _run_ocr(base64_image: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {OCR_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "deepseek-ocr",
+        "temperature": 0,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": "Extract all text from this image."
+                    }
+                ]
+            }
+        ]
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(ALEM_API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        except Exception as e:
+            logger.error(f"OCR Error: {e}")
+            return ""
+
 TEMPLATES_DIR = Path("templates")
 GENERATED_DIR = Path("generated_sites")
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -2112,7 +2150,12 @@ async def upload_photo(file: UploadFile = File(...)):
     filename = f"{uuid.uuid4().hex[:12]}.{ext}"
     (UPLOADS_DIR / filename).write_bytes(content)
     url = f"/static/uploads/{filename}"
-    return JSONResponse({"url": url, "size": len(content)})
+    
+    # Run OCR in background or await it
+    base64_img = base64.b64encode(content).decode("utf-8")
+    ocr_text = await _run_ocr(base64_img)
+    
+    return JSONResponse({"url": url, "size": len(content), "ocr_text": ocr_text})
 
 
 # ── Chat / site generation ────────────────────────────────────────────────────

@@ -5,14 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>lendings.kz — Бизнес-страницы и продвижение</title>
 <style>
-  <link rel="stylesheet" href="/static/css/global.css">
-  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+  :root{
+    --bg:#f6f7fb;--ink:#141722;--muted:#687286;--soft:#8b95a8;
+    --card:rgba(255,255,255,.9);--line:#e5e9f2;--line-strong:#d7deea;
+    --brand:#4f6df5;--brand-dark:#314dd2;--green:#21b889;--red:#e5485d;
+    --shadow:0 24px 80px rgba(28,39,73,.16);--radius:20px;
+    --input-bg:#fbfcff;--grid-color:rgba(79,109,245,.06);
+    --bg-gradient:linear-gradient(180deg,#fff 0,#f6f7fb 52%,#eef2fb 100%);
+    --flow-active: #ffffff; --flow-idle: rgba(255,255,255,0.6);
+    --flow-num-active: #eaf1ff; --flow-num-idle: #f0f4fb;
+    --flow-title-active: #152033; --flow-title-idle: #7b8495;
+  }
+  [data-theme="dark"]{
+    --bg:#06060a;--ink:#f8fafc;--muted:#94a3b8;--soft:#64748b;
+    --card:rgba(15,15,22,.85);--line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.12);
+    --brand:#8b5cf6;--brand-dark:#7c3aed;--green:#10b981;--red:#ef4444;
+    --shadow:0 32px 100px rgba(0,0,0,.8);--input-bg:#0f0f16;
+    --grid-color:rgba(139,92,246,.05);
+    --bg-gradient:radial-gradient(circle at 10% 10%, #1a1a2e 0%, #06060a 100%);
+    --flow-active: #1e1e2e; --flow-idle: rgba(30,30,46,0.4);
+    --flow-num-active: #2d2d3f; --flow-num-idle: #161621;
+    --flow-title-active: #f8fafc; --flow-title-idle: #64748b;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+  body{min-height:100vh;font-family:'Sora',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg-gradient);overflow-x:hidden;transition:background .5s cubic-bezier(0.4, 0, 0.2, 1), color .5s cubic-bezier(0.4, 0, 0.2, 1)}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:
+    linear-gradient(var(--grid-color) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+    background-size:42px 42px;mask-image:linear-gradient(180deg,#000 0,transparent 70%);z-index:0;transition:opacity .5s}
+  button,input,a{font-family:inherit}
+  a{text-decoration:none}
   
   .topline{position:fixed;top:24px;left:24px;display:flex;align-items:center;height:40px;z-index:100;animation:slideDown .3s ease-out both}
-  .logo{font-weight:800;letter-spacing:-.04em;font-size:1.05rem;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;height:40px;transition:color .5s}.logo span{color:var(--brand);transition:color .5s}
+  .logo{font-weight:800;letter-spacing:-.04em;font-size:1.05rem;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;height:40px;transition:color .5s}.logo span{color:var(--brand);transition:color .5s}
   
   .controls{position:fixed;top:24px;right:24px;z-index:100;display:flex;align-items:center;gap:12px;animation:slideDown .3s ease-out both}
-  .theme-toggle, .lang-toggle{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .5s,border-color .5s,transform .3s;backdrop-filter:blur(14px);font-size:.7rem;font-weight:800}
+  .theme-toggle, .lang-toggle{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .5s,border-color .5s,transform .3s;backdrop-filter:blur(14px);font-size:.7rem;font-weight:800}
   .theme-toggle:hover, .lang-toggle:hover{transform:scale(1.05);border-color:var(--brand)}
   .theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
   [data-theme="dark"] .theme-toggle svg{transform:rotate(360deg)}
@@ -23,14 +53,14 @@
   .nav-btn.primary{background:var(--brand);color:#fff;border:0;box-shadow:0 8px 18px rgba(79,109,245,.2)}
   .nav-btn.primary:hover{transform:translateY(-1px);background:var(--brand-dark)}
   .controls .nav-btn.ghost{width:104px;padding:0 12px;white-space:nowrap}
-  .nav-btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line);backdrop-filter:blur(14px)}
+  .nav-btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(14px)}
   .nav-btn.ghost:hover{border-color:var(--brand);transform:scale(1.02)}
 
   .shell{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;max-width:1040px;margin:0 auto;padding:140px 24px 40px}
   
   .hero{text-align:center;max-width:760px;margin-bottom:100px;animation:slideUp .4s ease-out .06s both}
   .eyebrow{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 11px;color:var(--brand);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:24px;backdrop-filter:blur(10px)}
-  h1{font-size:clamp(2.5rem, 6vw, 4rem);line-height:1.05;letter-spacing:-.065em;margin-bottom:20px;color:var(--text);transition:color .5s}
+  h1{font-size:clamp(2.5rem, 6vw, 4rem);line-height:1.05;letter-spacing:-.065em;margin-bottom:20px;color:var(--ink);transition:color .5s}
   h1 em{font-style:normal;color:var(--brand)}
   .lead{font-size:1.05rem;line-height:1.7;color:var(--muted);max-width:560px;margin:0 auto 40px;transition:color .5s}
   
@@ -38,17 +68,17 @@
   .btn{height:52px;padding:0 28px;border-radius:14px;font-size:.95rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s,background .2s,box-shadow .2s;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff;border:0;box-shadow:0 14px 32px rgba(79,109,245,.25)}
   .btn.primary:hover{transform:translateY(-2px);background:var(--brand-dark)}
-  .btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line);backdrop-filter:blur(14px)}
+  .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(14px)}
   .btn.ghost:hover{border-color:var(--brand);transform:translateY(-2px);box-shadow:0 12px 24px rgba(0,0,0,.06)}
 
   .stats{display:flex;gap:32px;justify-content:center;margin-top:60px;flex-wrap:wrap}
   .stat-item{display:flex;flex-direction:column;align-items:center;gap:6px}
-  .stat-val{font-size:1.4rem;font-weight:800;color:var(--text);letter-spacing:-.03em}
+  .stat-val{font-size:1.4rem;font-weight:800;color:var(--ink);letter-spacing:-.03em}
   .stat-lbl{font-size:.8rem;color:var(--muted);font-weight:600}
   
   .section{width:100%;padding:60px 0;animation:fadeIn .6s ease-out both;animation-timeline:view();animation-range:entry 10% cover 30%}
   .section-head{text-align:center;margin-bottom:50px}
-  h2{font-size:clamp(1.8rem, 4vw, 2.5rem);font-weight:800;letter-spacing:-.04em;color:var(--text);margin-bottom:14px}
+  h2{font-size:clamp(1.8rem, 4vw, 2.5rem);font-weight:800;letter-spacing:-.04em;color:var(--ink);margin-bottom:14px}
   .section-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto}
 
   .grid{display:grid;gap:24px}
@@ -65,17 +95,17 @@
   .card-icon svg{width:24px;height:24px;color:var(--brand);transition:transform .3s}
   .card:hover .card-icon{border-color:var(--brand);background:var(--card)}
   .card:hover .card-icon svg{transform:scale(1.1)}
-  .card-title{font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.03em}
+  .card-title{font-size:1.15rem;font-weight:800;color:var(--ink);margin-bottom:10px;letter-spacing:-.03em}
   .card-desc{font-size:.9rem;line-height:1.6;color:var(--muted)}
   
   .pricing-card{max-width:440px;margin:0 auto;text-align:center;padding:48px 32px}
-  .price{font-size:3.5rem;font-weight:800;color:var(--text);letter-spacing:-.04em;line-height:1;margin-bottom:6px}
+  .price{font-size:3.5rem;font-weight:800;color:var(--ink);letter-spacing:-.04em;line-height:1;margin-bottom:6px}
   .price span{font-size:.9rem;color:var(--muted);font-weight:600;margin-left:8px;vertical-align:middle;letter-spacing:normal}
   .price-sub{font-size:.9rem;color:var(--muted);margin-bottom:32px}
   .features-list{list-style:none;display:grid;grid-template-columns:24px minmax(100px, 160px) 1fr;gap:16px 12px;margin-bottom:40px;text-align:left;align-items:start;font-size:.92rem;line-height:1.4}
   .features-list li{display:contents}
   .features-list li::before{content:"✓";color:var(--brand);font-weight:800;font-size:1rem;background:var(--input-bg);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;align-self:start;margin-top:1px}
-  .features-list li strong{color:var(--text);font-weight:700;padding-top:2px;overflow-wrap:anywhere}
+  .features-list li strong{color:var(--ink);font-weight:700;padding-top:2px;overflow-wrap:anywhere}
   .features-list li span{color:var(--muted);padding-top:2px;overflow-wrap:anywhere}
   @media(max-width:500px){
     .features-list{grid-template-columns:24px auto}
@@ -87,7 +117,7 @@
   footer{width:100%;border-top:1px solid var(--line);padding:40px 24px 20px;margin-top:60px;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center}
   .footer-links{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
   .footer-links a{color:var(--muted);font-size:.85rem;font-weight:600;transition:color .2s}
-  .footer-links a:hover{color:var(--text)}
+  .footer-links a:hover{color:var(--ink)}
   .copyright{color:var(--soft);font-size:.8rem}
 
   @keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
@@ -108,9 +138,29 @@
     .stats{gap:20px;flex-direction:column}
     .pricing-card{padding:32px 24px}
   }
+  /* Unified smooth transitions for simultaneous theme change */
+  html, body, aside, main, header, div, section, p, h1, h2, h3, span, a, button, input, select, textarea, svg, path, circle, rect {
+    transition: background 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                background-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                border-color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                color 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                fill 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                stroke 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                box-shadow 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  
+  /* View Transition for Theme Toggle */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  .no-transitions * {
+    transition: none !important;
+  }
 </style>
 </head>
-<body class="with-grid">
+<body>
 
 <script>
   (function(){
