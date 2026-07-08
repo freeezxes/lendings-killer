@@ -125,8 +125,8 @@
               <div style="font-size:12px;font-weight:700;color:{{ 'var(--green)' if site.support_status == 'active' else 'var(--warn)' }}">{{ site.support_label }}</div>
             </div>
             <div style="display:flex;border-top:1px solid var(--line)">
-              <a href="/dashboard/sites/{{ site.id }}" class="lk-mag" style="flex:1;text-align:center;padding:12px;font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;border-right:1px solid var(--line)">Открыть</a>
-              <a href="/site/{{ site.slug }}/edit" class="lk-mag" style="flex:1;text-align:center;padding:12px;font-size:13px;font-weight:700;color:var(--coral);text-decoration:none">Редактировать</a>
+              <a href="/{{ site.slug }}" target="_blank" class="lk-mag" style="flex:1;text-align:center;padding:12px;font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;border-right:1px solid var(--line)">Открыть</a>
+              <a href="/dashboard/sites/{{ site.id }}" class="lk-mag" style="flex:1;text-align:center;padding:12px;font-size:13px;font-weight:700;color:var(--coral);text-decoration:none">Редактировать</a>
             </div>
           </div>
           {% endfor %}
@@ -299,7 +299,7 @@
                   <a href="/{{ selected_site.slug }}" target="_blank" style="font-size:13px;color:var(--brand);text-decoration:none">lendings.kz/{{ selected_site.slug }}</a>
                 </div>
                 <div style="display:flex;gap:10px">
-                  <a href="/site/{{ selected_site.slug }}/edit" class="lk-mag" style="padding:10px 16px;border-radius:10px;background:var(--coral);color:#fff;font-weight:700;font-size:13px;text-decoration:none">Редактировать</a>
+                  <a href="/dashboard/create?edit={{ selected_site.slug }}" class="lk-mag" style="padding:10px 16px;border-radius:10px;background:var(--coral);color:#fff;font-weight:700;font-size:13px;text-decoration:none">Редактировать</a>
                   <a href="/{{ selected_site.slug }}" target="_blank" class="lk-mag" style="padding:10px 16px;border-radius:10px;border:1px solid var(--line2);background:var(--bg2);color:var(--ink);font-weight:700;font-size:13px;text-decoration:none">Смотреть</a>
                 </div>
               </div>
