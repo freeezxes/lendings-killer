@@ -8,41 +8,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  *{{box-sizing:border-box;-webkit-tap-highlight-color:transparent}}
-  html,body{{margin:0;padding:0}}
-  :root{{
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  :root{
     --bg:#F3F4FA;--bg2:#FBFCFF;--surface:#FFFFFF;--soft-panel:#F1F3FA;--ink:#141625;--muted:#6B7386;--soft:#9AA1B2;
     --line:#E7EAF3;--line2:#D8DDEB;--brand:#6D4AFF;--brand2:#8A6BFF;--brand-ink:#4B2FE0;
     --green:#12A870;--warn:#E7952F;--red:#E5485D;--shadow:0 20px 50px -26px rgba(30,35,70,.30);--grid:rgba(109,74,255,.055);
-  }}
-  :root[data-theme="dark"]{{
+  }
+  :root[data-theme="dark"]{
     --bg:#09090F;--bg2:#0F0F17;--surface:#15151F;--soft-panel:#1B1B27;--ink:#F2F3F9;--muted:#9AA1B2;--soft:#6B7286;
     --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.15);--brand:#8A6BFF;--brand2:#A48CFF;--brand-ink:#6D4AFF;
     --green:#22C58A;--warn:#F0A93F;--red:#F4586C;--shadow:0 26px 64px -28px rgba(0,0,0,.75);--grid:rgba(138,107,255,.06);
-  }}
-  @keyframes lk-up{{from{{opacity:0;transform:translateY(20px)}}to{{opacity:1;transform:translateY(0)}}}}
-  @keyframes lk-pop{{0%{{opacity:0;transform:scale(.95) translateY(8px)}}100%{{opacity:1;transform:scale(1) translateY(0)}}}}
-  @keyframes lk-spin{{to{{transform:rotate(360deg)}}}}
-  @keyframes lk-bounce{{0%,70%,100%{{transform:translateY(0)}}35%{{transform:translateY(-5px)}}}}
-  .lk-sc::-webkit-scrollbar{{width:8px;height:8px}}.lk-sc::-webkit-scrollbar-thumb{{background:var(--line2);border-radius:4px}}.lk-sc::-webkit-scrollbar-track{{background:transparent}}
-  .lk-mag{{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .25s,color .25s,border-color .25s,opacity .2s}}
-  .lk-reveal{{animation:lk-up .5s cubic-bezier(.22,1,.36,1) both}}
+  }
+  @keyframes lk-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes lk-pop{0%{opacity:0;transform:scale(.95) translateY(8px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes lk-spin{to{transform:rotate(360deg)}}
+  @keyframes lk-bounce{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}}
+  .lk-sc::-webkit-scrollbar{width:8px;height:8px}.lk-sc::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}.lk-sc::-webkit-scrollbar-track{background:transparent}
+  .lk-mag{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .25s,color .25s,border-color .25s,opacity .2s}
+  .lk-reveal{animation:lk-up .5s cubic-bezier(.22,1,.36,1) both}
   
   /* Chat overrides */
-  .msg {{ max-width:min(76%,680px); padding:12px 14px; border-radius:17px; font-size:.88rem; line-height:1.62; white-space:pre-wrap; word-break:break-word; animation:lk-pop .18s ease-out both; }}
-  .msg.bot {{ align-self:flex-start; background:var(--soft-panel); border:1px solid var(--line); border-bottom-left-radius:5px; }}
-  .msg.user {{ align-self:flex-end; background:var(--brand); color:#fff; border-bottom-right-radius:5px; border:1px solid var(--brand); }}
-  .typing {{ align-self:flex-start; display:flex; gap:5px; background:var(--soft-panel); border:1px solid var(--line); border-radius:17px; border-bottom-left-radius:5px; padding:13px 15px; }}
-  .typing span {{ width:6px; height:6px; border-radius:50%; background:var(--muted); animation:lk-bounce 1.2s infinite; }}
-  .typing span:nth-child(2) {{ animation-delay:.15s; }}
-  .typing span:nth-child(3) {{ animation-delay:.3s; }}
+  .msg { max-width:min(76%,680px); padding:12px 14px; border-radius:17px; font-size:.88rem; line-height:1.62; white-space:pre-wrap; word-break:break-word; animation:lk-pop .18s ease-out both; }
+  .msg.bot { align-self:flex-start; background:var(--soft-panel); border:1px solid var(--line); border-bottom-left-radius:5px; }
+  .msg.user { align-self:flex-end; background:var(--brand); color:#fff; border-bottom-right-radius:5px; border:1px solid var(--brand); }
+  .typing { align-self:flex-start; display:flex; gap:5px; background:var(--soft-panel); border:1px solid var(--line); border-radius:17px; border-bottom-left-radius:5px; padding:13px 15px; }
+  .typing span { width:6px; height:6px; border-radius:50%; background:var(--muted); animation:lk-bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay:.15s; }
+  .typing span:nth-child(3) { animation-delay:.3s; }
   
-  .step {{ display:flex; gap:10px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--bg2); color:var(--muted); font-size:.78rem; font-weight:800; }}
-  .step-dot {{ width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--soft-panel); color:var(--brand); font-size:.72rem; }}
-  .step.done {{ background:rgba(18,168,112,.15); color:var(--green); border-color:rgba(18,168,112,.3); }}
-  .step.active {{ background:rgba(109,74,255,.15); color:var(--brand); border-color:rgba(109,74,255,.3); }}
+  .step { display:flex; gap:10px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--bg2); color:var(--muted); font-size:.78rem; font-weight:800; }
+  .step-dot { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--soft-panel); color:var(--brand); font-size:.72rem; }
+  .step.done { background:rgba(18,168,112,.15); color:var(--green); border-color:rgba(18,168,112,.3); }
+  .step.active { background:rgba(109,74,255,.15); color:var(--brand); border-color:rgba(109,74,255,.3); }
 
-  .toast{{position:fixed;left:50%;top:82px;transform:translateX(-50%) translateY(-8px);background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 15px;font-size:.82rem;box-shadow:var(--shadow);border:1px solid var(--line);z-index:100;opacity:0;pointer-events:none;transition:.2s}}.toast.show{{opacity:1;transform:translateX(-50%) translateY(0)}}
+  .toast{position:fixed;left:50%;top:82px;transform:translateX(-50%) translateY(-8px);background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 15px;font-size:.82rem;box-shadow:var(--shadow);border:1px solid var(--line);z-index:100;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body class="lk" data-theme="dark">
