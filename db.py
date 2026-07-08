@@ -94,6 +94,7 @@ def init_db():
             gen_out     INTEGER DEFAULT 0,
             cache_read  INTEGER DEFAULT 0,
             cost_usd    REAL DEFAULT 0,
+            edit_status TEXT DEFAULT 'ready',
             created     TEXT DEFAULT (datetime('now')),
             updated     TEXT DEFAULT (datetime('now'))
         );
@@ -318,6 +319,7 @@ def init_db():
             ("gen_out",   "INTEGER DEFAULT 0"),
             ("cache_read","INTEGER DEFAULT 0"),
             ("cost_usd",  "REAL DEFAULT 0"),
+            ("edit_status", "TEXT DEFAULT 'ready'"),
         ]:
             if col not in cols:
                 c.execute(f"ALTER TABLE sites ADD COLUMN {col} {defn}")
@@ -970,10 +972,14 @@ def update_site_html(site_id: int, html_path: str, tokens_used: int):
                   (html_path, tokens_used, site_id))
 
 def update_site_data(site_id: int, data: dict):
-    # update site data
     with get_conn() as c:
-        c.execute("UPDATE sites SET data=?,updated=datetime('now') WHERE id=?",
-                  (json.dumps(data, ensure_ascii=False), site_id))
+        c.execute("UPDATE sites SET data=?, updated=datetime('now') WHERE id=?", (json.dumps(data, ensure_ascii=False), site_id))
+        c.commit()
+
+def update_site_edit_status(site_id: int, status: str):
+    with get_conn() as c:
+        c.execute("UPDATE sites SET edit_status=?, updated=datetime('now') WHERE id=?", (status, site_id))
+        c.commit()
 
 def delete_site(site_id: int, user_id: int) -> bool:
     # delete site

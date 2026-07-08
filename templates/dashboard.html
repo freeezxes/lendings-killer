@@ -253,9 +253,31 @@
               const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});
               const j=await r.json();removeTyping();if(j.error){lockInput(false);throw new Error(j.error);}
               if(j.edit_history)editHistory=j.edit_history;
+              
+              if(j.status === 'editing'){
+                addMsg(j.message,'bot');
+                showGeneration();
+                const poll = setInterval(async () => {
+                  const pr = await fetch(`/site/${currentSlug}/edit/status`);
+                  const pj = await pr.json();
+                  if(pj.status !== 'editing'){
+                    clearInterval(poll);
+                    document.getElementById('generationBox')?.remove();
+                    if(pj.status === 'ready'){
+                      addMsg('Готово. Страница обновлена.','bot');
+                      setTimeout(()=>window.location.href=j.workspace_url||'/dashboard/sites/'+currentSlug, 900);
+                    } else {
+                      addMsg('Произошла ошибка при обновлении (или недостаточно кредитов).', 'bot');
+                    }
+                    lockInput(false);
+                  }
+                }, 3000);
+                return;
+              }
+              
               if(!j.done){addMsg(j.message,'bot');lockInput(false);return;}
               addMsg('Готово. Страница обновлена.','bot');
-              setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900);
+              setTimeout(()=>window.location.href=j.workspace_url||'/dashboard/sites/'+currentSlug,900);
             }catch(e){removeTyping();addMsg(e.message||'Ошибка','bot');lockInput(false);}
             return;
           }
@@ -329,6 +351,24 @@
                   const j = await r.json();if(j.error) throw new Error(j.error);
                   if(j.edit_history) editHist = j.edit_history;
                   addEditMsg(j.message, 'bot');
+                  
+                  if(j.status === 'editing'){
+                    const poll = setInterval(async () => {
+                      const pr = await fetch(`/site/${siteSlug}/edit/status`);
+                      const pj = await pr.json();
+                      if(pj.status !== 'editing'){
+                        clearInterval(poll);
+                        if(pj.status === 'ready'){
+                          addEditMsg('Готово. Страница обновлена.', 'bot');
+                          setTimeout(()=>window.location.reload(), 1500);
+                        } else {
+                          addEditMsg('Произошла ошибка при обновлении.', 'bot');
+                        }
+                      }
+                    }, 3000);
+                    return;
+                  }
+                  
                   if(j.done) setTimeout(()=>window.location.reload(), 1500);
                 } catch(e) {addEditMsg(e.message || 'Ошибка', 'bot');}
               }

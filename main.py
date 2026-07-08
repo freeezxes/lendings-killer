@@ -462,7 +462,7 @@ def _ai_generate(data: dict) -> dict:
         "cache_create_tokens": 0,
     }
 
-def _agent_generate(data: dict, slug: str) -> dict:
+async def _agent_generate(data: dict, slug: str) -> dict:
     import openhands_client
     
     ref_url = data.get("ref_url", "").strip()
@@ -495,7 +495,7 @@ def _agent_generate(data: dict, slug: str) -> dict:
 
     prompt = "\n\n".join(prompt_lines)
     
-    success = openhands_client.run_openhands_task(slug, prompt)
+    success = await openhands_client.run_openhands_task(slug, prompt)
     
     # Generate dummy HTML to satisfy legacy db/routing until we refactor routing fully
     dummy_html = f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0; url=/static/sites/{slug}/dist/index.html'></head><body>Loading App...</body></html>"
@@ -2218,7 +2218,8 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
         if db.get_site_by_slug(slug):
             slug = f"{slug}-{uuid.uuid4().hex[:4]}"
 
-        gen = _agent_generate(data, slug)
+        import asyncio
+        gen = asyncio.run(_agent_generate(data, slug))
         gen_in = gen["input_tokens"]
         gen_out = gen["output_tokens"]
         gen_cr = gen["cache_read_tokens"]
@@ -2545,7 +2546,7 @@ async def api_onboarding_status(request: Request, session_id: int):
 # ── Site edit ─────────────────────────────────────────────────────────────────
 
 @app.post("/site/{slug}/edit")
-async def site_edit(slug: str, request: Request):
+async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
     # handle ai site edit and generation flow
     user = _require_auth(request)
     if not user:
@@ -2641,52 +2642,72 @@ async def site_edit(slug: str, request: Request):
     data["chat_history"]   = combined_history
     data["prev_html_full"] = prev_html
 
-    gen = _agent_generate(data, slug)
-
-    gen_in  = gen["input_tokens"]
-    gen_out = gen["output_tokens"]
-    gen_cr  = gen["cache_read_tokens"]
-    gen_cc  = gen["cache_create_tokens"]
-    cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
-    our_tokens = _tokens_to_ours(gen_in, gen_out)
-
-    fresh_user = db.get_user_by_id(user["id"]) or user
-    if _dev_credits(fresh_user) < our_tokens:
-        return JSONResponse({"error": "Недостаточно кредитов разработки"}, status_code=402)
-
-    if prev_html:
-        services.VersionService.create_snapshot(site["id"], prev_html, site.get("data") or {}, "before_site_edit")
-    deducted = db.deduct_tokens(
-        user_id=user["id"], amount=our_tokens,
-        reason=f"site_edit:{slug}",
-        site_id=site["id"],
-        claude_in=gen_in, claude_out=gen_out,
-        cache_read=gen_cr, cost_usd=cost,
-    )
-    if not deducted:
-        return JSONResponse({"error": "Баланс изменился. Пополните кредиты разработки и попробуйте ещё раз."}, status_code=409)
-
-    updated_html = _inject_analytics(gen["html"], slug)
-    (GENERATED_DIR / f"{slug}.html").write_text(updated_html, encoding="utf-8")
-
-    data_to_save = {**data, "chat_history": combined_history}
-    db.update_site_data(site["id"], data_to_save)
-    db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
-    services.VersionService.create_snapshot(site["id"], updated_html, data_to_save, "site_edit")
-    services.CampaignService.site_changed(site["id"], "site_edit")
-    updated_user = db.get_user_by_id(user["id"]) or user
+    db.update_site_edit_status(site["id"], "editing")
+    
+    bg_tasks.add_task(_background_edit_task, user, site, slug, data, prev_html, combined_history, edit_history)
 
     return JSONResponse({
-        "done":         True,
-        "ok":           True,
-        "message":      reply,
-        "site_url":     f"/site/{slug}",
-        "workspace_url": f"/dashboard/sites/{site['id']}",
+        "done":         False,
+        "status":       "editing",
+        "message":      reply + " Запускаю Агента для внесения правок...",
         "edit_history": edit_history,
-        "tokens_spent": our_tokens,
-        "tokens_left":  _dev_credits(updated_user),
-        "dev_credits_left": _dev_credits(updated_user),
     })
+
+async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, prev_html: str, combined_history: list, edit_history: list):
+    try:
+        gen = await _agent_generate(data, slug)
+
+        gen_in  = gen["input_tokens"]
+        gen_out = gen["output_tokens"]
+        gen_cr  = gen["cache_read_tokens"]
+        gen_cc  = gen["cache_create_tokens"]
+        cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
+        our_tokens = _tokens_to_ours(gen_in, gen_out)
+
+        fresh_user = db.get_user_by_id(user["id"]) or user
+        if _dev_credits(fresh_user) < our_tokens:
+            db.update_site_edit_status(site["id"], "error_credits")
+            return
+
+        if prev_html:
+            services.VersionService.create_snapshot(site["id"], prev_html, site.get("data") or {}, "before_site_edit")
+            
+        deducted = db.deduct_tokens(
+            user_id=user["id"], amount=our_tokens,
+            reason=f"site_edit:{slug}",
+            site_id=site["id"],
+            claude_in=gen_in, claude_out=gen_out,
+            cache_read=gen_cr, cost_usd=cost,
+        )
+        if not deducted:
+            db.update_site_edit_status(site["id"], "error_balance")
+            return
+
+        updated_html = _inject_analytics(gen["html"], slug)
+        (GENERATED_DIR / f"{slug}.html").write_text(updated_html, encoding="utf-8")
+
+        data_to_save = {**data, "chat_history": combined_history}
+        db.update_site_data(site["id"], data_to_save)
+        db.update_site_html(site["id"], str(GENERATED_DIR / f"{slug}.html"), our_tokens)
+        services.VersionService.create_snapshot(site["id"], updated_html, data_to_save, "site_edit")
+        services.CampaignService.site_changed(site["id"], "site_edit")
+        
+        db.update_site_edit_status(site["id"], "ready")
+    except Exception as e:
+        logger.error(f"Error in background edit task for {slug}: {e}")
+        db.update_site_edit_status(site["id"], "error")
+
+@app.get("/site/{slug}/edit/status")
+async def get_site_edit_status(slug: str, request: Request):
+    user = _require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+        
+    site = db.get_site_by_slug(slug)
+    if not site or site["user_id"] != user["id"]:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+        
+    return JSONResponse({"status": site.get("edit_status", "ready")})
 
 
 # ── Payment routes ────────────────────────────────────────────────────────────

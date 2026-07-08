@@ -219,28 +219,63 @@ async function generateSite(){
     autosave();
   }
 }
-async function send(){if(inputLocked)return;const inp=document.getElementById('inp');const text=inp.value.trim();if(!text)return;inp.value='';inp.style.height='auto';addMsg(text,'user');lockInput(true);showTyping();if(editMode&&currentSlug){try{const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});
-  const j=await r.json();
-  removeTyping();
-  if(j.error){
-    lockInput(false);
-    throw new Error(j.error);
-  }
-  if(j.edit_history)editHistory=j.edit_history;
-  if(!j.done){
-    addMsg(j.message,'bot');
-    lockInput(false);
+async function send(){
+  if(inputLocked)return;
+  const inp=document.getElementById('inp');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  inp.style.height='auto';
+  addMsg(text,'user');
+  lockInput(true);
+  showTyping();
+  if(editMode&&currentSlug){
+    try{
+      const r=await fetch(`/site/${currentSlug}/edit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history,edit_history:editHistory,photo_urls:photoUrls})});
+      const j=await r.json();
+      removeTyping();
+      if(j.error){
+        lockInput(false);
+        throw new Error(j.error);
+      }
+      if(j.edit_history)editHistory=j.edit_history;
+      
+      if(j.status === 'editing'){
+        addMsg(j.message,'bot');
+        showGeneration();
+        const poll = setInterval(async () => {
+          const pr = await fetch(`/site/${currentSlug}/edit/status`);
+          const pj = await pr.json();
+          if(pj.status !== 'editing'){
+            clearInterval(poll);
+            document.getElementById('generationBox')?.remove();
+            if(pj.status === 'ready'){
+              addMsg('Готово. Страница обновлена.','bot');
+              setTimeout(()=>window.location.href=j.workspace_url||'/dashboard/sites/'+currentSlug, 900);
+            } else {
+              addMsg('Произошла ошибка при обновлении (или недостаточно кредитов).', 'bot');
+            }
+            lockInput(false);
+          }
+        }, 3000);
+        return;
+      }
+      
+      if(!j.done){
+        addMsg(j.message,'bot');
+        lockInput(false);
+        return;
+      }
+      addMsg('Готово. Страница обновлена.','bot');
+      setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900);
+    }catch(e){
+      removeTyping();
+      addMsg(e.message||'Ошибка правки','bot');
+      lockInput(false);
+    }
     return;
   }
-  addMsg('Готово. Страница обновлена.','bot');
-  setTimeout(()=>window.location.href=j.workspace_url||'/dashboard',900);
-  }catch(e){
-    removeTyping();
-    addMsg(e.message||'Ошибка правки','bot');
-    lockInput(false);
-  }
-  return;
-}
+
   try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,message:text,history,photo_urls:photoUrls,chat_in:chatIn,chat_out:chatOut,chat_cr:chatCr})});
   const j=await r.json();
   removeTyping();
