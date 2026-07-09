@@ -9,6 +9,7 @@ services:
       - LLM_BASE_URL=https://llm.alem.ai/v1
       - WORKSPACE_BASE=/opt/lendings/generated_sites
       - SANDBOX_USER_ID=1000
+      - SANDBOX_BASE_CONTAINER_IMAGE=nikolaik/python-nodejs:python3.12-nodejs22-bookworm
     ports:
       - "3030:3000"
     volumes:
@@ -22,6 +23,4 @@ services:
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
       - /usr/libexec/docker/cli-plugins:/usr/lib/docker/cli-plugins
       - /usr/libexec/docker/cli-plugins:/root/.docker/cli-plugins
-      # Mount patched Dockerfile template to fix libgl1-mesa-glx error
-      - ./Dockerfile.j2:/app/openhands/runtime/utils/runtime_templates/Dockerfile.j2
     restart: always
