@@ -467,7 +467,7 @@ document.querySelectorAll('form.form').forEach(form => {
     const lang = localStorage.getItem('lk_lang') || 'ru';
     btn.dataset.original = btn.textContent;
     btn.textContent = "⏳..."; // Simple loading
-    btn.disabled = true;
+    setTimeout(() => { btn.disabled = true; }, 0);
   });
 });
 
