@@ -22,4 +22,6 @@ services:
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
       - /usr/libexec/docker/cli-plugins:/usr/lib/docker/cli-plugins
       - /usr/libexec/docker/cli-plugins:/root/.docker/cli-plugins
+      # Mount patched Dockerfile template to fix libgl1-mesa-glx error
+      - ./Dockerfile.j2:/app/openhands/runtime/utils/runtime_templates/Dockerfile.j2
     restart: always
