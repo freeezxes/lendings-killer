@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   openhands:
-    image: docker.all-hands.dev/all-hands-ai/openhands:0.13
+    image: ghcr.io/all-hands-ai/openhands:0.13
     container_name: lendings_openhands
     environment:
       - LLM_MODEL=openai/qwen3-6
