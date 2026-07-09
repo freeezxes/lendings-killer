@@ -4,7 +4,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-async def run_openhands_task(slug: str, prompt: str, timeout_seconds: int = 600) -> bool:
+async def run_openhands_task(slug: str, prompt: str, timeout_seconds: int = 1200) -> bool:
     """
     Runs an OpenHands task for the given workspace slug via docker exec asynchronously.
     Assumes a docker container named 'lendings_openhands' is running.
