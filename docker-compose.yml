@@ -16,4 +16,6 @@ services:
       - /opt/lendings/generated_sites:/opt/workspace_base
       # Mount docker socket so OpenHands can spin up sandboxes
       - /var/run/docker.sock:/var/run/docker.sock
+      # Mount docker CLI to allow OpenHands to build sandboxes
+      - /usr/bin/docker:/usr/bin/docker
     restart: always

@@ -41,4 +41,4 @@ jobs:
 
     - name: Restart Service
       run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "sudo systemctl restart lendings"
+        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "cd /opt/lendings && sudo docker-compose up -d && sudo systemctl restart lendings"
