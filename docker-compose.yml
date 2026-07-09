@@ -20,4 +20,6 @@ services:
       - /usr/bin/docker:/usr/bin/docker
       # Mount docker plugins to allow OpenHands to use docker buildx
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
+      - /usr/libexec/docker/cli-plugins:/usr/lib/docker/cli-plugins
+      - /usr/libexec/docker/cli-plugins:/root/.docker/cli-plugins
     restart: always
