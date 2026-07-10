@@ -491,14 +491,14 @@ async def _agent_generate(data: dict, slug: str) -> dict:
         if extra:
             prompt_lines.append(f"Дополнительно: {extra}")
             
-        prompt_lines.append("ТРЕБОВАНИЯ:\n1. Если папка пустая, разверни базовый Vite+React проект (npm create vite@latest . -- --template react).\n2. ВАЖНО: В файле vite.config.js или vite.config.ts ОБЯЗАТЕЛЬНО установи `base: './'` (относительные пути), иначе статика не загрузится.\n3. Установи tailwindcss.\n4. ДИЗАЙН: Напиши красивый, современный UI (используй Phosphor Icons). ВАЖНО: Приложение должно занимать ВСЮ ширину экрана (100vw) на десктопе и мобилках (используй w-full, min-h-screen). Никаких черных или пустых полос по бокам! Делай премиальный вид: карточки с тенями (shadow-lg), красивые скругления (rounded-2xl), современные градиенты, отступы (padding).\n5. Выполни npm run build когда всё будет готово.")
+        prompt_lines.append("ТРЕБОВАНИЯ:\n1. ТЫ ДОЛЖЕН СДЕЛАТЬ ВСЁ БЫСТРО! Создай ровно ОДИН файл `index.html` в текущей директории.\n2. ВАЖНО: Никакого React, Vite, Node.js или npm install! Используй чистый HTML5 и Tailwind CSS через CDN (`<script src=\"https://cdn.tailwindcss.com\"></script>`).\n3. ДИЗАЙН: Напиши красивый, современный UI (используй Phosphor Icons через CDN). ВАЖНО: Приложение должно занимать ВСЮ ширину экрана (100vw). Никаких черных или пустых полос по бокам! Делай премиальный вид: карточки с тенями (shadow-lg), красивые скругления (rounded-2xl), современные градиенты, отступы (padding).\n4. Как только создашь и сохранишь `index.html`, СРАЗУ ЖЕ завершай работу.")
 
     prompt = "\n\n".join(prompt_lines)
     
     success = await openhands_client.run_openhands_task(slug, prompt)
     
     # Generate dummy HTML to satisfy legacy db/routing until we refactor routing fully
-    dummy_html = f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0; url=/static/sites/{slug}/dist/index.html'></head><body>Loading App...</body></html>"
+    dummy_html = f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0; url=/static/sites/{slug}/index.html'></head><body>Loading App...</body></html>"
     
     return {
         "html": dummy_html if success else "<html><body>Error generating site</body></html>",
