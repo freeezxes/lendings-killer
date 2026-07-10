@@ -2221,8 +2221,8 @@ def _generate_site_from_session(user: dict, session: dict) -> dict:
         if db.get_site_by_slug(slug):
             slug = f"{slug}-{uuid.uuid4().hex[:4]}"
 
-        import asyncio
-        gen = asyncio.run(_agent_generate(data, slug))
+        # Run generation
+        gen = _ai_generate(data)
         gen_in = gen["input_tokens"]
         gen_out = gen["output_tokens"]
         gen_cr = gen["cache_read_tokens"]
@@ -2658,7 +2658,7 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
 
 async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, prev_html: str, combined_history: list, edit_history: list):
     try:
-        gen = await _agent_generate(data, slug)
+        gen = _ai_generate(data)
 
         gen_in  = gen["input_tokens"]
         gen_out = gen["output_tokens"]
