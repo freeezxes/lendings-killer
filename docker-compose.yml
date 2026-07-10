@@ -10,6 +10,8 @@ services:
       - WORKSPACE_BASE=/opt/lendings/generated_sites
       - SANDBOX_USER_ID=1000
       - SANDBOX_BASE_CONTAINER_IMAGE=nikolaik/python-nodejs:python3.12-nodejs22-bookworm
+      - SANDBOX_LOCAL_RUNTIME_URL=http://lendings_openhands
+      - SANDBOX_NETWORK=lendings_default
     ports:
       - "3030:3000"
     volumes:
