@@ -1359,9 +1359,9 @@ class SubdomainMiddleware(BaseHTTPMiddleware):
 app = FastAPI()
 app.add_middleware(SubdomainMiddleware)
 app.add_middleware(SessionMiddleware)
-app.mount("/static", StaticFiles(directory="static"), name="static")
 GENERATED_DIR.mkdir(exist_ok=True)
 app.mount("/static/sites", StaticFiles(directory="generated_sites"), name="static_sites")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 def get_site_url(request: Request, slug: str) -> str:
