@@ -476,7 +476,7 @@ async def _agent_generate(data: dict, slug: str) -> dict:
         prompt_lines.append(f"ЗАПРОС НА ПРАВКУ СУЩЕСТВУЮЩЕГО КОДА:\n{edit_request}")
         prompt_lines.append("Внимательно изучи существующий код в директории src/, исправь ошибки или добавь запрошенный функционал.")
     else:
-        prompt_lines.append("ЗАДАЧА: Создать новое веб-приложение на React/Vite.")
+        prompt_lines.append("ЗАДАЧА: Создать новый красивый лендинг.")
         prompt_lines.append(f"Данные бизнеса:\n- Имя: {data.get('name')}\n- Услуги: {data.get('services')}\n- Город: {data.get('city')}")
         
         if ref_url:
@@ -494,6 +494,9 @@ async def _agent_generate(data: dict, slug: str) -> dict:
         prompt_lines.append("ТРЕБОВАНИЯ:\n1. ТЫ ДОЛЖЕН СДЕЛАТЬ ВСЁ БЫСТРО! Создай ровно ОДИН файл `index.html` в текущей директории.\n2. ВАЖНО: Никакого React, Vite, Node.js или npm install! Используй чистый HTML5 и Tailwind CSS через CDN (`<script src=\"https://cdn.tailwindcss.com\"></script>`).\n3. ДИЗАЙН: Напиши красивый, современный UI (используй Phosphor Icons через CDN). ВАЖНО: Приложение должно занимать ВСЮ ширину экрана (100vw). Никаких черных или пустых полос по бокам! Делай премиальный вид: карточки с тенями (shadow-lg), красивые скругления (rounded-2xl), современные градиенты, отступы (padding).\n4. Как только создашь и сохранишь `index.html`, СРАЗУ ЖЕ завершай работу.")
 
     prompt = "\n\n".join(prompt_lines)
+    
+    # Ensure the directory exists so OpenHands can write to it
+    (GENERATED_DIR / slug).mkdir(exist_ok=True)
     
     success = await openhands_client.run_openhands_task(slug, prompt)
     
