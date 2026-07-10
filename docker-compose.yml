@@ -7,7 +7,8 @@ services:
       - LLM_MODEL=openai/qwen3-6
       - LLM_API_KEY=${ALEM_API_KEY:-sk-YyCsvojyayk8wjNiEcF8tg} # Alem.plus default fallback
       - LLM_BASE_URL=https://llm.alem.ai/v1
-      - WORKSPACE_BASE=/opt/lendings/generated_sites
+      - WORKSPACE_BASE=/opt/workspace_base
+      - WORKSPACE_MOUNT_PATH=/opt/lendings/generated_sites
       - SANDBOX_USER_ID=1000
       - SANDBOX_BASE_CONTAINER_IMAGE=nikolaik/python-nodejs:python3.12-nodejs22-bookworm
       - SANDBOX_LOCAL_RUNTIME_URL=http://host.docker.internal
