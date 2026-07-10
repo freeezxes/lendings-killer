@@ -491,7 +491,7 @@ async def _agent_generate(data: dict, slug: str) -> dict:
         if extra:
             prompt_lines.append(f"Дополнительно: {extra}")
             
-        prompt_lines.append("ТРЕБОВАНИЯ:\n1. ТЫ ДОЛЖЕН СДЕЛАТЬ ВСЁ БЫСТРО! Создай ровно ОДИН файл `index.html` в текущей директории.\n2. ВАЖНО: Никакого React, Vite, Node.js или npm install! Используй чистый HTML5 и Tailwind CSS через CDN (`<script src=\"https://cdn.tailwindcss.com\"></script>`).\n3. ДИЗАЙН: Напиши красивый, современный UI (используй Phosphor Icons через CDN). ВАЖНО: Приложение должно занимать ВСЮ ширину экрана (100vw). Никаких черных или пустых полос по бокам! Делай премиальный вид: карточки с тенями (shadow-lg), красивые скругления (rounded-2xl), современные градиенты, отступы (padding).\n4. Как только создашь и сохранишь `index.html`, СРАЗУ ЖЕ завершай работу.")
+        prompt_lines.append(f"ТРЕБОВАНИЯ:\n1. ТЫ ДОЛЖЕН СДЕЛАТЬ ВСЁ БЫСТРО! Создай ровно ОДИН файл `index.html` ВНУТРИ папки `{slug}` (если папка не существует - создай её).\n2. ВАЖНО: Никакого React, Vite, Node.js или npm install! Используй чистый HTML5 и Tailwind CSS через CDN (`<script src=\"https://cdn.tailwindcss.com\"></script>`).\n3. ДИЗАЙН: Напиши красивый, современный UI (используй Phosphor Icons через CDN). ВАЖНО: Приложение должно занимать ВСЮ ширину экрана (100vw). Никаких черных или пустых полос по бокам! Делай премиальный вид: карточки с тенями (shadow-lg), красивые скругления (rounded-2xl), современные градиенты, отступы (padding).\n4. Как только создашь и сохранишь `{slug}/index.html`, СРАЗУ ЖЕ завершай работу.")
 
     prompt = "\n\n".join(prompt_lines)
     
