@@ -1,40 +1,36 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from core.database import Base
 
 class AdminUser(Base):
     __tablename__ = "admin_users"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    username = Column(String, unique=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    name = Column(String)
+    created = Column(String) # TEXT DEFAULT (datetime('now'))
+    last_login_at = Column(String)
 
 class AdminSession(Base):
     __tablename__ = "admin_sessions"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    session_id = Column(String, unique=True, index=True, nullable=False)
-    admin_id = Column(Integer, ForeignKey("admin_users.id"), nullable=False)
-    expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id = Column(String, primary_key=True)
+    admin_id = Column(Integer, ForeignKey("admin_users.id", ondelete="CASCADE"), nullable=False)
+    expires = Column(String, nullable=False)
 
 class Session(Base):
     __tablename__ = "sessions"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    session_id = Column(String, unique=True, index=True, nullable=False)
+    id = Column(String, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    expires_at = Column(Integer, nullable=False) # stored as timestamp in current schema
-    created_at = Column(DateTime, default=datetime.utcnow)
+    expires = Column(String, nullable=False)
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    token = Column(String, unique=True, index=True, nullable=False)
-    expires_at = Column(Integer, nullable=False) # stored as timestamp
+    token = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expires_at = Column(String, nullable=False)
     used = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(String)
+    used_at = Column(String)

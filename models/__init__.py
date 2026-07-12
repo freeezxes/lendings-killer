@@ -6,7 +6,7 @@ from .auth import AdminUser, AdminSession, Session, PasswordResetToken
 from .payment import Payment, SupportInvoice
 from .promotion import PromotionSetup, PromotionCampaign
 from .analytics import AnalyticsEvent
-from .log import DevCreditLog, PromoCreditLog, OnboardingSession, Notification
+from .log import TokenLog, DevCreditLog, PromoCreditLog, OnboardingSession, Notification
 
 __all__ = [
     "Base",
@@ -22,6 +22,7 @@ __all__ = [
     "PromotionSetup",
     "PromotionCampaign",
     "AnalyticsEvent",
+    "TokenLog",
     "DevCreditLog",
     "PromoCreditLog",
     "OnboardingSession",
