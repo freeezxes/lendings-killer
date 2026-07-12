@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from services.ai_service import _ai_chat
 import json
 
 router = APIRouter(tags=["chat"])

@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Request, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from services.ai_service import _tokens_to_ours
+from services.ai_service import _ai_generate
+from services.ai_service import _calc_cost
+from services.ai_service import _ai_edit_chat
 import re
 import json
 import base64
@@ -122,7 +126,7 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
     ai_history = edit_history + [{"role": "user", "content": ai_message}]
     edit_history = edit_history + [{"role": "user", "content": message}]
 
-    result       = _ai_edit_chat(ai_history, site_context)
+    result       = ai_service._ai_edit_chat(ai_history, site_context)
     reply        = result.get("reply", "Понял!")
     ready        = result.get("ready", False)
     needs_photos = result.get("needs_photos", False)
@@ -185,14 +189,14 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
 
 async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, prev_html: str, combined_history: list, edit_history: list):
     try:
-        gen = _ai_generate(data)
+        gen = ai_service._ai_generate(data)
 
         gen_in  = gen["input_tokens"]
         gen_out = gen["output_tokens"]
         gen_cr  = gen["cache_read_tokens"]
         gen_cc  = gen["cache_create_tokens"]
-        cost       = _calc_cost(gen_in, gen_out, gen_cr, gen_cc)
-        our_tokens = _tokens_to_ours(gen_in, gen_out)
+        cost       = ai_service._calc_cost(gen_in, gen_out, gen_cr, gen_cc)
+        our_tokens = ai_service._tokens_to_ours(gen_in, gen_out)
 
         fresh_user = main.db.get_user_by_id(user["id"]) or user
         if _dev_credits(fresh_user) < our_tokens:
