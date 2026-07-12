@@ -8,6 +8,7 @@ import unicodedata
 from datetime import datetime, timezone
 
 import db
+from core.config import settings
 
 
 EMAIL_RE = re.compile(
@@ -20,11 +21,7 @@ EMAIL_MAX_LENGTH = 254
 EMAIL_LOCAL_MAX_LENGTH = 64
 NAME_MIN_LENGTH = 2
 NAME_MAX_LENGTH = 80
-try:
-    PASSWORD_MIN_LENGTH = int(os.environ.get("AUTH_PASSWORD_MIN_LENGTH", "8"))
-except ValueError:
-    PASSWORD_MIN_LENGTH = 8
-PASSWORD_MIN_LENGTH = min(12, max(8, PASSWORD_MIN_LENGTH))
+PASSWORD_MIN_LENGTH = min(12, max(8, settings.auth_password_min_length))
 PASSWORD_MAX_LENGTH = 128
 BCRYPT_MAX_BYTES = 72
 PASSWORD_RESET_SECONDS = 60 * 60

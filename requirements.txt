@@ -9,3 +9,8 @@ bcrypt
 jinja2
 python-multipart
 aiofiles
+pydantic-settings
+python-dotenv
+sqlalchemy
+aiosqlite
+alembic
