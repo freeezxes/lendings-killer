@@ -403,7 +403,7 @@ def _ai_generate(data: dict) -> dict:
 
     if edit_request and prev_html_full:
         # Edit mode — patch existing HTML, don't regenerate from scratch
-        user_content = f"""Вот ТЕКУЩИЙ HTML сайта клиента — измени только то, о чём просит клиент, всё остальное оставь точно как есть:
+        user_content = f"""Вот ТЕКУЩИЙ HTML сайта клиента:
 
 === ТЕКУЩИЙ HTML ===
 {prev_html_full}
@@ -411,8 +411,16 @@ def _ai_generate(data: dict) -> dict:
 === ЗАПРОС КЛИЕНТА ===
 «{edit_request}»
 
-Верни ПОЛНЫЙ HTML с внесёнными изменениями. Только чистый HTML начиная с <!DOCTYPE html>, никакого markdown. 
-ОБЯЗАТЕЛЬНО: Пиши максимально компактно, без долгих размышлений. Твой ответ не должен превышать лимит, обязательно закрой тег </html>!"""
+Твоя задача — вернуть СТРОГО валидный JSON-массив объектов замен, чтобы выполнить точечное редактирование HTML кода.
+Формат:
+[
+  {{
+    "find": "точный кусок старого кода (желательно несколько строк для уникальности)",
+    "replace": "новый код, на который нужно заменить"
+  }}
+]
+Верни ТОЛЬКО JSON, больше ничего. Никакого markdown. Не переписывай весь HTML, верни только нужные блоки замен. Убедись, что строка в 'find' 100% совпадает с куском из оригинального HTML, включая отступы и пробелы!"""
+
     else:
         user_content = f"""Данные клиента:
 - Имя/профессия: {data.get('name', '')}
@@ -434,14 +442,37 @@ def _ai_generate(data: dict) -> dict:
     )
 
     usage = resp.get("usage", {})
-    html  = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+    content  = resp.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
-    if html.startswith("```"):
-        html = re.sub(r'^```[a-z]*\n?', '', html)
-        html = re.sub(r'\n?```$', '', html)
+    if edit_request and prev_html_full:
+        import json
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        content = content.replace("```", "").strip()
+        
+        try:
+            patches = json.loads(content)
+            html = prev_html_full
+            for patch in patches:
+                find_str = patch.get("find", "")
+                replace_str = patch.get("replace", "")
+                if find_str and find_str in html:
+                    html = html.replace(find_str, replace_str)
+            if html == prev_html_full:
+                logger.warning("AI edit JSON patch returned matches that were not found in original HTML")
+        except json.JSONDecodeError:
+            logger.exception("AI edit JSON patch failed to decode")
+            html = prev_html_full
+    else:
+        html = content
+        if html.startswith("```"):
+            html = re.sub(r'^```[a-z]*\n?', '', html)
+            html = re.sub(r'\n?```$', '', html)
 
-    if "</html>" not in html.lower():
-        raise ValueError("Генерация прервана из-за объема (код не поместился в лимит). Пожалуйста, сделайте запрос проще.")
+        if "</html>" not in html.lower():
+            raise ValueError("Генерация прервана из-за объема (код не поместился в лимит). Пожалуйста, сделайте запрос проще.")
 
     # Post-process: force AI to use the real photo URLs if it hallucinated dummy src
     photo_urls = data.get("photo_urls", [])
