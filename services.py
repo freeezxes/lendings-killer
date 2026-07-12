@@ -4,7 +4,18 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-import db
+from sqlalchemy import select, desc
+from core.database import AsyncSessionLocal
+from repositories.user_repo import user_repo
+from repositories.site_repo import site_repo
+from models.site import Site
+from models.user import User
+from models.payment import Payment, SupportInvoice
+from models.promotion import PromotionSetup, PromotionCampaign
+from models.log import DevCreditLog, PromoCreditLog, OnboardingSession, Notification
+from models.analytics import AnalyticsEvent
+from models.site_version import SiteVersion
+
 from domain import (
     AnalyticsStatus,
     CampaignStatus,
@@ -23,19 +34,13 @@ from domain import (
     VERSION_RESTORE_DEV_CREDITS,
 )
 
-
 def _now() -> datetime:
-    # now
     return datetime.utcnow().replace(microsecond=0)
 
-
 def _fmt(dt: datetime) -> str:
-    # fmt
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-
 def _parse_dt(value: str | None) -> datetime | None:
-    # parse dt
     if not value:
         return None
     text = str(value).strip()
@@ -46,39 +51,26 @@ def _parse_dt(value: str | None) -> datetime | None:
             pass
     return None
 
-
-def _rowdict(row: Any) -> dict | None:
-    # rowdict
-    return dict(row) if row else None
-
-
-def _site_data(site: dict) -> dict:
-    # site data
-    data = site.get("data") or {}
+def _site_data(site: Site | dict) -> dict:
+    data = site.data if hasattr(site, 'data') else site.get("data")
     if isinstance(data, str):
         try:
             return json.loads(data or "{}")
         except json.JSONDecodeError:
             return {}
-    return data
-
+    return data or {}
 
 def is_support_operational(status: str | None) -> bool:
-    # validate support state
     return status in {SupportStatus.ACTIVE.value, SupportStatus.EXPIRING_SOON.value}
 
-
 def is_support_public(status: str | None) -> bool:
-    # is support public
     return status in {
         SupportStatus.ACTIVE.value,
         SupportStatus.EXPIRING_SOON.value,
         SupportStatus.INVOICE_ISSUED.value,
     }
 
-
 def _status_label(status: str) -> str:
-    # status label
     labels = {
         SupportStatus.ACTIVE.value: "Поддержка активна",
         SupportStatus.EXPIRING_SOON.value: "Скоро закончится",
@@ -102,19 +94,16 @@ def _status_label(status: str) -> str:
     }
     return labels.get(status, status)
 
-
 class SupportService:
-    # support service class
     @staticmethod
     def initial_paid_until() -> str:
-        # initial paid until
         return _fmt(_now() + timedelta(days=SUPPORT_INCLUDED_DAYS))
 
     @staticmethod
-    def compute_status(site: dict, now: datetime | None = None) -> str:
-        # compute support status based on dates
+    def compute_status(site: Site | dict, now: datetime | None = None) -> str:
         now = now or _now()
-        paid_until = _parse_dt(site.get("support_paid_until"))
+        paid_until_str = site.support_paid_until if hasattr(site, 'support_paid_until') else site.get("support_paid_until")
+        paid_until = _parse_dt(paid_until_str)
         if not paid_until:
             return SupportStatus.SUSPENDED.value
         if now <= paid_until:
@@ -125,240 +114,205 @@ class SupportService:
             return SupportStatus.INVOICE_ISSUED.value
         return SupportStatus.SUSPENDED.value
 
-    @staticmethod
-    def refresh_site(site_id: int) -> dict | None:
-        # refresh site support status
+    @classmethod
+    async def refresh_site(cls, site_id: int) -> Site | None:
         now = _now()
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            site = _rowdict(c.execute("SELECT * FROM sites WHERE id=?", (site_id,)).fetchone())
+        async with AsyncSessionLocal() as session:
+            site = await site_repo.get(session, site_id)
             if not site:
                 return None
 
-            status = SupportService.compute_status(site, now)
-            paid_until = _parse_dt(site.get("support_paid_until"))
+            status = cls.compute_status(site, now)
+            paid_until = _parse_dt(site.support_paid_until)
             if status in {SupportStatus.INVOICE_ISSUED.value, SupportStatus.SUSPENDED.value}:
-                SupportService._ensure_invoice(c, site, paid_until or now)
-                c.execute(
-                    """UPDATE sites
-                       SET analytics_status=?, promo_status=?, support_status=?, updated=datetime('now')
-                       WHERE id=?""",
-                    (
-                        AnalyticsStatus.BLOCKED.value,
-                        PromotionStatus.PAUSED.value,
-                        status,
-                        site_id,
-                    ),
-                )
-                CampaignService._stop_active_for_site(
-                    c,
+                await cls._ensure_invoice(session, site, paid_until or now)
+                site.analytics_status = AnalyticsStatus.BLOCKED.value
+                site.promo_status = PromotionStatus.PAUSED.value
+                site.support_status = status
+                site.updated = now
+                session.add(site)
+                
+                await CampaignService._stop_active_for_site(
+                    session,
                     site_id,
                     CampaignStatus.STOPPED_SUPPORT_EXPIRED.value,
                 )
             else:
-                c.execute(
-                    "UPDATE sites SET support_status=?, updated=datetime('now') WHERE id=?",
-                    (status, site_id),
-                )
+                site.support_status = status
+                site.updated = now
+                session.add(site)
 
-            row = c.execute("SELECT * FROM sites WHERE id=?", (site_id,)).fetchone()
-            result = dict(row)
-            result["data"] = _site_data(result)
-            return result
+            await session.commit()
+            await session.refresh(site)
+            return site
 
-    @staticmethod
-    def _ensure_invoice(c, site: dict, expired_at: datetime):
-        # ensure invoice
-        existing = c.execute(
-            """SELECT id FROM support_invoices
-               WHERE site_id=? AND status=?
-               ORDER BY created DESC LIMIT 1""",
-            (site["id"], InvoiceStatus.PENDING.value),
-        ).fetchone()
+    @classmethod
+    async def _ensure_invoice(cls, session, site: Site, expired_at: datetime):
+        result = await session.execute(
+            select(SupportInvoice).filter_by(site_id=site.id, status=InvoiceStatus.PENDING.value)
+            .order_by(desc(SupportInvoice.created)).limit(1)
+        )
+        existing = result.scalars().first()
         if existing:
             return
         due_at = expired_at + timedelta(days=SUPPORT_GRACE_DAYS)
-        c.execute(
-            """INSERT INTO support_invoices
-               (user_id, site_id, amount, months, status, due_at, created, updated)
-               VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))""",
-            (
-                site["user_id"],
-                site["id"],
-                SUPPORT_MONTHLY_PRICE,
-                1,
-                InvoiceStatus.PENDING.value,
-                _fmt(due_at),
-            ),
+        invoice = SupportInvoice(
+            user_id=site.user_id,
+            site_id=site.id,
+            amount=SUPPORT_MONTHLY_PRICE,
+            months=1,
+            status=InvoiceStatus.PENDING.value,
+            due_at=_fmt(due_at),
+            created=datetime.utcnow(),
+            updated=datetime.utcnow(),
         )
+        session.add(invoice)
 
-    @staticmethod
-    def refresh_user_sites(user_id: int) -> list[dict]:
-        # refresh all user sites statuses
-        sites = db.get_user_sites(user_id)
-        refreshed = []
-        for site in sites:
-            updated = SupportService.refresh_site(site["id"]) or site
-            CampaignService.refresh_site_campaigns(updated["id"])
-            refreshed.append(db.get_site_by_id(updated["id"]) or updated)
-        return refreshed
+    @classmethod
+    async def refresh_user_sites(cls, user_id: int) -> list[Site]:
+        async with AsyncSessionLocal() as session:
+            sites = await site_repo.get_multi_by_user(session, user_id)
+            refreshed = []
+            for site in sites:
+                updated = await cls.refresh_site(site.id) or site
+                await CampaignService.refresh_site_campaigns(updated.id)
+                refreshed.append(await site_repo.get(session, updated.id) or updated)
+            return refreshed
 
-    @staticmethod
-    def get_open_invoice(site_id: int) -> dict | None:
-        # get open invoice
-        with db.get_conn() as c:
-            return _rowdict(c.execute(
-                """SELECT * FROM support_invoices
-                   WHERE site_id=? AND status=?
-                   ORDER BY created DESC LIMIT 1""",
-                (site_id, InvoiceStatus.PENDING.value),
-            ).fetchone())
+    @classmethod
+    async def get_open_invoice(cls, site_id: int) -> SupportInvoice | None:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SupportInvoice).filter_by(site_id=site_id, status=InvoiceStatus.PENDING.value)
+                .order_by(desc(SupportInvoice.created)).limit(1)
+            )
+            return result.scalars().first()
 
-    @staticmethod
-    def pay_invoice(user_id: int, site_id: int) -> dict:
-        # process support invoice payment
+    @classmethod
+    async def pay_invoice(cls, user_id: int, site_id: int) -> dict:
         now = _now()
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            site = _rowdict(c.execute(
-                "SELECT * FROM sites WHERE id=? AND user_id=?",
-                (site_id, user_id),
-            ).fetchone())
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Site).filter_by(id=site_id, user_id=user_id))
+            site = result.scalars().first()
             if not site:
                 return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
 
-            status = SupportService.compute_status(site, now)
+            status = cls.compute_status(site, now)
             if status == SupportStatus.ACTIVE.value:
                 return {"ok": False, "error": "support_active", "message": "Поддержка уже активна."}
 
-            paid_until = _parse_dt(site.get("support_paid_until")) or now
-            if not c.execute(
-                """SELECT id FROM support_invoices
-                   WHERE site_id=? AND status=?
-                   ORDER BY created DESC LIMIT 1""",
-                (site_id, InvoiceStatus.PENDING.value),
-            ).fetchone():
-                SupportService._ensure_invoice(c, site, paid_until)
+            paid_until = _parse_dt(site.support_paid_until) or now
+            
+            inv_res = await session.execute(
+                select(SupportInvoice).filter_by(site_id=site_id, status=InvoiceStatus.PENDING.value)
+                .order_by(desc(SupportInvoice.created)).limit(1)
+            )
+            invoice = inv_res.scalars().first()
+            if not invoice:
+                await cls._ensure_invoice(session, site, paid_until)
+                await session.flush()
+                inv_res = await session.execute(
+                    select(SupportInvoice).filter_by(site_id=site_id, status=InvoiceStatus.PENDING.value)
+                    .order_by(desc(SupportInvoice.created)).limit(1)
+                )
+                invoice = inv_res.scalars().first()
 
-            invoice = _rowdict(c.execute(
-                """SELECT * FROM support_invoices
-                   WHERE site_id=? AND status=?
-                   ORDER BY created DESC LIMIT 1""",
-                (site_id, InvoiceStatus.PENDING.value),
-            ).fetchone())
             if not invoice:
                 return {"ok": False, "error": "invoice_unavailable", "message": "Счёт не найден."}
 
             extend_from = max(now, paid_until)
             new_paid_until = extend_from + timedelta(days=SUPPORT_INCLUDED_DAYS)
             order_id = f"support-{uuid.uuid4().hex[:12]}"
-            c.execute(
-                """UPDATE support_invoices
-                   SET status=?, paid_at=datetime('now'), order_id=?, updated=datetime('now')
-                   WHERE id=? AND status=?""",
-                (InvoiceStatus.PAID.value, order_id, invoice["id"], InvoiceStatus.PENDING.value),
+            
+            invoice.status = InvoiceStatus.PAID.value
+            invoice.paid_at = _fmt(now)
+            invoice.order_id = order_id
+            invoice.updated = datetime.utcnow()
+            
+            payment = Payment(
+                user_id=user_id,
+                order_id=order_id,
+                invoice_id="",
+                amount=invoice.amount,
+                tokens=0,
+                status="paid",
+                payment_kind="support_invoice",
+                site_id=site_id,
+                support_invoice_id=invoice.id,
+                created=datetime.utcnow(),
+                updated=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO payments
-                   (user_id, order_id, invoice_id, amount, tokens, status,
-                    payment_kind, site_id, support_invoice_id)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
-                (
-                    user_id,
-                    order_id,
-                    "",
-                    int(invoice["amount"]),
-                    0,
-                    "paid",
-                    "support_invoice",
-                    site_id,
-                    invoice["id"],
-                ),
-            )
-            analytics_status = site.get("analytics_status") or AnalyticsStatus.UNAVAILABLE.value
-            if analytics_status == AnalyticsStatus.BLOCKED.value and int(site.get("promo_setup_done") or 0):
+            session.add(payment)
+
+            analytics_status = site.analytics_status or AnalyticsStatus.UNAVAILABLE.value
+            if analytics_status == AnalyticsStatus.BLOCKED.value and site.promo_setup_done:
                 analytics_status = AnalyticsStatus.ACTIVE.value
-            promo_status = site.get("promo_status") or PromotionStatus.NOT_CONFIGURED.value
-            if promo_status == PromotionStatus.PAUSED.value and int(site.get("promo_setup_done") or 0):
+            promo_status = site.promo_status or PromotionStatus.NOT_CONFIGURED.value
+            if promo_status == PromotionStatus.PAUSED.value and site.promo_setup_done:
                 promo_status = PromotionStatus.CONFIGURED.value
-            c.execute(
-                """UPDATE sites
-                   SET support_paid_until=?, support_status=?, analytics_status=?, promo_status=?, updated=datetime('now')
-                   WHERE id=?""",
-                (
-                    _fmt(new_paid_until),
-                    SupportStatus.ACTIVE.value,
-                    analytics_status,
-                    promo_status,
-                    site_id,
-                ),
-            )
+                
+            site.support_paid_until = _fmt(new_paid_until)
+            site.support_status = SupportStatus.ACTIVE.value
+            site.analytics_status = analytics_status
+            site.promo_status = promo_status
+            site.updated = datetime.utcnow()
+            
+            await session.commit()
             return {
                 "ok": True,
                 "support_paid_until": _fmt(new_paid_until),
                 "amount": SUPPORT_MONTHLY_PRICE,
             }
 
-    @staticmethod
-    def mark_invoice_paid(payment: dict) -> dict:
-        # apply a paid support invoice from payment webhook
-        invoice_id = payment.get("support_invoice_id")
-        site_id = payment.get("site_id")
-        user_id = payment.get("user_id")
+    @classmethod
+    async def mark_invoice_paid(cls, payment_data: dict) -> dict:
+        invoice_id = payment_data.get("support_invoice_id")
+        site_id = payment_data.get("site_id")
+        user_id = payment_data.get("user_id")
         now = _now()
         if not invoice_id or not site_id or not user_id:
             return {"ok": False, "error": "invalid_support_payment"}
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            invoice = _rowdict(c.execute(
-                """SELECT * FROM support_invoices
-                   WHERE id=? AND user_id=? AND site_id=?""",
-                (invoice_id, user_id, site_id),
-            ).fetchone())
-            site = _rowdict(c.execute(
-                "SELECT * FROM sites WHERE id=? AND user_id=?",
-                (site_id, user_id),
-            ).fetchone())
+            
+        async with AsyncSessionLocal() as session:
+            inv_res = await session.execute(select(SupportInvoice).filter_by(id=invoice_id, user_id=user_id, site_id=site_id))
+            invoice = inv_res.scalars().first()
+            site_res = await session.execute(select(Site).filter_by(id=site_id, user_id=user_id))
+            site = site_res.scalars().first()
+            
             if not invoice or not site:
                 return {"ok": False, "error": "support_invoice_not_found"}
-            if invoice.get("status") == InvoiceStatus.PAID.value:
+            if invoice.status == InvoiceStatus.PAID.value:
                 return {"ok": True, "already_paid": True}
 
-            paid_until = _parse_dt(site.get("support_paid_until")) or now
+            paid_until = _parse_dt(site.support_paid_until) or now
             extend_from = max(now, paid_until)
             new_paid_until = extend_from + timedelta(days=SUPPORT_INCLUDED_DAYS)
-            analytics_status = site.get("analytics_status") or AnalyticsStatus.UNAVAILABLE.value
-            if analytics_status == AnalyticsStatus.BLOCKED.value and int(site.get("promo_setup_done") or 0):
+            
+            analytics_status = site.analytics_status or AnalyticsStatus.UNAVAILABLE.value
+            if analytics_status == AnalyticsStatus.BLOCKED.value and site.promo_setup_done:
                 analytics_status = AnalyticsStatus.ACTIVE.value
-            promo_status = site.get("promo_status") or PromotionStatus.NOT_CONFIGURED.value
-            if promo_status == PromotionStatus.PAUSED.value and int(site.get("promo_setup_done") or 0):
+            promo_status = site.promo_status or PromotionStatus.NOT_CONFIGURED.value
+            if promo_status == PromotionStatus.PAUSED.value and site.promo_setup_done:
                 promo_status = PromotionStatus.CONFIGURED.value
-            c.execute(
-                """UPDATE support_invoices
-                   SET status=?, paid_at=datetime('now'), order_id=?, updated=datetime('now')
-                   WHERE id=?""",
-                (InvoiceStatus.PAID.value, payment.get("order_id"), invoice_id),
-            )
-            c.execute(
-                """UPDATE sites
-                   SET support_paid_until=?, support_status=?, analytics_status=?, promo_status=?, updated=datetime('now')
-                   WHERE id=?""",
-                (
-                    _fmt(new_paid_until),
-                    SupportStatus.ACTIVE.value,
-                    analytics_status,
-                    promo_status,
-                    site_id,
-                ),
-            )
+                
+            invoice.status = InvoiceStatus.PAID.value
+            invoice.paid_at = _fmt(now)
+            invoice.order_id = payment_data.get("order_id")
+            invoice.updated = datetime.utcnow()
+            
+            site.support_paid_until = _fmt(new_paid_until)
+            site.support_status = SupportStatus.ACTIVE.value
+            site.analytics_status = analytics_status
+            site.promo_status = promo_status
+            site.updated = datetime.utcnow()
+            
+            await session.commit()
             return {"ok": True, "support_paid_until": _fmt(new_paid_until)}
 
 
 class CreditsService:
-    # credits service class
-    @staticmethod
-    def purchase_promo_credits(user_id: int, credits: int) -> dict:
-        # process promo credits purchase
+    @classmethod
+    async def purchase_promo_credits(cls, user_id: int, credits: int) -> dict:
         try:
             credits = int(credits)
         except (TypeError, ValueError):
@@ -372,74 +326,96 @@ class CreditsService:
 
         amount = credits * PROMO_CREDIT_TENGE
         order_id = f"promo-{uuid.uuid4().hex[:12]}"
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            c.execute(
-                """INSERT INTO payments
-                   (user_id, order_id, invoice_id, amount, tokens, status,
-                    catalog_item_id, payment_kind, promo_credits, dev_credits)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    user_id,
-                    order_id,
-                    "",
-                    amount,
-                    0,
-                    "paid",
-                    "",
-                    "promo_credits",
-                    credits,
-                    0,
-                ),
+        
+        async with AsyncSessionLocal() as session:
+            payment = Payment(
+                user_id=user_id,
+                order_id=order_id,
+                invoice_id="",
+                amount=amount,
+                tokens=0,
+                status="paid",
+                payment_kind="promo_credits",
+                promo_credits=credits,
+                dev_credits=0,
+                created=datetime.utcnow(),
+                updated=datetime.utcnow()
             )
-            c.execute("UPDATE users SET promo_credits=promo_credits+? WHERE id=?", (credits, user_id))
-            c.execute(
-                """INSERT INTO promo_credit_log
-                   (user_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,datetime('now'))""",
-                (
-                    user_id,
-                    credits,
-                    f"promo_credit_purchase:{order_id}",
-                    c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0],
-                ),
+            session.add(payment)
+            
+            user = await user_repo.get(session, user_id)
+            user.promo_credits += credits
+            session.add(user)
+            await session.flush()
+            
+            log = PromoCreditLog(
+                user_id=user_id,
+                delta=credits,
+                reason=f"promo_credit_purchase:{order_id}",
+                balance_after=user.promo_credits,
+                created=datetime.utcnow()
             )
-            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
+            session.add(log)
+            balance = user.promo_credits
+            await session.commit()
+            
         return {"ok": True, "credits": credits, "amount": amount, "balance": balance, "order_id": order_id}
 
-    @staticmethod
-    def apply_promo_payment(payment: dict) -> dict:
-        # add promotion credits after external payment succeeds
-        credits = int(payment.get("promo_credits") or 0)
-        user_id = int(payment.get("user_id") or 0)
+    @classmethod
+    async def apply_promo_payment(cls, payment_data: dict) -> dict:
+        credits = int(payment_data.get("promo_credits") or 0)
+        user_id = int(payment_data.get("user_id") or 0)
         if credits <= 0 or user_id <= 0:
             return {"ok": False, "error": "invalid_promo_payment"}
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            c.execute("UPDATE users SET promo_credits=promo_credits+? WHERE id=?", (credits, user_id))
-            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO promo_credit_log
-                   (user_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,datetime('now'))""",
-                (user_id, credits, f"promo_credit_purchase:{payment.get('order_id')}", balance),
+            
+        async with AsyncSessionLocal() as session:
+            user = await user_repo.get(session, user_id)
+            user.promo_credits += credits
+            session.add(user)
+            await session.flush()
+            
+            log = PromoCreditLog(
+                user_id=user_id,
+                delta=credits,
+                reason=f"promo_credit_purchase:{payment_data.get('order_id')}",
+                balance_after=user.promo_credits,
+                created=datetime.utcnow()
             )
+            session.add(log)
+            balance = user.promo_credits
+            await session.commit()
+            
         return {"ok": True, "credits": credits, "balance": balance}
 
-    @staticmethod
-    def logs(user_id: int, limit: int = 50) -> dict:
-        # logs
-        return {
-            "dev": db.get_dev_credit_log(user_id, limit),
-            "promo": db.get_promo_credit_log(user_id, limit),
-        }
+    @classmethod
+    async def logs(cls, user_id: int, limit: int = 50) -> dict:
+        async with AsyncSessionLocal() as session:
+            dev_logs = await session.execute(
+                select(DevCreditLog).filter_by(user_id=user_id).order_by(desc(DevCreditLog.created)).limit(limit)
+            )
+            promo_logs = await session.execute(
+                select(PromoCreditLog).filter_by(user_id=user_id).order_by(desc(PromoCreditLog.created)).limit(limit)
+            )
+            
+            return {
+                "dev": [
+                    {
+                        "id": l.id, "user_id": l.user_id, "site_id": l.site_id, "delta": l.delta,
+                        "reason": l.reason, "balance_after": l.balance_after, "created": _fmt(l.created)
+                    } for l in dev_logs.scalars().all()
+                ],
+                "promo": [
+                    {
+                        "id": l.id, "user_id": l.user_id, "site_id": l.site_id, "delta": l.delta,
+                        "reason": l.reason, "balance_after": l.balance_after, "created": _fmt(l.created)
+                    } for l in promo_logs.scalars().all()
+                ],
+            }
 
 
 class ForecastService:
-    # forecast service class
     @staticmethod
-    def build(site: dict, credits: int, duration_hours: int) -> dict:
-        # generate promotion forecast metrics
+    def build(site: Site | dict, credits: int, duration_hours: int) -> dict:
         credits = int(credits)
         duration_hours = int(duration_hours)
         if credits < CAMPAIGN_MIN_CREDITS:
@@ -448,11 +424,13 @@ class ForecastService:
             raise ValueError(f"Минимум {CAMPAIGN_MIN_DURATION_HOURS} часа.")
 
         data = _site_data(site)
+        title = site.title if hasattr(site, 'title') else site.get("title")
         niche_text = " ".join([
-            str(site.get("title") or ""),
+            str(title or ""),
             str(data.get("name") or ""),
             str(data.get("services") or ""),
         ]).lower()
+        
         factor = 1.0
         if re.search(r"маникюр|бров|ресниц|макияж|beauty|salon", niche_text):
             factor = 1.22
@@ -479,66 +457,70 @@ class ForecastService:
 
 
 class PromotionService:
-    # promotion service class
-    @staticmethod
-    def setup(user_id: int, site_id: int) -> dict:
-        # configure promotion setup for site
-        site = SupportService.refresh_site(site_id)
-        if not site or site["user_id"] != user_id:
+    @classmethod
+    async def setup(cls, user_id: int, site_id: int) -> dict:
+        site = await SupportService.refresh_site(site_id)
+        if not site or site.user_id != user_id:
             return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
-        if not is_support_operational(site.get("support_status")):
+        if not is_support_operational(site.support_status):
             return {"ok": False, "error": "support_inactive", "message": "Сначала оплатите поддержку сайта."}
-        if int(site.get("promo_setup_done") or 0):
+        if site.promo_setup_done:
             return {"ok": False, "error": "already_configured", "message": "Продвижение уже настроено."}
 
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            updated = c.execute(
-                """UPDATE users
-                   SET promo_credits=promo_credits-?
-                   WHERE id=? AND promo_credits>=?""",
-                (PROMO_SETUP_COST, user_id, PROMO_SETUP_COST),
-            )
-            if updated.rowcount != 1:
+        async with AsyncSessionLocal() as session:
+            user = await user_repo.get(session, user_id)
+            if user.promo_credits < PROMO_SETUP_COST:
                 return {
                     "ok": False,
                     "error": "insufficient_promo_credits",
                     "message": f"Нужно {PROMO_SETUP_COST} кредитов продвижения.",
                 }
-            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO promo_credit_log
-                   (user_id, site_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,?,datetime('now'))""",
-                (user_id, site_id, -PROMO_SETUP_COST, "promotion_setup", balance),
+            user.promo_credits -= PROMO_SETUP_COST
+            session.add(user)
+            await session.flush()
+            balance = user.promo_credits
+            
+            log = PromoCreditLog(
+                user_id=user_id,
+                site_id=site_id,
+                delta=-PROMO_SETUP_COST,
+                reason="promotion_setup",
+                balance_after=balance,
+                created=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO promotion_setups
-                   (user_id, site_id, credits_spent, status, created, updated)
-                   VALUES (?,?,?,?,datetime('now'),datetime('now'))""",
-                (user_id, site_id, PROMO_SETUP_COST, "completed"),
+            session.add(log)
+            
+            setup_record = PromotionSetup(
+                user_id=user_id,
+                site_id=site_id,
+                credits_spent=PROMO_SETUP_COST,
+                status="completed",
+                created=datetime.utcnow(),
+                updated=datetime.utcnow()
             )
-            c.execute(
-                """UPDATE sites
-                   SET promo_setup_done=1,
-                       promo_status=?,
-                       analytics_status=?,
-                       updated=datetime('now')
-                   WHERE id=?""",
-                (PromotionStatus.CONFIGURED.value, AnalyticsStatus.ACTIVE.value, site_id),
-            )
+            session.add(setup_record)
+            
+            site = await site_repo.get(session, site_id)
+            site.promo_setup_done = 1
+            site.promo_status = PromotionStatus.CONFIGURED.value
+            site.analytics_status = AnalyticsStatus.ACTIVE.value
+            site.updated = datetime.utcnow()
+            session.add(site)
+            
+            await session.commit()
             return {"ok": True, "promo_credits": balance}
 
     @staticmethod
-    def validate_business_change(site: dict, edit_summary: str) -> dict:
-        # prevent changing business niche
+    def validate_business_change(site: Site | dict, edit_summary: str) -> dict:
         text = (edit_summary or "").lower()
         data = _site_data(site)
+        title = site.title if hasattr(site, 'title') else site.get("title")
         current = " ".join([
-            str(site.get("title") or ""),
+            str(title or ""),
             str(data.get("name") or ""),
             str(data.get("services") or ""),
         ]).lower()
+        
         blocked = [
             "другой бизнес",
             "новый бизнес",
@@ -582,86 +564,88 @@ class PromotionService:
             }
         return {"ok": True}
 
-
 class CampaignService:
-    # campaign service class
-    @staticmethod
-    def _stop_active_for_site(c, site_id: int, status: str):
-        # stop active for site
-        c.execute(
-            """UPDATE promotion_campaigns
-               SET status=?, stopped_reason=?, updated=datetime('now')
-               WHERE site_id=? AND status=?""",
-            (status, status, site_id, CampaignStatus.ACTIVE.value),
+    @classmethod
+    async def _stop_active_for_site(cls, session, site_id: int, status: str):
+        result = await session.execute(
+            select(PromotionCampaign)
+            .filter_by(site_id=site_id, status=CampaignStatus.ACTIVE.value)
         )
+        for camp in result.scalars().all():
+            camp.status = status
+            camp.stopped_reason = status
+            camp.updated = datetime.utcnow()
+            session.add(camp)
 
-    @staticmethod
-    def refresh_site_campaigns(site_id: int):
-        # refresh site campaign statuses
+    @classmethod
+    async def refresh_site_campaigns(cls, site_id: int):
         now = _now()
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            site = _rowdict(c.execute("SELECT * FROM sites WHERE id=?", (site_id,)).fetchone())
+        async with AsyncSessionLocal() as session:
+            site = await site_repo.get(session, site_id)
             if not site:
                 return
-            if not is_support_operational(site.get("support_status")):
-                CampaignService._stop_active_for_site(
-                    c,
+            if not is_support_operational(site.support_status):
+                await cls._stop_active_for_site(
+                    session,
                     site_id,
                     CampaignStatus.STOPPED_SUPPORT_EXPIRED.value,
                 )
+                await session.commit()
                 return
-            c.execute(
-                """UPDATE promotion_campaigns
-                   SET status=?, updated=datetime('now')
-                   WHERE site_id=? AND status=? AND ends_at<=?""",
-                (
-                    CampaignStatus.COMPLETED.value,
-                    site_id,
-                    CampaignStatus.ACTIVE.value,
-                    _fmt(now),
-                ),
+                
+            active_camps = await session.execute(
+                select(PromotionCampaign)
+                .filter_by(site_id=site_id, status=CampaignStatus.ACTIVE.value)
             )
-            active = c.execute(
-                "SELECT id FROM promotion_campaigns WHERE site_id=? AND status=? LIMIT 1",
-                (site_id, CampaignStatus.ACTIVE.value),
-            ).fetchone()
-            next_status = PromotionStatus.ACTIVE.value if active else (
-                PromotionStatus.CONFIGURED.value if int(site.get("promo_setup_done") or 0) else PromotionStatus.NOT_CONFIGURED.value
+            active_camps = active_camps.scalars().all()
+            for camp in active_camps:
+                if camp.ends_at and camp.ends_at <= now:
+                    camp.status = CampaignStatus.COMPLETED.value
+                    camp.updated = datetime.utcnow()
+                    session.add(camp)
+            
+            await session.flush()
+            
+            active = await session.execute(
+                select(PromotionCampaign)
+                .filter_by(site_id=site_id, status=CampaignStatus.ACTIVE.value).limit(1)
             )
-            c.execute(
-                "UPDATE sites SET promo_status=?, updated=datetime('now') WHERE id=?",
-                (next_status, site_id),
+            has_active = active.scalars().first()
+            
+            next_status = PromotionStatus.ACTIVE.value if has_active else (
+                PromotionStatus.CONFIGURED.value if site.promo_setup_done else PromotionStatus.NOT_CONFIGURED.value
             )
+            site.promo_status = next_status
+            site.updated = datetime.utcnow()
+            session.add(site)
+            await session.commit()
 
-    @staticmethod
-    def forecast(user_id: int, site_id: int, credits: int, duration_hours: int) -> dict:
-        # calculate promotion forecast
-        site = SupportService.refresh_site(site_id)
-        if not site or site["user_id"] != user_id:
+    @classmethod
+    async def forecast(cls, user_id: int, site_id: int, credits: int, duration_hours: int) -> dict:
+        site = await SupportService.refresh_site(site_id)
+        if not site or site.user_id != user_id:
             return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
-        if not is_support_operational(site.get("support_status")):
+        if not is_support_operational(site.support_status):
             return {"ok": False, "error": "support_inactive", "message": "Сначала оплатите поддержку сайта."}
-        if not int(site.get("promo_setup_done") or 0):
+        if not site.promo_setup_done:
             return {"ok": False, "error": "promo_not_configured", "message": "Сначала настройте продвижение."}
-        if site.get("analytics_status") != AnalyticsStatus.ACTIVE.value:
+        if site.analytics_status != AnalyticsStatus.ACTIVE.value:
             return {"ok": False, "error": "analytics_outdated", "message": "Сначала восстановите аналитику."}
         try:
             return {"ok": True, "forecast": ForecastService.build(site, credits, duration_hours)}
         except (TypeError, ValueError) as exc:
             return {"ok": False, "error": "invalid_campaign", "message": str(exc)}
 
-    @staticmethod
-    def launch(user_id: int, site_id: int, credits: int, duration_hours: int) -> dict:
-        # launch promotion campaign
-        site = SupportService.refresh_site(site_id)
-        if not site or site["user_id"] != user_id:
+    @classmethod
+    async def launch(cls, user_id: int, site_id: int, credits: int, duration_hours: int) -> dict:
+        site = await SupportService.refresh_site(site_id)
+        if not site or site.user_id != user_id:
             return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
-        if not is_support_operational(site.get("support_status")):
+        if not is_support_operational(site.support_status):
             return {"ok": False, "error": "support_inactive", "message": "Сначала оплатите поддержку сайта."}
-        if not int(site.get("promo_setup_done") or 0):
+        if not site.promo_setup_done:
             return {"ok": False, "error": "promo_not_configured", "message": "Сначала настройте продвижение."}
-        if site.get("analytics_status") != AnalyticsStatus.ACTIVE.value:
+        if site.analytics_status != AnalyticsStatus.ACTIVE.value:
             return {"ok": False, "error": "analytics_outdated", "message": "Сначала восстановите аналитику."}
         try:
             forecast = ForecastService.build(site, credits, duration_hours)
@@ -670,184 +654,197 @@ class CampaignService:
 
         starts_at = _now()
         ends_at = starts_at + timedelta(hours=int(duration_hours))
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            active = c.execute(
-                """SELECT id FROM promotion_campaigns
-                   WHERE site_id=? AND status=?
-                   LIMIT 1""",
-                (site_id, CampaignStatus.ACTIVE.value),
-            ).fetchone()
-            if active:
-                return {"ok": False, "error": "active_campaign_exists", "message": "Кампания уже запущена."}
-            updated = c.execute(
-                """UPDATE users
-                   SET promo_credits=promo_credits-?
-                   WHERE id=? AND promo_credits>=?""",
-                (int(credits), user_id, int(credits)),
+        
+        async with AsyncSessionLocal() as session:
+            active = await session.execute(
+                select(PromotionCampaign)
+                .filter_by(site_id=site_id, status=CampaignStatus.ACTIVE.value).limit(1)
             )
-            if updated.rowcount != 1:
+            if active.scalars().first():
+                return {"ok": False, "error": "active_campaign_exists", "message": "Кампания уже запущена."}
+                
+            user = await user_repo.get(session, user_id)
+            if user.promo_credits < int(credits):
                 return {
                     "ok": False,
                     "error": "insufficient_promo_credits",
                     "message": "Недостаточно кредитов продвижения.",
                 }
-            balance = c.execute("SELECT promo_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO promotion_campaigns
-                   (user_id, site_id, credits_spent, duration_hours, status,
-                    forecast_json, starts_at, ends_at, created, updated)
-                   VALUES (?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
-                (
-                    user_id,
-                    site_id,
-                    int(credits),
-                    int(duration_hours),
-                    CampaignStatus.ACTIVE.value,
-                    json.dumps(forecast, ensure_ascii=False),
-                    _fmt(starts_at),
-                    _fmt(ends_at),
-                ),
+            user.promo_credits -= int(credits)
+            session.add(user)
+            await session.flush()
+            balance = user.promo_credits
+            
+            campaign = PromotionCampaign(
+                user_id=user_id,
+                site_id=site_id,
+                credits_spent=int(credits),
+                duration_hours=int(duration_hours),
+                status=CampaignStatus.ACTIVE.value,
+                forecast_json=json.dumps(forecast, ensure_ascii=False),
+                starts_at=starts_at,
+                ends_at=ends_at,
+                created=datetime.utcnow(),
+                updated=datetime.utcnow()
             )
-            campaign_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
-            c.execute(
-                """INSERT INTO promo_credit_log
-                   (user_id, site_id, campaign_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,?,?,datetime('now'))""",
-                (
-                    user_id,
-                    site_id,
-                    campaign_id,
-                    -int(credits),
-                    f"campaign_launch:{campaign_id}",
-                    balance,
-                ),
+            session.add(campaign)
+            await session.flush()
+            campaign_id = campaign.id
+            
+            log = PromoCreditLog(
+                user_id=user_id,
+                site_id=site_id,
+                campaign_id=campaign_id,
+                delta=-int(credits),
+                reason=f"campaign_launch:{campaign_id}",
+                balance_after=balance,
+                created=datetime.utcnow()
             )
-            c.execute(
-                "UPDATE sites SET promo_status=?, updated=datetime('now') WHERE id=?",
-                (PromotionStatus.ACTIVE.value, site_id),
-            )
+            session.add(log)
+            
+            site = await site_repo.get(session, site_id)
+            site.promo_status = PromotionStatus.ACTIVE.value
+            site.updated = datetime.utcnow()
+            session.add(site)
+            
+            await session.commit()
+            
         return {"ok": True, "campaign_id": campaign_id, "promo_credits": balance, "forecast": forecast}
 
-    @staticmethod
-    def site_changed(site_id: int, reason: str):
-        # pause campaigns after site edit
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            site = _rowdict(c.execute("SELECT * FROM sites WHERE id=?", (site_id,)).fetchone())
+    @classmethod
+    async def site_changed(cls, site_id: int, reason: str):
+        async with AsyncSessionLocal() as session:
+            site = await site_repo.get(session, site_id)
             if not site:
                 return
+                
             analytics_status = (
                 AnalyticsStatus.OUTDATED.value
-                if int(site.get("promo_setup_done") or 0)
+                if site.promo_setup_done
                 else AnalyticsStatus.UNAVAILABLE.value
             )
             promo_status = (
                 PromotionStatus.PAUSED.value
-                if int(site.get("promo_setup_done") or 0)
+                if site.promo_setup_done
                 else PromotionStatus.NOT_CONFIGURED.value
             )
-            CampaignService._stop_active_for_site(c, site_id, CampaignStatus.STOPPED_SITE_CHANGED.value)
-            c.execute(
-                """UPDATE sites
-                   SET analytics_status=?, promo_status=?, updated=datetime('now')
-                   WHERE id=?""",
-                (analytics_status, promo_status, site_id),
+            await cls._stop_active_for_site(session, site_id, CampaignStatus.STOPPED_SITE_CHANGED.value)
+            
+            site.analytics_status = analytics_status
+            site.promo_status = promo_status
+            site.updated = datetime.utcnow()
+            session.add(site)
+            
+            event = AnalyticsEvent(
+                site_id=site_id,
+                event_type="site_changed",
+                payload_json=json.dumps({"reason": reason}, ensure_ascii=False),
+                created=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO analytics_events
-                   (site_id, event_type, payload_json, created)
-                   VALUES (?,?,?,datetime('now'))""",
-                (site_id, "site_changed", json.dumps({"reason": reason}, ensure_ascii=False)),
+            session.add(event)
+            await session.commit()
+
+    @classmethod
+    async def history(cls, site_id: int) -> list[dict]:
+        await cls.refresh_site_campaigns(site_id)
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                select(PromotionCampaign).filter_by(site_id=site_id).order_by(desc(PromotionCampaign.created)).limit(20)
             )
+            return [cls.present_campaign(r) for r in rows.scalars().all()]
 
     @staticmethod
-    def history(site_id: int) -> list[dict]:
-        # retrieve site campaign history
-        CampaignService.refresh_site_campaigns(site_id)
-        with db.get_conn() as c:
-            rows = c.execute(
-                """SELECT * FROM promotion_campaigns
-                   WHERE site_id=?
-                   ORDER BY created DESC LIMIT 20""",
-                (site_id,),
-            ).fetchall()
-            return [CampaignService.present_campaign(dict(r)) for r in rows]
-
-    @staticmethod
-    def present_campaign(campaign: dict) -> dict:
-        # present campaign
-        starts_at = _parse_dt(campaign.get("starts_at"))
-        ends_at = _parse_dt(campaign.get("ends_at"))
+    def present_campaign(campaign: PromotionCampaign | dict) -> dict:
+        is_orm = hasattr(campaign, 'starts_at')
+        starts_at = campaign.starts_at if is_orm else _parse_dt(campaign.get("starts_at"))
+        ends_at = campaign.ends_at if is_orm else _parse_dt(campaign.get("ends_at"))
+        status = campaign.status if is_orm else campaign.get("status")
+        forecast_json = campaign.forecast_json if is_orm else campaign.get("forecast_json")
         now = _now()
         progress = 0
         if starts_at and ends_at and ends_at > starts_at:
             progress = int(min(100, max(0, (now - starts_at).total_seconds() / (ends_at - starts_at).total_seconds() * 100)))
         try:
-            forecast = json.loads(campaign.get("forecast_json") or "{}")
+            forecast = json.loads(forecast_json or "{}")
         except json.JSONDecodeError:
             forecast = {}
-        campaign["forecast"] = forecast
-        campaign["progress"] = 100 if campaign.get("status") == CampaignStatus.COMPLETED.value else progress
-        campaign["status_label"] = _status_label(campaign.get("status") or "")
-        return campaign
+            
+        c_dict = {
+            "id": campaign.id if is_orm else campaign.get("id"),
+            "status": status,
+            "starts_at": _fmt(starts_at) if starts_at else None,
+            "ends_at": _fmt(ends_at) if ends_at else None,
+            "duration_hours": campaign.duration_hours if is_orm else campaign.get("duration_hours"),
+            "credits_spent": campaign.credits_spent if is_orm else campaign.get("credits_spent"),
+            "stopped_reason": campaign.stopped_reason if is_orm else campaign.get("stopped_reason"),
+            "created": _fmt(campaign.created) if (is_orm and getattr(campaign, 'created', None)) else (campaign.get("created") if not is_orm else None),
+        }
+            
+        c_dict["forecast"] = forecast
+        c_dict["progress"] = 100 if status == CampaignStatus.COMPLETED.value else progress
+        c_dict["status_label"] = _status_label(status or "")
+        return c_dict
 
 
 class AnalyticsService:
-    # analytics service class
-    @staticmethod
-    def restore(user_id: int, site_id: int) -> dict:
-        # restore site analytics
-        site = SupportService.refresh_site(site_id)
-        if not site or site["user_id"] != user_id:
+    @classmethod
+    async def restore(cls, user_id: int, site_id: int) -> dict:
+        site = await SupportService.refresh_site(site_id)
+        if not site or site.user_id != user_id:
             return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
-        if not is_support_operational(site.get("support_status")):
+        if not is_support_operational(site.support_status):
             return {"ok": False, "error": "support_inactive", "message": "Сначала оплатите поддержку сайта."}
-        if not int(site.get("promo_setup_done") or 0):
+        if not site.promo_setup_done:
             return {"ok": False, "error": "promo_not_configured", "message": "Сначала настройте продвижение."}
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            spent = c.execute(
-                """UPDATE users
-                   SET dev_credits=dev_credits-?, tokens=MAX(tokens-?,0)
-                   WHERE id=? AND dev_credits>=?""",
-                (
-                    VERSION_RESTORE_DEV_CREDITS,
-                    VERSION_RESTORE_DEV_CREDITS,
-                    user_id,
-                    VERSION_RESTORE_DEV_CREDITS,
-                ),
-            )
-            if spent.rowcount != 1:
+            
+        async with AsyncSessionLocal() as session:
+            user = await user_repo.get(session, user_id)
+            if user.dev_credits < VERSION_RESTORE_DEV_CREDITS:
                 return {"ok": False, "error": "insufficient_dev_credits", "message": "Недостаточно кредитов разработки."}
-            balance = c.execute("SELECT dev_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO dev_credit_log
-                   (user_id, site_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,?,datetime('now'))""",
-                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, "analytics_restore", balance),
+                
+            user.dev_credits -= VERSION_RESTORE_DEV_CREDITS
+            user.tokens = max(user.tokens - VERSION_RESTORE_DEV_CREDITS, 0)
+            session.add(user)
+            await session.flush()
+            balance = user.dev_credits
+            
+            log = DevCreditLog(
+                user_id=user_id,
+                site_id=site_id,
+                delta=-VERSION_RESTORE_DEV_CREDITS,
+                reason="analytics_restore",
+                balance_after=balance,
+                created=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO token_log (user_id, site_id, delta, reason)
-                   VALUES (?,?,?,?)""",
-                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, "analytics_restore"),
+            session.add(log)
+            
+            # Note: The original code inserts into token_log but we don't have its ORM explicitly,
+            # we'll use raw execute for token_log if needed, but the original codebase mostly uses DevCreditLog.
+            await session.execute(
+                insert(Payment.metadata.tables['token_log']).values(
+                    user_id=user_id, site_id=site_id, delta=-VERSION_RESTORE_DEV_CREDITS, reason="analytics_restore"
+                )
             )
-            c.execute(
-                """UPDATE sites
-                   SET analytics_status=?, promo_status=?, updated=datetime('now')
-                   WHERE id=?""",
-                (AnalyticsStatus.ACTIVE.value, PromotionStatus.CONFIGURED.value, site_id),
+            
+            site = await site_repo.get(session, site_id)
+            site.analytics_status = AnalyticsStatus.ACTIVE.value
+            site.promo_status = PromotionStatus.CONFIGURED.value
+            site.updated = datetime.utcnow()
+            session.add(site)
+            
+            event = AnalyticsEvent(
+                site_id=site_id,
+                event_type="analytics_restored",
+                payload_json="{}",
+                created=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO analytics_events (site_id, event_type, payload_json, created)
-                   VALUES (?,?,?,datetime('now'))""",
-                (site_id, "analytics_restored", "{}"),
-            )
+            session.add(event)
+            await session.commit()
+            
         return {"ok": True, "dev_credits": balance}
 
-    @staticmethod
-    def record_event(site_id: int, event_type: str, payload: dict | None = None) -> dict:
-        # record a public site analytics event
+    @classmethod
+    async def record_event(cls, site_id: int, event_type: str, payload: dict | None = None) -> dict:
         allowed = {
             "page_view",
             "cta_click",
@@ -860,34 +857,33 @@ class AnalyticsService:
         event_type = (event_type or "").strip()
         if event_type not in allowed:
             event_type = "cta_click"
-        with db.get_conn() as c:
-            c.execute(
-                """INSERT INTO analytics_events
-                   (site_id, event_type, payload_json, created)
-                   VALUES (?,?,?,datetime('now'))""",
-                (site_id, event_type, json.dumps(payload or {}, ensure_ascii=False)[:2000]),
+            
+        async with AsyncSessionLocal() as session:
+            event = AnalyticsEvent(
+                site_id=site_id,
+                event_type=event_type,
+                payload_json=json.dumps(payload or {}, ensure_ascii=False)[:2000],
+                created=datetime.utcnow()
             )
+            session.add(event)
+            await session.commit()
         return {"ok": True}
 
-    @staticmethod
-    def metrics(site_id: int) -> dict:
-        # aggregate analytics events for dashboard
-        with db.get_conn() as c:
-            site_row = c.execute("SELECT slug FROM sites WHERE id=?", (site_id,)).fetchone()
-            if not site_row:
+    @classmethod
+    async def metrics(cls, site_id: int) -> dict:
+        async with AsyncSessionLocal() as session:
+            site = await site_repo.get(session, site_id)
+            if not site:
                 return {"visits": 0, "clicks": {}}
-            slug = site_row["slug"]
+            slug = site.slug
             
-            rows = c.execute(
-                """SELECT event_type, COUNT(*) as cnt
-                   FROM analytics_events
-                   WHERE site_id=?
-                   GROUP BY event_type""",
-                (site_id,),
-            ).fetchall()
+            rows = await session.execute(
+                select(AnalyticsEvent.event_type, func.count(AnalyticsEvent.id).label('cnt'))
+                .filter_by(site_id=site_id)
+                .group_by(AnalyticsEvent.event_type)
+            )
+            counts = {r.event_type: r.cnt for r in rows.all()}
             
-        counts = {r["event_type"]: int(r["cnt"]) for r in rows}
-        
         legacy_map = {
             "whatsapp_click": "WhatsApp",
             "telegram_click": "Telegram",
@@ -898,7 +894,6 @@ class AnalyticsService:
         }
         
         clicks = {}
-        import re
         from pathlib import Path
         GENERATED_DIR = Path("generated_sites")
         html_path = GENERATED_DIR / f"{slug}.html"
@@ -936,110 +931,147 @@ class AnalyticsService:
 
 
 class VersionService:
-    # version service class
-    @staticmethod
-    def create_snapshot(site_id: int, html: str, data: dict, reason: str):
-        # create snapshot
-        db.create_site_version(site_id, html, data, reason)
+    @classmethod
+    async def create_snapshot(cls, site_id: int, html: str, data: dict, reason: str):
+        async with AsyncSessionLocal() as session:
+            # find max version
+            result = await session.execute(
+                select(func.max(SiteVersion.version_no)).filter_by(site_id=site_id)
+            )
+            max_v = result.scalar() or 0
+            sv = SiteVersion(
+                site_id=site_id,
+                version_no=max_v + 1,
+                html=html,
+                data=json.dumps(data, ensure_ascii=False) if isinstance(data, dict) else (data or "{}"),
+                reason=reason,
+                created=datetime.utcnow()
+            )
+            session.add(sv)
+            await session.commit()
 
-    @staticmethod
-    def list_versions(user_id: int, site_id: int) -> list[dict]:
-        # list versions
-        site = db.get_site_by_id(site_id)
-        if not site or site["user_id"] != user_id:
-            return []
-        return db.get_site_versions(site_id)
+    @classmethod
+    async def list_versions(cls, user_id: int, site_id: int) -> list[dict]:
+        async with AsyncSessionLocal() as session:
+            site = await site_repo.get(session, site_id)
+            if not site or site.user_id != user_id:
+                return []
+            result = await session.execute(
+                select(SiteVersion).filter_by(site_id=site_id).order_by(desc(SiteVersion.created))
+            )
+            return [
+                {
+                    "id": v.id, "site_id": v.site_id, "version_no": v.version_no,
+                    "reason": v.reason, "created": _fmt(v.created)
+                } for v in result.scalars().all()
+            ]
 
-    @staticmethod
-    def restore(user_id: int, site_id: int, version_id: int) -> dict:
-        # restore site from version snapshot
-        site = SupportService.refresh_site(site_id)
-        if not site or site["user_id"] != user_id:
+    @classmethod
+    async def restore(cls, user_id: int, site_id: int, version_id: int) -> dict:
+        site = await SupportService.refresh_site(site_id)
+        if not site or site.user_id != user_id:
             return {"ok": False, "error": "site_not_found", "message": "Сайт не найден."}
-        if not is_support_operational(site.get("support_status")):
+        if not is_support_operational(site.support_status):
             return {"ok": False, "error": "support_inactive", "message": "Сначала оплатите поддержку сайта."}
 
-        with db.get_conn() as c:
-            c.execute("BEGIN IMMEDIATE")
-            version = _rowdict(c.execute(
-                "SELECT * FROM site_versions WHERE id=? AND site_id=?",
-                (version_id, site_id),
-            ).fetchone())
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(SiteVersion).filter_by(id=version_id, site_id=site_id))
+            version = result.scalars().first()
             if not version:
                 return {"ok": False, "error": "version_not_found", "message": "Версия не найдена."}
-            spent = c.execute(
-                """UPDATE users
-                   SET dev_credits=dev_credits-?, tokens=MAX(tokens-?,0)
-                   WHERE id=? AND dev_credits>=?""",
-                (
-                    VERSION_RESTORE_DEV_CREDITS,
-                    VERSION_RESTORE_DEV_CREDITS,
-                    user_id,
-                    VERSION_RESTORE_DEV_CREDITS,
-                ),
-            )
-            if spent.rowcount != 1:
+                
+            user = await user_repo.get(session, user_id)
+            if user.dev_credits < VERSION_RESTORE_DEV_CREDITS:
                 return {"ok": False, "error": "insufficient_dev_credits", "message": "Недостаточно кредитов разработки."}
-            balance = c.execute("SELECT dev_credits FROM users WHERE id=?", (user_id,)).fetchone()[0]
-            c.execute(
-                """INSERT INTO dev_credit_log
-                   (user_id, site_id, delta, reason, balance_after, created)
-                   VALUES (?,?,?,?,?,datetime('now'))""",
-                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, f"version_restore:{version_id}", balance),
+                
+            user.dev_credits -= VERSION_RESTORE_DEV_CREDITS
+            user.tokens = max(user.tokens - VERSION_RESTORE_DEV_CREDITS, 0)
+            session.add(user)
+            await session.flush()
+            balance = user.dev_credits
+            
+            log = DevCreditLog(
+                user_id=user_id,
+                site_id=site_id,
+                delta=-VERSION_RESTORE_DEV_CREDITS,
+                reason=f"version_restore:{version_id}",
+                balance_after=balance,
+                created=datetime.utcnow()
             )
-            c.execute(
-                """INSERT INTO token_log (user_id, site_id, delta, reason)
-                   VALUES (?,?,?,?)""",
-                (user_id, site_id, -VERSION_RESTORE_DEV_CREDITS, f"version_restore:{version_id}"),
+            session.add(log)
+            
+            await session.execute(
+                insert(Payment.metadata.tables['token_log']).values(
+                    user_id=user_id, site_id=site_id, delta=-VERSION_RESTORE_DEV_CREDITS, reason=f"version_restore:{version_id}"
+                )
             )
-            c.execute(
-                """UPDATE sites
-                   SET data=?, updated=datetime('now')
-                   WHERE id=?""",
-                (version["data"], site_id),
-            )
-        CampaignService.site_changed(site_id, "version_restore")
+            
+            site = await site_repo.get(session, site_id)
+            site.data = version.data
+            site.updated = datetime.utcnow()
+            session.add(site)
+            await session.commit()
+            
+        await CampaignService.site_changed(site_id, "version_restore")
         return {
             "ok": True,
-            "html": version["html"],
-            "data": json.loads(version["data"] or "{}"),
+            "html": version.html,
+            "data": json.loads(version.data or "{}"),
             "dev_credits": balance,
         }
 
-
-def build_dashboard_context(user: dict) -> dict:
-    # build data context for dashboard
-    sites = SupportService.refresh_user_sites(user["id"])
+async def build_dashboard_context(user: User) -> dict:
+    sites = await SupportService.refresh_user_sites(user.id)
     enriched = []
     for site in sites:
-        invoice = SupportService.get_open_invoice(site["id"])
-        campaigns = CampaignService.history(site["id"])
+        invoice = await SupportService.get_open_invoice(site.id)
+        campaigns = await CampaignService.history(site.id)
         active_campaign = next((c for c in campaigns if c.get("status") == CampaignStatus.ACTIVE.value), None)
-        paid_until = _parse_dt(site.get("support_paid_until"))
-        support_status = site.get("support_status") or SupportService.compute_status(site)
-        site["support_label"] = _status_label(support_status)
-        site["promotion_label"] = _status_label(site.get("promo_status") or PromotionStatus.NOT_CONFIGURED.value)
-        site["analytics_label"] = _status_label(site.get("analytics_status") or AnalyticsStatus.UNAVAILABLE.value)
-        site["support_operational"] = is_support_operational(support_status)
-        site["support_public"] = is_support_public(support_status)
-        site["support_paid_until_display"] = paid_until.strftime("%d.%m.%Y") if paid_until else "не задана"
-        site["support_invoice"] = invoice
-        site["campaigns"] = campaigns
-        site["active_campaign"] = active_campaign
-        site["campaign_history_count"] = len(campaigns)
-        site["needs_analytics_restore"] = site.get("analytics_status") == AnalyticsStatus.OUTDATED.value
-        if site.get("data", {}).get("analytics_purchased"):
-            site["analytics_label"] = "Подключена"
-            site["analytics_metrics"] = AnalyticsService.metrics(site["id"])
-        enriched.append(site)
-    user = db.get_user_by_id(user["id"]) or user
-    notifications = NotificationService.for_user(user["id"])
+        paid_until = _parse_dt(site.support_paid_until)
+        support_status = site.support_status or SupportService.compute_status(site)
+        
+        s_dict = {
+            "id": site.id,
+            "slug": site.slug,
+            "title": site.title,
+            "support_status": support_status,
+            "promo_status": site.promo_status,
+            "analytics_status": site.analytics_status,
+            "support_label": _status_label(support_status),
+            "promotion_label": _status_label(site.promo_status or PromotionStatus.NOT_CONFIGURED.value),
+            "analytics_label": _status_label(site.analytics_status or AnalyticsStatus.UNAVAILABLE.value),
+            "support_operational": is_support_operational(support_status),
+            "support_public": is_support_public(support_status),
+            "support_paid_until_display": paid_until.strftime("%d.%m.%Y") if paid_until else "не задана",
+            "support_invoice": {"id": invoice.id, "amount": invoice.amount} if invoice else None,
+            "campaigns": campaigns,
+            "active_campaign": active_campaign,
+            "campaign_history_count": len(campaigns),
+            "needs_analytics_restore": site.analytics_status == AnalyticsStatus.OUTDATED.value,
+        }
+        site_data = _site_data(site)
+        if site_data.get("analytics_purchased"):
+            s_dict["analytics_label"] = "Подключена"
+            s_dict["analytics_metrics"] = await AnalyticsService.metrics(site.id)
+            
+        enriched.append(s_dict)
+        
+    async with AsyncSessionLocal() as session:
+        user_db = await user_repo.get(session, user.id)
+        notifications = await NotificationService.for_user(user.id)
+        
+        active_onboarding = await session.execute(
+            select(OnboardingSession).filter(OnboardingSession.user_id == user.id, OnboardingSession.status.notin_(["completed"]))
+            .order_by(desc(OnboardingSession.updated)).limit(1)
+        )
+        active_onboarding = active_onboarding.scalars().first()
+        
     return {
-        "user": user,
+        "user": user_db or user,
         "sites": enriched,
         "notifications": notifications,
-        "unread_notifications": sum(1 for n in notifications if not int(n.get("is_read") or 0)),
-        "active_onboarding": db.get_active_onboarding_session(user["id"]),
+        "unread_notifications": sum(1 for n in notifications if not n.get("is_read")),
+        "active_onboarding": active_onboarding,
         "promo_setup_cost": PROMO_SETUP_COST,
         "promo_min_purchase": PROMO_MIN_PURCHASE,
         "promo_credit_tenge": PROMO_CREDIT_TENGE,
@@ -1051,55 +1083,62 @@ def build_dashboard_context(user: dict) -> dict:
 
 
 class NotificationService:
-    # notification service class
-    @staticmethod
-    def sync_user(user_id: int):
-        # sync user
-        sites = db.get_user_sites(user_id)
-        existing = db.get_notifications(user_id, 50)
-        keys = {(n.get("type"), n.get("site_id")) for n in existing}
-        for site in sites:
-            status = site.get("support_status")
-            if status == SupportStatus.EXPIRING_SOON.value and ("support_expiring", site["id"]) not in keys:
-                db.create_notification(
-                    user_id,
-                    "support_expiring",
-                    "Поддержка скоро закончится",
-                    f"Страница «{site.get('title') or site.get('slug')}» скоро потребует продления.",
-                    site["id"],
-                )
-            if status == SupportStatus.SUSPENDED.value and ("support_suspended", site["id"]) not in keys:
-                db.create_notification(
-                    user_id,
-                    "support_suspended",
-                    "Страница приостановлена",
-                    "Правки, продвижение и аналитика заблокированы до продления поддержки.",
-                    site["id"],
-                )
-            if site.get("analytics_status") == AnalyticsStatus.OUTDATED.value and ("analytics_outdated", site["id"]) not in keys:
-                db.create_notification(
-                    user_id,
-                    "analytics_outdated",
-                    "Аналитика устарела",
-                    "После правок нужно восстановить аналитику перед продвижением.",
-                    site["id"],
-                )
+    @classmethod
+    async def sync_user(cls, user_id: int):
+        async with AsyncSessionLocal() as session:
+            sites = await site_repo.get_multi_by_user(session, user_id)
+            existing_res = await session.execute(
+                select(Notification).filter_by(user_id=user_id).order_by(desc(Notification.created)).limit(50)
+            )
+            existing = existing_res.scalars().all()
+            keys = {(n.type, n.site_id) for n in existing}
+            
+            for site in sites:
+                status = site.support_status
+                if status == SupportStatus.EXPIRING_SOON.value and ("support_expiring", site.id) not in keys:
+                    session.add(Notification(
+                        user_id=user_id, type="support_expiring",
+                        title="Поддержка скоро закончится",
+                        body=f"Страница «{site.title or site.slug}» скоро потребует продления.",
+                        site_id=site.id, created=datetime.utcnow()
+                    ))
+                if status == SupportStatus.SUSPENDED.value and ("support_suspended", site.id) not in keys:
+                    session.add(Notification(
+                        user_id=user_id, type="support_suspended",
+                        title="Страница приостановлена",
+                        body="Правки, продвижение и аналитика заблокированы до продления поддержки.",
+                        site_id=site.id, created=datetime.utcnow()
+                    ))
+                if site.analytics_status == AnalyticsStatus.OUTDATED.value and ("analytics_outdated", site.id) not in keys:
+                    session.add(Notification(
+                        user_id=user_id, type="analytics_outdated",
+                        title="Аналитика устарела",
+                        body="После правок нужно восстановить аналитику перед продвижением.",
+                        site_id=site.id, created=datetime.utcnow()
+                    ))
+            await session.commit()
 
-    @staticmethod
-    def for_user(user_id: int) -> list[dict]:
-        # for user
-        NotificationService.sync_user(user_id)
-        return db.get_notifications(user_id)
-
+    @classmethod
+    async def for_user(cls, user_id: int) -> list[dict]:
+        await cls.sync_user(user_id)
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                select(Notification).filter_by(user_id=user_id).order_by(desc(Notification.created))
+            )
+            return [
+                {
+                    "id": n.id, "user_id": n.user_id, "site_id": n.site_id,
+                    "type": n.type, "title": n.title, "body": n.body,
+                    "is_read": n.is_read, "created": _fmt(n.created)
+                } for n in rows.scalars().all()
+            ]
 
 class OnboardingService:
-    # onboarding service class
     REQUIRED_KEYS = ("name", "services", "city", "vibe")
     ALLOWED_STATUSES = {"draft", "ready", "generating", "failed", "completed"}
 
     @staticmethod
     def _safe_history(value) -> list:
-        # safe history
         if not isinstance(value, list):
             return []
         safe = []
@@ -1116,7 +1155,6 @@ class OnboardingService:
 
     @staticmethod
     def _safe_collected(value) -> dict:
-        # safe collected
         if not isinstance(value, dict):
             return {}
         return {
@@ -1127,7 +1165,6 @@ class OnboardingService:
 
     @staticmethod
     def _safe_photo_urls(value) -> list:
-        # safe photo urls
         if not isinstance(value, list):
             return []
         return [
@@ -1138,31 +1175,59 @@ class OnboardingService:
 
     @staticmethod
     def _safe_status(value) -> str:
-        # safe status
         status = str(value or "draft")
         return status if status in OnboardingService.ALLOWED_STATUSES else "draft"
 
     @staticmethod
     def _safe_int(value) -> int:
-        # safe int
         try:
             return max(0, int(value or 0))
         except (TypeError, ValueError):
             return 0
 
-    @staticmethod
-    def current(user_id: int) -> dict:
-        # current
-        session = db.get_active_onboarding_session(user_id) or db.create_onboarding_session(user_id)
-        return OnboardingService.present(session)
+    @classmethod
+    async def current(cls, user_id: int) -> dict:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(OnboardingSession).filter(OnboardingSession.user_id == user_id, OnboardingSession.status.notin_(["completed"]))
+                .order_by(desc(OnboardingSession.updated)).limit(1)
+            )
+            onb_session = result.scalars().first()
+            if not onb_session:
+                onb_session = OnboardingSession(
+                    user_id=user_id,
+                    status="draft",
+                    history="[]",
+                    collected="{}",
+                    photo_urls="[]",
+                    created=datetime.utcnow(),
+                    updated=datetime.utcnow()
+                )
+                session.add(onb_session)
+                await session.commit()
+                await session.refresh(onb_session)
+                
+        return cls.present(onb_session)
 
-    @staticmethod
-    def present(session: dict | None) -> dict:
-        # present
-        if not session:
-            return {"session": None, "summary": [], "progress": 0, "missing": list(OnboardingService.REQUIRED_KEYS)}
-        collected = session.get("collected") or {}
-        done = [key for key in OnboardingService.REQUIRED_KEYS if collected.get(key)]
+    @classmethod
+    def present(cls, onb_session: OnboardingSession | dict | None) -> dict:
+        if not onb_session:
+            return {"session": None, "summary": [], "progress": 0, "missing": list(cls.REQUIRED_KEYS)}
+            
+        is_orm = hasattr(onb_session, 'collected')
+        col_str = onb_session.collected if is_orm else onb_session.get("collected")
+        try:
+            collected = json.loads(col_str) if isinstance(col_str, str) else col_str
+        except:
+            collected = {}
+            
+        photo_urls_str = onb_session.photo_urls if is_orm else onb_session.get("photo_urls")
+        try:
+            photo_urls = json.loads(photo_urls_str) if isinstance(photo_urls_str, str) else photo_urls_str
+        except:
+            photo_urls = []
+            
+        done = [key for key in cls.REQUIRED_KEYS if collected.get(key)]
         summary = [
             {"key": "name", "label_key": "create_summary_business", "value": collected.get("name") or ""},
             {"key": "services", "label_key": "create_summary_services", "value": collected.get("services") or ""},
@@ -1171,80 +1236,151 @@ class OnboardingService:
             {
                 "key": "photos",
                 "label_key": "create_summary_photos",
-                "value": f"{len(session.get('photo_urls') or [])} фото" if session.get("photo_urls") else "",
+                "value": f"{len(photo_urls or [])} фото" if photo_urls else "",
             },
         ]
+        
+        session_dict = {
+            "id": onb_session.id if is_orm else onb_session.get("id"),
+            "status": onb_session.status if is_orm else onb_session.get("status"),
+            "draft_title": onb_session.draft_title if is_orm else onb_session.get("draft_title"),
+            "history": json.loads(onb_session.history) if is_orm and isinstance(onb_session.history, str) else (onb_session.history if is_orm else onb_session.get("history", [])),
+            "collected": collected,
+            "photo_urls": photo_urls,
+            "error": onb_session.error if is_orm else onb_session.get("error"),
+        }
+        
         return {
-            "session": session,
+            "session": session_dict,
             "summary": summary,
-            "progress": int(len(done) / len(OnboardingService.REQUIRED_KEYS) * 100),
-            "missing": [key for key in OnboardingService.REQUIRED_KEYS if key not in done],
+            "progress": int(len(done) / len(cls.REQUIRED_KEYS) * 100),
+            "missing": [key for key in cls.REQUIRED_KEYS if key not in done],
         }
 
-    @staticmethod
-    def autosave(user_id: int, payload: dict) -> dict:
-        # autosave
-        session = db.upsert_onboarding_session(
-            user_id,
-            payload.get("session_id"),
-            status=OnboardingService._safe_status(payload.get("status")),
-            history=OnboardingService._safe_history(payload.get("history")),
-            collected=OnboardingService._safe_collected(payload.get("collected")),
-            photo_urls=OnboardingService._safe_photo_urls(payload.get("photo_urls")),
-            chat_in=OnboardingService._safe_int(payload.get("chat_in")),
-            chat_out=OnboardingService._safe_int(payload.get("chat_out")),
-            chat_cr=OnboardingService._safe_int(payload.get("chat_cr")),
-        )
-        return OnboardingService.present(session)
+    @classmethod
+    async def autosave(cls, user_id: int, payload: dict) -> dict:
+        session_id = payload.get("session_id")
+        async with AsyncSessionLocal() as db_session:
+            onb_session = None
+            if session_id:
+                res = await db_session.execute(select(OnboardingSession).filter_by(id=session_id, user_id=user_id))
+                onb_session = res.scalars().first()
+                
+            if not onb_session:
+                onb_session = OnboardingSession(
+                    user_id=user_id,
+                    created=datetime.utcnow()
+                )
+                db_session.add(onb_session)
+                
+            onb_session.status = cls._safe_status(payload.get("status"))
+            onb_session.history = json.dumps(cls._safe_history(payload.get("history")), ensure_ascii=False)
+            onb_session.collected = json.dumps(cls._safe_collected(payload.get("collected")), ensure_ascii=False)
+            onb_session.photo_urls = json.dumps(cls._safe_photo_urls(payload.get("photo_urls")), ensure_ascii=False)
+            onb_session.chat_in = cls._safe_int(payload.get("chat_in"))
+            onb_session.chat_out = cls._safe_int(payload.get("chat_out"))
+            onb_session.chat_cr = cls._safe_int(payload.get("chat_cr"))
+            onb_session.updated = datetime.utcnow()
+            
+            await db_session.commit()
+            await db_session.refresh(onb_session)
+            return cls.present(onb_session)
 
-    @staticmethod
-    def reset(user_id: int) -> dict:
-        # reset
-        session = db.create_onboarding_session(user_id)
-        return OnboardingService.present(session)
+    @classmethod
+    async def reset(cls, user_id: int) -> dict:
+        async with AsyncSessionLocal() as session:
+            onb_session = OnboardingSession(
+                user_id=user_id,
+                status="draft",
+                history="[]",
+                collected="{}",
+                photo_urls="[]",
+                created=datetime.utcnow(),
+                updated=datetime.utcnow()
+            )
+            session.add(onb_session)
+            await session.commit()
+            await session.refresh(onb_session)
+        return cls.present(onb_session)
 
-    @staticmethod
-    def delete(user_id: int, session_id: int) -> dict:
-        # delete
-        deleted = db.delete_onboarding_session(session_id, user_id)
-        return {"deleted": deleted}
+    @classmethod
+    async def delete(cls, user_id: int, session_id: int) -> dict:
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(select(OnboardingSession).filter_by(id=session_id, user_id=user_id))
+            onb = res.scalars().first()
+            if onb:
+                await session.delete(onb)
+                await session.commit()
+                return {"deleted": True}
+        return {"deleted": False}
 
-    @staticmethod
-    def rename(user_id: int, session_id: int, title: str) -> dict:
-        # rename
-        session = db.rename_onboarding_session(session_id, user_id, title)
-        return OnboardingService.present(session)
+    @classmethod
+    async def rename(cls, user_id: int, session_id: int, title: str) -> dict:
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(select(OnboardingSession).filter_by(id=session_id, user_id=user_id))
+            onb = res.scalars().first()
+            if onb:
+                onb.draft_title = title
+                onb.updated = datetime.utcnow()
+                await session.commit()
+                await session.refresh(onb)
+            return cls.present(onb)
 
-    @staticmethod
-    def reorder(user_id: int, session_ids: list[int]) -> dict:
-        # reorder
-        db.reorder_onboarding_sessions(user_id, session_ids)
+    @classmethod
+    async def reorder(cls, user_id: int, session_ids: list[int]) -> dict:
+        async with AsyncSessionLocal() as session:
+            for i, sid in enumerate(session_ids):
+                res = await session.execute(select(OnboardingSession).filter_by(id=sid, user_id=user_id))
+                onb = res.scalars().first()
+                if onb:
+                    onb.sort_order = i
+                    onb.updated = datetime.utcnow()
+            await session.commit()
         return {"reordered": True}
 
 
-def build_site_workspace_context(user: dict, site_id: int) -> dict | None:
-    # build data context for site workspace
-    site = db.get_user_site_by_id(user["id"], site_id)
+async def build_site_workspace_context(user: User, site_id: int) -> dict | None:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Site).filter_by(id=site_id, user_id=user.id))
+        site = result.scalars().first()
+        
     if not site:
         return None
-    site = SupportService.refresh_site(site["id"]) or site
-    CampaignService.refresh_site_campaigns(site["id"])
-    site = db.get_user_site_by_id(user["id"], site_id) or site
-    paid_until = _parse_dt(site.get("support_paid_until"))
-    campaigns = CampaignService.history(site["id"])
-    site["support_label"] = _status_label(site.get("support_status") or "")
-    site["promotion_label"] = _status_label(site.get("promo_status") or "")
-    site["analytics_label"] = _status_label(site.get("analytics_status") or "")
-    site["support_operational"] = is_support_operational(site.get("support_status"))
-    site["support_paid_until_display"] = paid_until.strftime("%d.%m.%Y") if paid_until else "не задана"
-    site["support_invoice"] = SupportService.get_open_invoice(site["id"])
-    site["campaigns"] = campaigns
-    site["active_campaign"] = next((c for c in campaigns if c.get("status") == CampaignStatus.ACTIVE.value), None)
-    site["needs_analytics_restore"] = site.get("analytics_status") == AnalyticsStatus.OUTDATED.value
-    versions = VersionService.list_versions(user["id"], site["id"])
+        
+    site = await SupportService.refresh_site(site.id) or site
+    await CampaignService.refresh_site_campaigns(site.id)
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Site).filter_by(id=site_id, user_id=user.id))
+        site = result.scalars().first() or site
+        
+    paid_until = _parse_dt(site.support_paid_until)
+    campaigns = await CampaignService.history(site.id)
+    
+    s_dict = {
+        "id": site.id,
+        "slug": site.slug,
+        "title": site.title,
+        "support_status": site.support_status,
+        "promo_status": site.promo_status,
+        "analytics_status": site.analytics_status,
+        "support_label": _status_label(site.support_status or ""),
+        "promotion_label": _status_label(site.promo_status or ""),
+        "analytics_label": _status_label(site.analytics_status or ""),
+        "support_operational": is_support_operational(site.support_status),
+        "support_paid_until_display": paid_until.strftime("%d.%m.%Y") if paid_until else "не задана",
+        "support_invoice": await SupportService.get_open_invoice(site.id),
+        "campaigns": campaigns,
+        "active_campaign": next((c for c in campaigns if c.get("status") == CampaignStatus.ACTIVE.value), None),
+        "needs_analytics_restore": site.analytics_status == AnalyticsStatus.OUTDATED.value,
+        "data": _site_data(site),
+    }
+    
+    versions = await VersionService.list_versions(user.id, site.id)
+    site_data = _site_data(site)
     analytics_metrics = (
-        AnalyticsService.metrics(site["id"])
-        if site.get("data", {}).get("analytics_purchased")
+        await AnalyticsService.metrics(site.id)
+        if site_data.get("analytics_purchased")
         else {
             "visits": 0,
             "cta_clicks": 0,
@@ -1254,16 +1390,18 @@ def build_site_workspace_context(user: dict, site_id: int) -> dict | None:
             "phone_clicks": 0,
         }
     )
+    
+    dashboard_ctx = await build_dashboard_context(user)
+    
     return {
-        **build_dashboard_context(user),
-        "selected_site": site,
+        **dashboard_ctx,
+        "selected_site": s_dict,
         "versions": versions,
         "analytics_metrics": analytics_metrics,
     }
 
 
 def maintenance_page() -> str:
-    # maintenance page
     return """<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1280,3 +1418,4 @@ p{margin:0;color:#8d88a8;line-height:1.6;font-size:.95rem}
 </style>
 </head>
 <body><main class="box"><div class="logo">lendings<span>.kz</span></div><div class="badge">Обслуживание сайта</div><h1>Site temporarily unavailable</h1><p>Страница временно недоступна. Владелец сайта скоро восстановит поддержку.</p></main></body></html>"""
+
