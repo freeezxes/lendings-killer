@@ -302,9 +302,27 @@ class SessionMiddleware(BaseHTTPMiddleware):
             if content_type not in {"application/x-www-form-urlencoded", "multipart/form-data"}:
                 return JSONResponse({"ok": False, "error": "Unable to process request"}, status_code=415)
         sid = request.cookies.get("sid")
-        request.state.user = db.get_session_user(sid) if sid else None
-        if request.state.user:
-            request.state.user["sites_count"] = db.get_user_sites_count(request.state.user["id"])
+        request.state.user = None
+        if sid:
+            from core.database import AsyncSessionLocal
+            from repositories.user_repo import user_repo
+            from repositories.site_repo import site_repo
+            from sqlalchemy import select
+            from models.auth import Session
+            import time
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(Session, models.user.User)
+                    .join(models.user.User, Session.user_id == models.user.User.id)
+                    .where(Session.session_id == sid)
+                )
+                row = result.first()
+                if row:
+                    db_session, user = row
+                    if db_session.expires_at > int(time.time()):
+                        request.state.user = user
+                        sites = await site_repo.get_multi_by_user(session, user.id)
+                        request.state.user.sites_count = len(sites)
         return await call_next(request)
 
 
@@ -443,9 +461,9 @@ def _get_or_create_local_guest() -> dict:
                    promo_credits=MAX(COALESCE(promo_credits,0), 1000),
                    updated_at=datetime('now')
                WHERE id=?""",
-            (user["id"],),
+            (user.id,),
         )
-    return db.get_user_by_id(user["id"]) or user
+    return db.get_user_by_id(user.id) or user
 
 
 def _auth_context(request: Request, error: str | None = None, active_tab: str | None = None) -> dict:
@@ -739,12 +757,12 @@ async def _send_verification_email(request: Request, user: dict, token: str):
     verify_url = _verification_url(request, token)
     html = templates.env.get_template("email_verification.html").render(
         verify_url=verify_url,
-        email=user["email"],
+        email=user.email,
         expires_minutes=EMAIL_VERIFY_SECONDS // 60,
     )
     payload = {
         "from": settings["from_email"],
-        "to": [user["email"]],
+        "to": [user.email],
         "subject": "Verify your email — dum-e",
         "html": html,
     }
@@ -813,29 +831,64 @@ async def _send_password_reset_email(request: Request, reset: dict):
         raise EmailServiceUnavailable(f"Resend API returned {resp.status_code}")
 
 
-async def _prepare_and_send_verification(request: Request, user: dict,
+async def _prepare_and_send_verification(request: Request, user,
                                          rate_limit: bool = True) -> dict:
     # prepare and send verification
-    if not user.get("email"):
+    if not user.email:
         return {"ok": False, "error": "email_not_found"}
-    if int(user.get("email_verified") or 0):
+    if user.email_verified:
         return {"ok": False, "error": "email_already_verified"}
     if rate_limit and _resend_rate_limited(request, user):
         return {"ok": False, "error": "resend_rate_limited"}
 
-    prepared = db.resend_verification_email(
-        user["id"],
-        cooldown_seconds=EMAIL_RESEND_COOLDOWN_SECONDS,
-        expires_seconds=EMAIL_VERIFY_SECONDS,
-    )
-    if not prepared.get("ok"):
-        return prepared
+    from core.database import AsyncSessionLocal
+    from repositories.user_repo import user_repo
+    import time
+    
+    async with AsyncSessionLocal() as session:
+        user = await user_repo.get(session, user.id)
+        if not user:
+            return {"ok": False, "error": "user_not_found"}
+            
+        now = int(time.time())
+        sent_at = int(user.verification_sent_at or 0)
+        if sent_at and now - sent_at < EMAIL_RESEND_COOLDOWN_SECONDS:
+            return {
+                "ok": False,
+                "error": "resend_cooldown",
+                "retry_after": EMAIL_RESEND_COOLDOWN_SECONDS - (now - sent_at)
+            }
+            
+        import secrets, hashlib
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        user.email_verify_token = token_hash
+        user.email_verify_expires = now + EMAIL_VERIFY_SECONDS
+        user.verification_sent_at = now
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    try:
+        await _send_verification_email(request, user, token)
+    except EmailServiceUnavailable:
+        logger.warning("Email verification send failed or is not configured")
+        async with AsyncSessionLocal() as session:
+            user = await user_repo.get(session, user.id)
+            user.email_verify_token = None
+            user.email_verify_expires = None
+            user.verification_sent_at = None
+            session.add(user)
+            await session.commit()
+        return {"ok": False, "error": "resend_service_unavailable"}
+
+    return {"ok": True, "token": token, "user": user}
 
     try:
         await _send_verification_email(request, prepared["user"], prepared["token"])
     except EmailServiceUnavailable:
         logger.warning("Email verification send failed or is not configured")
-        db.clear_email_verification(user["id"])
+        db.clear_email_verification(user.id)
         return {"ok": False, "error": "resend_service_unavailable"}
 
     return prepared
@@ -844,25 +897,25 @@ async def _prepare_and_send_verification(request: Request, user: dict,
 class SubdomainMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         host = request.headers.get("host", "")
-        # Отсекаем порт (например: test.dum-e.com:8000 -> test.dum-e.com)
+        # Отсекаем порт
         host_no_port = host.split(":")[0]
-        
-        # Разрешаем поддомены для dum-e.com и lendings.kz
         match = re.match(r"^([a-zA-Z0-9_-]+)\.(dum-e\.com|lendings\.kz)$", host_no_port)
         
         if match:
             slug = match.group(1)
-            # Технические поддомены игнорируем
             if slug != "www":
-                # Пропускаем API и статику к роутеру FastAPI
                 if request.url.path.startswith("/api/") or request.url.path.startswith("/static/"):
                     return await call_next(request)
                     
-                site = db.get_site_by_slug(slug)
-                if site:
-                    site = services.SupportService.refresh_site(site["id"]) or site
-                    if not services.is_support_public(site.get("support_status")):
-                        return HTMLResponse(services.maintenance_page(), status_code=503)
+                from core.database import AsyncSessionLocal
+                from repositories.site_repo import site_repo
+                import services
+                async with AsyncSessionLocal() as session:
+                    site = await site_repo.get_by_slug(session, slug)
+                    if site:
+                        site = await services.SupportService.refresh_site(site.id) or site
+                        if not services.is_support_public(site.support_status):
+                            return HTMLResponse(services.maintenance_page(), status_code=503)
                 
                 path = GENERATED_DIR / f"{slug}.html"
                 if path.exists():
@@ -871,7 +924,6 @@ class SubdomainMiddleware(BaseHTTPMiddleware):
                         html = html.replace("if (window.__lendingsAnalytics) return;", "if (window.__lendingsAnalytics) return;\n  try { if (window.self !== window.top) return; } catch(e) { return; }")
                     return HTMLResponse(html)
                 
-                # Если перешли на поддомен, но сайта нет — отдаём 404
                 return HTMLResponse("<h1>Сайт не найден</h1>", status_code=404)
                 
         return await call_next(request)

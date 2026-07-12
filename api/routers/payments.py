@@ -11,7 +11,7 @@ async def api_billing_promo_purchase(request: Request):
         return main._api_error("Authentication required", 401, "auth_required")
     payload = await main._json_body(request)
     amount = payload.get("amount", 0)
-    return JSONResponse(main.services.PromoService.purchase_credits(user["id"], amount))
+    return JSONResponse(main.services.PromoService.purchase_credits(user.id, amount))
 
 @router.get("/api/billing/credit-logs")
 async def api_billing_credit_logs(request: Request):
@@ -19,7 +19,7 @@ async def api_billing_credit_logs(request: Request):
     user = main._require_auth(request)
     if not user:
         return main._api_error("Authentication required", 401, "auth_required")
-    return JSONResponse({"ok": True, "logs": main.db.get_promo_credit_log(user["id"])})
+    return JSONResponse({"ok": True, "logs": await main.repositories.log_repo.promo_credit_log_repo.get_multi_by_user(session, user.id)})
 
 @router.get("/payment", response_class=HTMLResponse)
 async def payment_page(request: Request):
@@ -59,7 +59,7 @@ async def payment_create(request: Request):
     domain = main.settings.domain or "lendings.kz"
     proto = "https" if main.settings.app_env in ("prod", "production") else "http"
     site_slug = body.get("site_slug")
-    order_id = main.services.PaymentService.create_order(user["id"], pkg, site_slug=site_slug)
+    order_id = main.services.PaymentService.create_order(user.id, pkg, site_slug=site_slug)
     try:
         url = main.services.PaymentService.generate_kaspi_url(
             order_id, pkg["price"], pkg["name"], success_url=f"{proto}://{domain}/payment/status/{order_id}"
@@ -75,7 +75,7 @@ async def payment_status(order_id: str, request: Request):
     user = main._require_auth(request)
     if not user:
         return RedirectResponse("/auth", status_code=302)
-    status = main.services.PaymentService.check_order(order_id, user["id"])
+    status = main.services.PaymentService.check_order(order_id, user.id)
     if not status:
         return main.templates.TemplateResponse(request, "payment_status.html", {"status": "not_found", "user": user})
     return main.templates.TemplateResponse(request, "payment_status.html", {
