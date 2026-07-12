@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 import re
 import json
 
@@ -70,3 +70,82 @@ async def dashboard_create(request: Request):
         edit_site=edit_site,
         onboarding=main.services.OnboardingService.current(user["id"]) if not edit_site else None,
     )
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request):
+    import main
+    user = main._require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    log = main.db.get_dev_credit_log(user["id"])
+    promo_log = main.db.get_promo_credit_log(user["id"])
+    sites = main.db.get_user_sites(user["id"])
+    csrf_token = main.auth_services.CsrfService.generate()
+    response = main.templates.TemplateResponse(request, "profile.html", {
+        "user": user,
+        "log": log,
+        "promo_log": promo_log,
+        "sites_count": len(sites),
+        "verification_notice": main._verification_notice(request, user),
+        "csrf_token": csrf_token,
+    })
+    main._set_auth_csrf_cookie(response, request, csrf_token)
+    return response
+
+@router.post("/profile/update")
+async def profile_update(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(""),
+    avatar_url: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    import main
+    user = main._require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    try:
+        main._verify_auth_csrf(request, csrf_token)
+        safe_name = main.auth_services.validate_name(name)
+    except main.auth_services.AuthError:
+        return RedirectResponse("/dashboard/profile?email_error=verification_failed", status_code=302)
+    main.db.update_user_name(user["id"], safe_name)
+
+    if avatar_url:
+        main.db.update_user_avatar(user["id"], avatar_url)
+
+    try:
+        new_email = main.auth_services.validate_email(email) if (email or "").strip() else ""
+    except main.auth_services.AuthError:
+        return RedirectResponse("/dashboard/profile?email_error=invalid_email", status_code=302)
+    current_email = main.auth_services.normalize_email(user.get("email"))
+    if new_email and new_email != current_email:
+        updated = main.db.update_user_email_for_verification(user["id"], new_email)
+        if not updated:
+            return RedirectResponse("/dashboard/profile?email_error=account_conflict", status_code=302)
+        result = await main._prepare_and_send_verification(request, updated, rate_limit=False)
+        if result.get("ok"):
+            return RedirectResponse("/dashboard/profile?email_success=verification_sent", status_code=302)
+        return RedirectResponse(f"/dashboard/profile?email_error={result.get('error', 'verification_failed')}", status_code=302)
+
+    return RedirectResponse("/dashboard/profile", status_code=302)
+
+@router.post("/profile/update-password")
+async def profile_update_password(
+    request: Request,
+    password: str = Form(...),
+    confirm_password: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    import main
+    user = main._require_auth(request)
+    if not user:
+        return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
+    try:
+        main._verify_auth_csrf(request, csrf_token)
+        main.auth_services.validate_password(password, confirm_password, email=user.get("email"), name=user.get("name"))
+    except main.auth_services.AuthError as e:
+        return RedirectResponse(f"/dashboard/profile?password_error={e.code}", status_code=302)
+
+    main.db.update_user_password(user["id"], password)
+    return RedirectResponse("/dashboard/profile?password_success=updated", status_code=302)
