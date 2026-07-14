@@ -14,7 +14,7 @@ CHAT_SYSTEM = settings.chat_system
 from pathlib import Path
 GENERATED_DIR = Path('generated_sites')
 
-def _ask_llm(model: str, max_tokens: int, system_text: str, messages: list) -> dict:
+async def _ask_llm(model: str, max_tokens: int, system_text: str, messages: list) -> dict:
     headers = {
         "Authorization": f"Bearer {ALEM_API_KEY}",
         "Content-Type": "application/json"
@@ -26,9 +26,9 @@ def _ask_llm(model: str, max_tokens: int, system_text: str, messages: list) -> d
         "messages": api_messages,
         "max_tokens": max_tokens,
     }
-    with httpx.Client(timeout=180.0) as client:
+    async with httpx.AsyncClient(timeout=180.0) as client:
         try:
-            resp = client.post(ALEM_API_URL, headers=headers, json=payload)
+            resp = await client.post(ALEM_API_URL, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
             # Handle reasoning models where content is empty but reasoning_content exists
@@ -103,32 +103,66 @@ def _extract_design_tokens(css: str, html: str) -> dict:
 
 
 
-def _fetch_url(url: str) -> str:
-    # fetch reference site styles via Playwright script
-    import subprocess
+async def _fetch_url(url: str) -> str:
+    # fetch reference site styles via Playwright natively
     import json
+    from playwright.async_api import async_playwright
     
     if not url.startswith("http"):
         url = "https://" + url
 
+    tokens = {}
     try:
-        result = subprocess.run(
-            ["venv_playwright/bin/python", "scripts/playwright_scraper.py", url],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        if result.returncode != 0 or not result.stdout.strip():
-            logger.error(f"Playwright scraper error: {result.stderr}")
-            return ""
-            
-        tokens = json.loads(result.stdout)
-        if "error" in tokens:
-            logger.error(f"Playwright scraper JSON error: {tokens['error']}")
-            return ""
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            try:
+                # Wait until network is mostly idle to ensure SPA renders
+                await page.goto(url, timeout=15000, wait_until="networkidle")
+            except Exception:
+                # If networkidle times out, just proceed with what we have
+                pass
+
+            js_script = """
+            () => {
+                const elements = document.querySelectorAll('*');
+                const colors = new Set();
+                const bgColors = new Set();
+                const fonts = new Set();
+                const radii = new Set();
+                const shadows = new Set();
+
+                elements.forEach(el => {
+                    const style = window.getComputedStyle(el);
+                    
+                    if (style.color && style.color !== 'rgba(0, 0, 0, 0)') colors.add(style.color);
+                    if (style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent') bgColors.add(style.backgroundColor);
+                    if (style.fontFamily) fonts.add(style.fontFamily);
+                    if (style.borderRadius && style.borderRadius !== '0px') radii.add(style.borderRadius);
+                    if (style.boxShadow && style.boxShadow !== 'none') shadows.add(style.boxShadow);
+                });
+                
+                const googleFonts = [];
+                document.querySelectorAll('link[href*="fonts.googleapis.com"]').forEach(link => {
+                    googleFonts.push(link.href);
+                });
+
+                return {
+                    colors: Array.from(colors).slice(0, 15),
+                    backgrounds: Array.from(bgColors).slice(0, 10),
+                    fonts: Array.from(fonts).map(f => f.split(',')[0].replace(/['"]/g, '').trim()).slice(0, 5),
+                    border_radius: Array.from(radii).slice(0, 5),
+                    shadows: Array.from(shadows).slice(0, 5),
+                    google_fonts_urls: googleFonts.slice(0, 3)
+                };
+            }
+            """
+            tokens = await page.evaluate(js_script)
+            await browser.close()
     except Exception as e:
-        logger.error(f"Failed to run playwright scraper: {e}")
+        logger.error(f"Playwright native error: {e}")
         return ""
+
 
     lines = [f"=== ДИЗАЙН-БРИФ: {url} ===\n"]
 
@@ -165,7 +199,7 @@ def _is_url(text: str) -> bool:
 
 
 
-def _ai_generate(data: dict) -> dict:
+async def _ai_generate(data: dict) -> dict:
     # generate complete html site via ai
     ref_url = data.get("ref_url", "").strip()
     vibe    = data.get("vibe", "").strip()
@@ -174,7 +208,7 @@ def _ai_generate(data: dict) -> dict:
     style_lines = []
 
     if ref_url and _is_url(ref_url):
-        brief = _fetch_url(ref_url)
+        brief = await _fetch_url(ref_url)
         if brief:
             style_lines.append(f"Дизайн-бриф с сайта-референса ({ref_url}):\n{brief}")
             style_lines.append("\nВАЖНО: Используй ТОЧНО цвета, шрифты и CSS переменные из брифа выше.")
@@ -256,7 +290,7 @@ def _ai_generate(data: dict) -> dict:
 
 Сгенерируй полный HTML сайт-визитку для этого клиента. Используй все детали из диалога — специализацию, нюансы бизнеса, тон общения клиента."""
 
-    resp = _ask_llm(
+    resp = await _ask_llm(
         model=ALEM_MODEL,
         max_tokens=65536,
         system_text=SYSTEM_PROMPT,
@@ -337,7 +371,7 @@ async def _agent_generate(data: dict, slug: str) -> dict:
         
         if ref_url:
             from main import _fetch_url
-            brief = _fetch_url(ref_url)
+            brief = await _fetch_url(ref_url)
             if brief:
                 prompt_lines.append(f"Дизайн-бриф ({ref_url}):\n{brief}")
                 
@@ -386,12 +420,12 @@ def _tokens_to_ours(inp: int, out: int) -> int:
 
 
 
-def _ai_edit_chat(history: list, site_context: str = "") -> dict:
+async def _ai_edit_chat(history: list, site_context: str = "") -> dict:
     # handle ai edit chat turn
     system_text = EDIT_CHAT_SYSTEM
     if site_context:
         system_text += f"\n\n=== ТЕКУЩИЙ КОНТЕНТ САЙТА ===\n{site_context}"
-    resp = _ask_llm(
+    resp = await _ask_llm(
         model=ALEM_MODEL,
         max_tokens=65536,
         system_text=system_text,
@@ -420,9 +454,9 @@ def _ai_edit_chat(history: list, site_context: str = "") -> dict:
 
 
 
-def _ai_chat(history: list) -> dict:
+async def _ai_chat(history: list) -> dict:
     # generate onboarding response
-    resp = _ask_llm(
+    resp = await _ask_llm(
         model=ALEM_MODEL,
         max_tokens=65536,
         system_text=CHAT_SYSTEM,

@@ -130,7 +130,7 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
         edit_history = edit_history + [{"role": "user", "content": message}]
 
         from services.ai_service import _ai_edit_chat
-        result       = _ai_edit_chat(ai_history, site_context)
+        result       = await _ai_edit_chat(ai_history, site_context)
         reply        = result.get("reply", "Понял!")
         ready        = result.get("ready", False)
         needs_photos = result.get("needs_photos", False)
@@ -231,7 +231,7 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
 
 async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, prev_html: str, combined_history: list, edit_history: list):
     try:
-        gen = ai_service._ai_generate(data)
+        gen = await _ai_generate(data)
 
         gen_in  = gen["input_tokens"]
         gen_out = gen["output_tokens"]

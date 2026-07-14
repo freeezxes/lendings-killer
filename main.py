@@ -894,7 +894,35 @@ async def _prepare_and_send_verification(request: Request, user,
     return prepared
 
 
+
+import time
+_SITE_CACHE = {}
+_SITE_CACHE_TTL = 60 * 5  # 5 minutes
+
+async def _get_cached_site_support(slug: str):
+    now = time.time()
+    if slug in _SITE_CACHE:
+        cached_at, is_public = _SITE_CACHE[slug]
+        if now - cached_at < _SITE_CACHE_TTL:
+            return is_public
+
+    from core.database import AsyncSessionLocal
+    from repositories.site_repo import site_repo
+    import services
+    
+    async with AsyncSessionLocal() as session:
+        site = await site_repo.get_by_slug(session, slug)
+        if not site:
+            _SITE_CACHE[slug] = (now, False)
+            return False
+        
+        site = await services.SupportService.refresh_site(session, site.id) or site
+        is_pub = services.is_support_public(site.support_status)
+        _SITE_CACHE[slug] = (now, is_pub)
+        return is_pub
+
 class SubdomainMiddleware(BaseHTTPMiddleware):
+
     async def dispatch(self, request: Request, call_next):
         host = request.headers.get("host", "")
         # Отсекаем порт
@@ -907,15 +935,9 @@ class SubdomainMiddleware(BaseHTTPMiddleware):
                 if request.url.path.startswith("/api/") or request.url.path.startswith("/static/"):
                     return await call_next(request)
                     
-                from core.database import AsyncSessionLocal
-                from repositories.site_repo import site_repo
-                import services
-                async with AsyncSessionLocal() as session:
-                    site = await site_repo.get_by_slug(session, slug)
-                    if site:
-                        site = await services.SupportService.refresh_site(site.id) or site
-                        if not services.is_support_public(site.support_status):
-                            return HTMLResponse(services.maintenance_page(), status_code=503)
+                is_public = await _get_cached_site_support(slug)
+                if not is_public:
+                    return HTMLResponse(services.maintenance_page(), status_code=503)
                 
                 path = GENERATED_DIR / f"{slug}.html"
                 if path.exists():

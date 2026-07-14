@@ -59,7 +59,7 @@ async def chat(request: Request):
 
     history.append({"role": "user", "content": message})
 
-    result     = main._ai_chat(history)
+    result     = await _ai_chat(history)
     reply      = result.get("reply", "Продолжай, я слушаю")
     ready      = result.get("ready", False)
     collected  = result.get("collected", {})
