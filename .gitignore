@@ -7,8 +7,9 @@ generated_sites/
 static/uploads/
 .env
 *.png
-test_*.py
+/test_*.py
 scratch*.py
+!tests/
 maks.html
 test_script.html
 venv_playwright/

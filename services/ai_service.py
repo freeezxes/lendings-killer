@@ -6,11 +6,13 @@ logger = logging.getLogger(__name__)
 ALEM_API_KEY = settings.alem_api_key
 ALEM_API_URL = settings.alem_api_url
 ALEM_MODEL = settings.alem_model
-PRICE_INPUT = settings.price_input
-PRICE_OUTPUT = settings.price_output
-SYSTEM_PROMPT = settings.system_prompt
-EDIT_CHAT_SYSTEM = settings.edit_chat_system
-CHAT_SYSTEM = settings.chat_system
+from core.prompts import (
+    PRICE_INPUT,
+    PRICE_OUTPUT,
+    SYSTEM_PROMPT,
+    EDIT_CHAT_SYSTEM,
+    CHAT_SYSTEM,
+)
 from pathlib import Path
 GENERATED_DIR = Path('generated_sites')
 

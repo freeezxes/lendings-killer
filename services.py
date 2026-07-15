@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func, insert
 from core.database import AsyncSessionLocal
 from repositories.user_repo import user_repo
 from repositories.site_repo import site_repo

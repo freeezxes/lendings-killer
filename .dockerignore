@@ -1,0 +1,16 @@
+.git
+.github
+__pycache__
+*.pyc
+venv
+venv_playwright
+generated_sites
+static/uploads
+lendings.db
+costs.json
+.env
+*.png
+tests
+docs
+*.md
+scratch*.py

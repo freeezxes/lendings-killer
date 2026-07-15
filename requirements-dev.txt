@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Test & quality tooling (used by CI "Test & Quality" job)
+pytest
+pytest-asyncio
+ruff

@@ -48,6 +48,7 @@ def _slugify(text: str) -> str:
 # Alem.plus AI
 ALEM_API_URL = settings.alem_api_url
 ALEM_API_KEY = settings.alem_api_key
+OCR_API_KEY = settings.ocr_api_key
 ALEM_MODEL = settings.alem_model
 
 PRICE_INPUT   = 1.00   # $1.00 per 1M input tokens
@@ -309,6 +310,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
             from repositories.site_repo import site_repo
             from sqlalchemy import select
             from models.auth import Session
+            import models.user
             import time
             async with AsyncSessionLocal() as session:
                 result = await session.execute(
@@ -884,15 +886,6 @@ async def _prepare_and_send_verification(request: Request, user,
 
     return {"ok": True, "token": token, "user": user}
 
-    try:
-        await _send_verification_email(request, prepared["user"], prepared["token"])
-    except EmailServiceUnavailable:
-        logger.warning("Email verification send failed or is not configured")
-        db.clear_email_verification(user.id)
-        return {"ok": False, "error": "resend_service_unavailable"}
-
-    return prepared
-
 
 
 import time
@@ -953,6 +946,14 @@ class SubdomainMiddleware(BaseHTTPMiddleware):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI()
+
+
+@app.get("/healthz")
+async def healthz():
+    # Lightweight liveness probe used by CI and the deploy health check.
+    return {"status": "ok"}
+
+
 app.include_router(api_router)
 app.add_middleware(SubdomainMiddleware)
 app.add_middleware(SessionMiddleware)

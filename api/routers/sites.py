@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from services import ai_service
 from services.ai_service import _tokens_to_ours
 from services.ai_service import _ai_generate
 from services.ai_service import _calc_cost
@@ -194,7 +195,7 @@ async def site_edit(slug: str, request: Request, bg_tasks: BackgroundTasks):
         })
 
     # Ready — generate
-    if _dev_credits(user) < 1:
+    if main._dev_credits(user) < 1:
         return JSONResponse({"error": "Недостаточно кредитов разработки"}, status_code=402)
 
     business_check = main.services.PromotionService.validate_business_change(site, edit_summary)
@@ -241,7 +242,7 @@ async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, p
         our_tokens = ai_service._tokens_to_ours(gen_in, gen_out)
 
         fresh_user = main.db.get_user_by_id(user.id) or user
-        if _dev_credits(fresh_user) < our_tokens:
+        if main._dev_credits(fresh_user) < our_tokens:
             main.db.update_site_edit_status(site.id, "error_credits")
             return
 
@@ -259,7 +260,7 @@ async def _background_edit_task(user: dict, site: dict, slug: str, data: dict, p
             main.db.update_site_edit_status(site.id, "error_balance")
             return
 
-        updated_html = _inject_analytics(gen["html"], slug)
+        updated_html = main._inject_analytics(gen["html"], slug)
         (main.GENERATED_DIR / f"{slug}.html").write_text(updated_html, encoding="utf-8")
 
         data_to_save = {**data, "chat_history": combined_history}

@@ -1,0 +1,154 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ── 1. Test & Quality ─────────────────────────────────────────────────────
+  test-quality:
+    name: Test & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint (ruff — crash-class rules)
+        run: ruff check .
+      - name: Import smoke check
+        run: python -c "import main; assert main.app is not None; print('app imports:', len(main.app.routes), 'routes')"
+      - name: Run tests
+        run: pytest
+
+  # ── 2. Docker Build ───────────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: lendings-killer:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke-test the image
+        run: |
+          docker run -d --name lendings_ci -p 8000:8000 lendings-killer:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/healthz; then echo "\nhealthy"; exit 0; fi
+            sleep 2
+          done
+          echo "container never became healthy"; docker logs lendings_ci; exit 1
+
+  # ── 3. Migration Safety ───────────────────────────────────────────────────
+  migration-safety:
+    name: Migration Safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Apply Alembic migrations on a fresh DB
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///ci_migrations.db
+        run: alembic upgrade head
+      - name: Verify schema bootstrap (db.init_db)
+        run: python -c "import db; db.init_db(); print('schema bootstrap OK')"
+
+  # ── 4. Real DB Integration ────────────────────────────────────────────────
+  db-integration:
+    name: Real DB Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Boot app against a real SQLite DB and hit endpoints
+        env:
+          APP_ENV: test
+          DATABASE_URL: sqlite+aiosqlite:///ci_integration.db
+          ALLOW_GUEST_LOGIN: "1"
+        run: |
+          uvicorn main:app --host 127.0.0.1 --port 8000 &
+          APP_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/healthz; then break; fi
+            sleep 1
+          done
+          echo "\n--- /healthz ---"; curl -fsS http://127.0.0.1:8000/healthz
+          echo "\n--- / (landing) ---"; curl -fsS -o /dev/null -w "landing status: %{http_code}\n" http://127.0.0.1:8000/
+          kill $APP_PID
+
+  # ── 5. Deploy (main only, after all checks pass) ──────────────────────────
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [test-quality, docker-build, migration-safety, db-integration]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+      - name: Deploy with rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='generated_sites/' \
+            --exclude='lendings.db' \
+            --exclude='static/uploads/' \
+            --exclude='costs.json' \
+            --exclude='venv' \
+            --exclude='venv_playwright' \
+            ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lendings/
+      - name: Install deps, run migrations & restart service
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
+            set -e
+            cd /opt/lendings
+            python3 -m venv venv 2>/dev/null || true
+            ./venv/bin/pip install -q -r requirements.txt
+            ./venv/bin/alembic upgrade head || true
+            sudo systemctl restart lendings
+          '
+      - name: Verify deployment health
+        run: |
+          sleep 5
+          curl -fsS --retry 5 --retry-delay 3 https://dum-e.com/healthz \
+            || curl -fsS --retry 5 --retry-delay 3 http://${{ secrets.DEPLOY_HOST }}/healthz
