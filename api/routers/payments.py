@@ -24,26 +24,26 @@ async def api_billing_credit_logs(request: Request):
 @router.get("/payment", response_class=HTMLResponse)
 async def payment_page(request: Request):
     import main
+    from core.database import AsyncSessionLocal
+    from repositories.site_repo import site_repo
     user = main._require_auth(request)
     if not user:
         return RedirectResponse("/auth?next=/payment", status_code=302)
     reason = request.query_params.get("reason", "")
-    pkg_type = request.query_params.get("type", "slot")
-    context = {"user": user, "reason": reason, "pkg_type": pkg_type}
-    if pkg_type == "slot":
-        context["package"] = next((p for p in main.PAYMENT_PACKAGES if p["type"] == "slot"), None)
-    elif pkg_type == "credits":
-        amount_str = request.query_params.get("amount", "100")
-        try:
-            amt = int(amount_str)
-        except ValueError:
-            amt = 100
-        context["package"] = next((p for p in main.PAYMENT_PACKAGES if p["type"] == "credits" and p["credits"] == amt), None)
-    else:
-        context["package"] = None
-    if not context["package"]:
-        return RedirectResponse("/dashboard", status_code=302)
-    return main.templates.TemplateResponse(request, "payment.html", context)
+    slot_pkg = next(p for p in main.PAYMENT_PACKAGES if p["type"] == "slot")
+    credit_pkgs = [p for p in main.PAYMENT_PACKAGES if p["type"] == "credits"]
+    async with AsyncSessionLocal() as session:
+        sites = await site_repo.get_multi_by_user(session, user.id)
+    return main.templates.TemplateResponse(request, "payment.html", {
+        "user": user,
+        "reason": reason,
+        "sites_count": len(sites),
+        "slot_pkg": slot_pkg,
+        "credit_pkgs": credit_pkgs,
+        "promo_min_purchase": main.PROMO_MIN_PURCHASE,
+        "promo_credit_tenge": main.PROMO_CREDIT_TENGE,
+        "verification_notice": main._verification_notice(request, user),
+    })
 
 @router.post("/payment/create")
 async def payment_create(request: Request):

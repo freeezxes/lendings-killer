@@ -311,17 +311,18 @@ class SessionMiddleware(BaseHTTPMiddleware):
             from sqlalchemy import select
             from models.auth import Session
             import models.user
-            import time
+            from datetime import datetime as _dt
             async with AsyncSessionLocal() as session:
                 result = await session.execute(
                     select(Session, models.user.User)
                     .join(models.user.User, Session.user_id == models.user.User.id)
-                    .where(Session.session_id == sid)
+                    .where(Session.id == sid)
                 )
                 row = result.first()
                 if row:
                     db_session, user = row
-                    if db_session.expires_at > int(time.time()):
+                    # sessions.expires is a UTC isoformat string (see db.create_session)
+                    if db_session.expires > _dt.utcnow().isoformat():
                         request.state.user = user
                         sites = await site_repo.get_multi_by_user(session, user.id)
                         request.state.user.sites_count = len(sites)
@@ -1043,6 +1044,18 @@ EDIT_CHAT_SYSTEM = """Ты — помощник по редактировани�
 def _require_auth(request: Request):
     # check if user is authenticated
     return request.state.user
+
+
+async def dashboard_view(request: Request, view: str, **extra):
+    # render the dashboard shell for a given view (overview/billing/create/...)
+    user = _require_auth(request)
+    if not user:
+        return RedirectResponse("/auth", status_code=302)
+    context = await services.build_dashboard_context(user)
+    context["verification_notice"] = _verification_notice(request, context["user"])
+    context["dashboard_view"] = view
+    context.update(extra)
+    return templates.TemplateResponse(request, "dashboard.html", context)
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

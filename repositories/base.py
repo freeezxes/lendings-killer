@@ -17,6 +17,11 @@ class BaseRepository(Generic[ModelType]):
         result = await db.execute(select(self.model).offset(skip).limit(limit))
         return result.scalars().all()
 
+    async def get_multi_by_user(self, db: AsyncSession, user_id: int) -> List[ModelType]:
+        # Generic user-scoped fetch for models that carry a user_id column.
+        result = await db.execute(select(self.model).filter(self.model.user_id == user_id))
+        return result.scalars().all()
+
     async def create(self, db: AsyncSession, *, obj_in: dict) -> ModelType:
         db_obj = self.model(**obj_in)
         db.add(db_obj)

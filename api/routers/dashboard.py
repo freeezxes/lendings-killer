@@ -5,6 +5,10 @@ import json
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+# Profile / "Оплата и профиль" lives at the top level (/profile*), matching the
+# templates and the pre-refactor routes — not under the /dashboard prefix.
+profile_router = APIRouter(tags=["profile"])
+
 @router.get("", response_class=HTMLResponse)
 async def dashboard(request: Request):
     import main
@@ -20,7 +24,7 @@ async def dashboard_site_workspace(site_id: int, request: Request):
     user = main._require_auth(request)
     if not user:
         return RedirectResponse("/auth", status_code=302)
-    context = main.services.build_site_workspace_context(user, site_id)
+    context = await main.services.build_site_workspace_context(user, site_id)
     if not context:
         return RedirectResponse("/dashboard?missing=site", status_code=302)
     context["verification_notice"] = main._verification_notice(request, context["user"])
@@ -72,7 +76,10 @@ async def dashboard_create(request: Request):
             "create",
             edit_site=edit_site,
             onboarding=await main.services.OnboardingService.current(user.id) if not edit_site else None,
-        )@router.get("/profile", response_class=HTMLResponse)
+        )
+
+
+@profile_router.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
     import main
     from core.database import AsyncSessionLocal
@@ -86,7 +93,7 @@ async def profile_page(request: Request):
         promo_log = await promo_credit_log_repo.get_multi_by_user(session, user.id)
         sites = await site_repo.get_multi_by_user(session, user.id)
         sites_count = len(sites)
-    csrf_token = await main.auth_services.CsrfService.generate()
+    csrf_token = main.auth_services.CsrfService.generate()
     response = main.templates.TemplateResponse(request, "profile.html", {
         "user": user,
         "log": log,
@@ -96,7 +103,10 @@ async def profile_page(request: Request):
         "csrf_token": csrf_token,
     })
     main._set_auth_csrf_cookie(response, request, csrf_token)
-    return response@router.post("/profile/update")
+    return response
+
+
+@profile_router.post("/profile/update")
 async def profile_update(
     request: Request,
     name: str = Form(...),
@@ -114,7 +124,7 @@ async def profile_update(
         await main._verify_auth_csrf(request, csrf_token)
         safe_name = main.auth_services.validate_name(name)
     except main.auth_services.AuthError:
-        return RedirectResponse("/dashboard/profile?email_error=verification_failed", status_code=302)
+        return RedirectResponse("/profile?email_error=verification_failed", status_code=302)
     
     async with AsyncSessionLocal() as session:
         db_user = await user_repo.get(session, user.id)
@@ -128,7 +138,7 @@ async def profile_update(
     try:
         new_email = main.auth_services.validate_email(email) if (email or "").strip() else ""
     except main.auth_services.AuthError:
-        return RedirectResponse("/dashboard/profile?email_error=invalid_email", status_code=302)
+        return RedirectResponse("/profile?email_error=invalid_email", status_code=302)
     current_email = main.auth_services.normalize_email(user.email)
     
     if new_email and new_email != current_email:
@@ -145,17 +155,20 @@ async def profile_update(
                     await session.commit()
                     updated = db_user
                 except Exception:
-                    return RedirectResponse("/dashboard/profile?email_error=account_conflict", status_code=302)
+                    return RedirectResponse("/profile?email_error=account_conflict", status_code=302)
             else:
                 updated = None
                 
         if updated:
             result = await main._prepare_and_send_verification(request, updated, rate_limit=False)
             if result.get("ok"):
-                return RedirectResponse("/dashboard/profile?email_success=verification_sent", status_code=302)
-            return RedirectResponse(f"/dashboard/profile?email_error={result.get('error', 'verification_failed')}", status_code=302)
+                return RedirectResponse("/profile?email_success=verification_sent", status_code=302)
+            return RedirectResponse(f"/profile?email_error={result.get('error', 'verification_failed')}", status_code=302)
 
-    return RedirectResponse("/dashboard/profile", status_code=302)@router.post("/profile/update-password")
+    return RedirectResponse("/profile", status_code=302)
+
+
+@profile_router.post("/profile/update-password")
 async def profile_update_password(
     request: Request,
     password: str = Form(...),
@@ -173,7 +186,7 @@ async def profile_update_password(
         await main._verify_auth_csrf(request, csrf_token)
         main.auth_services.validate_password(password, confirm_password, email=user.email, name=user.name)
     except main.auth_services.AuthError as e:
-        return RedirectResponse(f"/dashboard/profile?password_error={e.code}", status_code=302)
+        return RedirectResponse(f"/profile?password_error={e.code}", status_code=302)
 
     async with AsyncSessionLocal() as session:
         db_user = await user_repo.get(session, user.id)
@@ -189,4 +202,4 @@ async def profile_update_password(
             db_user.updated_at = datetime.utcnow()
             session.add(db_user)
             await session.commit()
-    return RedirectResponse("/dashboard/profile?password_success=updated", status_code=302)
+    return RedirectResponse("/profile?password_success=updated", status_code=302)

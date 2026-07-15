@@ -31,3 +31,15 @@ class User(Base):
     last_login_at = Column(DateTime, nullable=True)
 
     sites = relationship("Site", back_populates="user", cascade="all, delete-orphan")
+
+    # Dict-compatibility shims: large parts of the codebase predate the ORM
+    # migration and still treat `user` as a dict (user.get("x"), user["x"]).
+    # These let a User instance stand in for that legacy interface.
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __contains__(self, key):
+        return hasattr(self, key)

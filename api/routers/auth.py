@@ -151,7 +151,10 @@ async def auth_google_callback(request: Request):
         return response
     except Exception:
         main.logger.exception("Unexpected Google OAuth account persistence failure")
-        return main._auth_error_redirect("oauth_failed")@router.post("/auth/register")
+        return main._auth_error_redirect("oauth_failed")
+
+
+@router.post("/auth/register")
 async def auth_register(
     request: Request,
     email: str = Form(...),

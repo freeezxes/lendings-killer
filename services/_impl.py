@@ -1248,6 +1248,9 @@ class OnboardingService:
             "collected": collected,
             "photo_urls": photo_urls,
             "error": onb_session.error if is_orm else onb_session.get("error"),
+            "chat_in": (onb_session.chat_in if is_orm else onb_session.get("chat_in")) or 0,
+            "chat_out": (onb_session.chat_out if is_orm else onb_session.get("chat_out")) or 0,
+            "chat_cr": (onb_session.chat_cr if is_orm else onb_session.get("chat_cr")) or 0,
         }
         
         return {
