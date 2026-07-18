@@ -84,21 +84,34 @@ jobs:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          host_keys="$(ssh-keyscan -4 -T 10 -H "${{ secrets.DEPLOY_HOST }}" 2>/dev/null || true)"
+          if [ -z "$host_keys" ]; then
+            echo "Could not retrieve an SSH host key from DEPLOY_HOST" >&2
+            exit 1
+          fi
+          printf '%s\n' "$host_keys" >> ~/.ssh/known_hosts
       - name: Deploy with rsync
         run: |
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='__pycache__' \
-            --exclude='*.pyc' \
-            --exclude='generated_sites/' \
-            --exclude='lendings.db' \
-            --exclude='static/uploads/' \
-            --exclude='costs.json' \
-            --exclude='venv' \
-            --exclude='venv_playwright' \
-            ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lendings/
+          for attempt in 1 2 3; do
+            if rsync -avz --partial --timeout=120 --info=progress2 \
+              -e "ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o ConnectTimeout=30" \
+              --exclude='.git' \
+              --exclude='.github' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='generated_sites/' \
+              --exclude='lendings.db' \
+              --exclude='static/uploads/' \
+              --exclude='costs.json' \
+              --exclude='venv' \
+              --exclude='venv_playwright' \
+              ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lendings/; then
+              exit 0
+            fi
+            echo "rsync attempt $attempt failed; retrying"
+            sleep 10
+          done
+          exit 1
       - name: Install deps, run migrations & restart service
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
