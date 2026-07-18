@@ -17,8 +17,45 @@
   @keyframes lk-pop{0%{opacity:0;transform:scale(.95) translateY(8px)}100%{opacity:1;transform:scale(1) translateY(0)}}
   @keyframes lk-spin{to{transform:rotate(360deg)}}
   @keyframes lk-bounce{0%,70%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}}
+  @keyframes dashboard-enter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes dashboard-panel-enter{from{opacity:0;transform:translateY(20px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
   .lk-sc::-webkit-scrollbar{width:8px;height:8px}.lk-sc::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}.lk-sc::-webkit-scrollbar-track{background:transparent}
   .lk-mag{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .25s,color .25s,border-color .25s,opacity .2s}
+  .lk-app>.lk-side{animation:dashboard-enter .55s .02s both}
+  .lk-app>main>header{animation:dashboard-enter .55s .08s both}
+  .lk-app>main>div{animation:dashboard-enter .6s .14s both}
+  .dashboard-view-panel{animation:dashboard-panel-enter .6s .2s both}
+  .dashboard-control{height:38px;min-width:38px;border:1px solid var(--line2);border-radius:12px;background:var(--bg2);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-family:'Golos Text';font-size:12px;font-weight:800;letter-spacing:.04em;cursor:pointer}
+  .dashboard-control:hover{transform:translateY(-2px);box-shadow:0 10px 22px -14px var(--coral)}
+  .dashboard-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line2);border-radius:13px;background:var(--surface)}
+  .dashboard-seg .dashboard-control{height:34px;min-width:38px;border:0;border-radius:10px;background:transparent}
+  .dashboard-seg .dashboard-control:hover{background:color-mix(in oklab,var(--ink) 6%,transparent);box-shadow:none;transform:none}
+  .dashboard-seg .theme-toggle svg{transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+  .dashboard-seg .theme-toggle:hover svg{transform:rotate(18deg)}
+  .dashboard-nav-link{position:relative;color:var(--muted);transition:background .25s,color .25s,transform .25s,box-shadow .25s!important}
+  .dashboard-nav-link:hover{background:color-mix(in oklab,var(--coral) 8%,transparent);color:var(--coral)!important;transform:translateX(3px)}
+  .dashboard-nav-link:focus-visible,.dashboard-profile-link:focus-visible{outline:2px solid var(--coral);outline-offset:3px}
+  .dashboard-nav-link.is-active{box-shadow:inset 3px 0 0 var(--coral)}
+  .dashboard-profile-link.is-active{border-color:color-mix(in oklab,var(--coral) 28%,transparent);background:color-mix(in oklab,var(--coral) 8%,var(--surface))}
+  .dashboard-profile-link:hover{background:transparent}
+  .dashboard-profile-link:hover>span:first-child{transform:scale(1.08)}
+  .dashboard-profile-link>span:first-child{flex:0 0 34px}
+  .dashboard-profile-link>span:last-child{display:grid;gap:2px;min-width:0}
+  .dashboard-nav-icon{width:20px;height:20px;display:inline-grid;place-items:center;flex:0 0 20px;transition:transform .3s cubic-bezier(.22,1,.36,1),color .25s}
+  .dashboard-nav-icon svg{width:20px;height:20px;display:block}
+  .dashboard-mobile-toggle{display:none}
+  .dashboard-mobile-seg{display:none}
+  .dashboard-rail-toggle{display:none}
+  .dashboard-mobile-backdrop{display:none}
+  .dashboard-card:hover{transform:translateY(-4px);box-shadow:0 28px 60px -28px rgba(20,18,24,.34)!important}
+  .create-page-header{min-height:78px!important;padding:0 26px!important}
+  .create-page-heading{display:grid;gap:4px;min-width:0}
+  .create-page-eyebrow{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--coral)}
+  .create-page-title{font-family:'Unbounded';font-size:19px;font-weight:700;letter-spacing:-.04em;line-height:1.2;margin:0}
+  .create-page-subtitle{font-size:12px;color:var(--muted);line-height:1.35}
+  .dashboard-page-header{min-height:78px!important;padding:0 26px!important}
+  .dashboard-page-header .create-page-eyebrow{color:var(--muted)}
+  @media(prefers-reduced-motion:reduce){.lk-app>.lk-side,.lk-app>main>header,.lk-app>main>div,.dashboard-view-panel{animation:none}.dashboard-control:hover,.dashboard-nav-link:hover,.dashboard-card:hover{transform:none}}
   
   /* Chat overrides */
   .msg { max-width:min(76%,680px); padding:12px 14px; border-radius:17px; font-size:14px; line-height:1.62; white-space:pre-wrap; word-break:break-word; animation:lk-pop .18s ease-out both; }
@@ -36,42 +73,114 @@
 
   .toast{position:fixed;left:50%;top:82px;transform:translateX(-50%) translateY(-8px);background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 15px;font-size:13px;box-shadow:var(--shadow);border:1px solid var(--line);z-index:100;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  @media(max-width:900px){.lk-side{display:none!important}.lk-app{grid-template-columns:1fr!important}}
+  @media(max-width:900px){
+    .lk-app{grid-template-columns:1fr!important}
+    .lk-side{position:fixed!important;z-index:80;left:0;top:0;bottom:0;width:min(304px,88vw)!important;transform:translateX(-105%);transition:transform .38s cubic-bezier(.22,1,.36,1),box-shadow .38s ease;box-shadow:24px 0 50px -30px rgba(20,18,24,.45);overflow-y:auto}
+    .lk-side.is-open{transform:translateX(0)}
+    .dashboard-mobile-backdrop{display:block;position:fixed;inset:0;z-index:70;background:rgba(20,18,24,.28);backdrop-filter:blur(3px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .38s ease,visibility .38s ease}
+    .dashboard-mobile-backdrop.is-open{opacity:1;visibility:visible;pointer-events:auto}
+    .dashboard-mobile-toggle{display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;border:0;border-radius:12px;background:var(--surface);color:var(--ink);font-size:20px;cursor:pointer;flex-shrink:0}
+    .dashboard-mobile-seg{display:inline-flex!important}
+    .dashboard-rail-toggle{display:inline-flex;width:42px;height:42px;align-items:center;justify-content:center;border:0;border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer;padding:0}
+    .dashboard-menu-icon,.dashboard-menu-icon:before,.dashboard-menu-icon:after{display:block;width:18px;height:2px;border-radius:2px;background:currentColor;transition:transform .3s ease,opacity .2s ease}
+    .dashboard-menu-icon{position:relative}
+    .dashboard-menu-icon:before,.dashboard-menu-icon:after{content:"";position:absolute;left:0}
+    .dashboard-menu-icon:before{top:-6px}.dashboard-menu-icon:after{top:6px}
+    .lk-side.is-open .dashboard-menu-icon{transform:rotate(45deg)}
+    .lk-side.is-open .dashboard-menu-icon:before{transform:translateY(6px) rotate(90deg)}
+    .lk-side.is-open .dashboard-menu-icon:after{transform:translateY(-6px) rotate(90deg);opacity:0}
+    .lk-app>main>header{height:62px;padding:0 18px}
+    .lk-app>main>div{padding:20px 18px 64px!important}
+    .dashboard-view-panel{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important}
+    .lk-app>main{margin-left:64px}
+    .lk-side{width:64px!important;padding:18px 10px!important;transform:none;gap:18px;overflow:hidden;border-right:0;box-shadow:8px 0 24px -20px rgba(20,18,24,.45)}
+    .lk-side{animation:none!important}
+    .lk-side>div:first-child{justify-content:center!important}
+    .lk-side>div:first-child>a,.lk-side .dashboard-seg,.lk-side>div[style*="margin-top:auto"],.lk-side>a:last-child > span:not(:first-child){display:none!important}
+    .lk-side nav{gap:8px!important;margin-top:0!important}
+    .lk-side:not(.is-open) nav a{width:40px!important}
+    .lk-side nav a{justify-content:center;gap:0!important;padding:0!important;font-size:0!important}
+    .lk-side nav a .dashboard-nav-icon{font-size:19px!important;width:42px!important;height:42px;display:grid;place-items:center;border-radius:12px;transition:transform .32s cubic-bezier(.22,1,.36,1),background .25s,color .25s}
+    .dashboard-nav-icon svg{width:20px;height:20px;display:block;transition:transform .32s cubic-bezier(.22,1,.36,1)}
+    .lk-side nav a:hover .dashboard-nav-icon{transform:scale(1.08) rotate(-4deg)}
+    .lk-side nav a:hover .dashboard-nav-icon{background:transparent}
+    .lk-side>a:last-child{justify-content:center;padding:10px 0!important;margin-top:auto;border:0!important;transition:background .25s,transform .32s cubic-bezier(.22,1,.36,1)}
+    .lk-side>a:last-child:hover{background:transparent;transform:translateY(-2px)}
+    .lk-side>a:last-child>span:first-child{width:38px!important;height:38px!important;flex:0 0 38px!important}
+    .lk-side:not(.is-open)>a:last-child>span:first-child{position:relative;left:-.5px}
+    .lk-side.is-open{width:min(304px,88vw)!important;transform:none;box-shadow:24px 0 50px -30px rgba(20,18,24,.45);overflow-y:auto}
+    .lk-side.is-open>div:first-child{justify-content:space-between!important}
+    .lk-side.is-open>div:first-child>a,.lk-side.is-open .dashboard-seg,.lk-side.is-open>div[style*="margin-top:auto"],.lk-side.is-open>a:last-child > span:not(:first-child){display:flex!important}
+    .lk-side.is-open nav a{justify-content:flex-start;gap:9px!important;padding:0 10px!important;font-size:12.5px!important;letter-spacing:-.01em}
+    .lk-side.is-open nav a .dashboard-nav-icon{width:20px!important;height:auto;background:transparent!important;font-size:16px!important;transition:transform .32s cubic-bezier(.22,1,.36,1),color .25s}
+    .lk-side.is-open .dashboard-nav-icon svg{width:20px;height:20px}
+    .lk-side.is-open nav a:hover .dashboard-nav-icon{transform:translateX(2px) scale(1.08) rotate(-4deg)}
+    .lk-side.is-open>a:last-child{justify-content:flex-start;padding:10px 11px 10px 2px!important;margin-top:2px;border:0!important}
+    #dashboardSidebar.is-open .dashboard-profile-link>span:last-child{display:grid!important;gap:2px;align-items:start}
+    .lk-side.is-open>div[style*="margin-top:auto"]{display:grid!important;grid-template-columns:1fr!important;gap:7px!important;width:100%}
+    .lk-side.is-open>div[style*="margin-top:auto"]>div{width:100%;min-width:0}
+    .lk-side:not(.is-open) [data-i18n="profile"]{display:none!important}
+  }
+  @media(max-width:640px){
+    .lk-app>main>header h1{font-size:15px}
+    .create-page-header{min-height:70px!important;padding:0 18px!important}
+    .create-page-title{font-size:15px}
+    .create-page-subtitle{display:none}
+    .dashboard-header-controls{gap:7px!important}
+    .dashboard-view-panel{grid-template-columns:1fr!important}
+    .dashboard-view-panel .dashboard-card{height:220px!important}
+    .dashboard-create-grid{grid-template-columns:1fr!important}
+    .dashboard-create-grid>section{height:calc(100vh - 150px)!important;min-height:460px}
+    .dashboard-create-grid>aside{position:static!important}
+  }
+  @media(prefers-reduced-motion:reduce){.dashboard-seg .theme-toggle:hover svg{transform:none}.dashboard-mobile-backdrop,.lk-side{transition:none!important}}
 </style>
 {% endraw %}
 </head>
 <body class="lk" data-theme="light" style="font-family:'Golos Text',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;transition:background .5s,color .5s;margin:0">
+<script>
+  (function () {
+    const theme = localStorage.getItem('lk_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const lang = (localStorage.getItem('lk_lang') || 'ru').toLowerCase();
+    document.body.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('lang', lang);
+  }());
+</script>
   
   <div class="lk-app" style="display:grid;grid-template-columns:260px 1fr;min-height:100vh;position:relative;z-index:1">
+    <div id="dashboardMobileBackdrop" class="dashboard-mobile-backdrop" onclick="toggleDashboardNav(false)"></div>
     
     <!-- SIDEBAR -->
-    <aside class="lk-side" style="position:sticky;top:0;height:100vh;padding:22px 18px;border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <a href="/" style="font-family:'Unbounded';font-weight:800;font-size:18px;letter-spacing:-.03em;color:var(--ink);text-decoration:none">lendings<span style="color:var(--coral)">.kz</span></a>
-        <div style="display:flex;gap:6px">
-          <button id="themeBtn" onclick="toggleTheme()" class="lk-mag theme-toggle" aria-label="theme" style="width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:var(--bg2);color:var(--muted);cursor:pointer;font-size:14px">🌙</button>
+    <aside id="dashboardSidebar" class="lk-side" style="position:sticky;top:0;height:100vh;padding:22px 18px;border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <button class="dashboard-rail-toggle" onclick="toggleDashboardNav()" aria-label="Открыть навигацию" aria-expanded="false"><span class="dashboard-menu-icon" aria-hidden="true"></span></button>
+        <a href="/" class="lk-mag" style="font-family:'Unbounded';font-weight:800;font-size:18px;letter-spacing:-.03em;color:var(--ink);text-decoration:none">lendings<span style="color:var(--coral)">.kz</span></a>
+        <div class="dashboard-seg">
+          <button id="langBtn" data-lang-control onclick="cycleLang(event)" class="lk-mag dashboard-control" aria-label="Change language" title="Language">RU</button>
+          <span style="width:1px;height:18px;background:var(--line2)"></span>
+          <button id="themeBtn" data-theme-control onclick="toggleTheme(event)" class="lk-mag dashboard-control theme-toggle" aria-label="Toggle theme" title="Theme"></button>
         </div>
       </div>
       <nav style="display:grid;gap:4px;margin-top:6px">
-        <a href="/dashboard" class="lk-mag" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;{{ 'background:color-mix(in oklab,var(--coral) 12%,transparent);color:var(--coral);' if dashboard_view == 'overview' else 'color:var(--muted);' }}"><span style="width:20px;text-align:center;font-size:16px">▤</span>Панель</a>
-        <a href="/dashboard/create" class="lk-mag" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;{{ 'background:color-mix(in oklab,var(--coral) 12%,transparent);color:var(--coral);' if dashboard_view == 'create' else 'color:var(--muted);' }}"><span style="width:20px;text-align:center;font-size:17px">＋</span>Создать страницу</a>
-        <a href="/profile" class="lk-mag" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;color:var(--muted)"><span style="width:20px;text-align:center;font-size:15px">◈</span>Оплата и профиль</a>
+        <a href="/dashboard" onclick="toggleDashboardNav(false)" class="lk-mag dashboard-nav-link" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;{{ 'background:color-mix(in oklab,var(--coral) 12%,transparent);color:var(--coral);' if dashboard_view == 'overview' else 'color:var(--muted);' }}"><span class="dashboard-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span data-i18n="navOverview">Панель</span></a>
+        <a href="/dashboard/create" onclick="toggleDashboardNav(false)" class="lk-mag dashboard-nav-link" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;{{ 'background:color-mix(in oklab,var(--coral) 12%,transparent);color:var(--coral);' if dashboard_view == 'create' else 'color:var(--muted);' }}"><span class="dashboard-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span data-i18n="navCreate">Создать страницу</span></a>
+        <a href="/dashboard/billing" onclick="toggleDashboardNav(false)" class="lk-mag dashboard-nav-link" style="height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:11px;text-decoration:none;font-size:13.5px;font-weight:700;color:var(--muted)"><span class="dashboard-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span><span data-i18n="navBilling">Billing</span></a>
       </nav>
       <div style="margin-top:auto;display:grid;gap:7px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:var(--bg2)">
-            <span style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Разработка</span>
+            <span data-i18n="devCredits" style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Разработка</span>
             <strong style="font-size:14px;font-family:'Unbounded';color:var(--coral);font-variant-numeric:tabular-nums">{{ user.dev_credits }}</strong>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:var(--bg2)">
-            <span style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Продвижение</span>
+            <span data-i18n="promoCredits" style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Продвижение</span>
             <strong style="font-size:14px;font-family:'Unbounded';color:var(--violet);font-variant-numeric:tabular-nums">{{ user.promo_credits }}</strong>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:var(--bg2)">
-            <span style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Свободные слоты</span>
+            <span data-i18n="freeSlots" style="font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2">Свободные слоты</span>
             <strong style="font-size:14px;font-family:'Unbounded';color:var(--green);font-variant-numeric:tabular-nums">{{ user.site_slots }}</strong>
           </div>
       </div>
-      <a href="/profile" style="display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:12px;border:1px solid transparent;text-decoration:none;transition:background .2s">
+      <a href="/profile" class="dashboard-profile-link" style="display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:12px;border:1px solid transparent;text-decoration:none;transition:background .2s">
         <span style="width:34px;height:34px;border-radius:10px;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;overflow:hidden">
             {% if user.avatar_url %}
             <img src="{{ user.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">
@@ -79,25 +188,34 @@
             {{ user.name[:1]|upper if user.name else (user.email[:1]|upper if user.email else 'U') }}
             {% endif %}
         </span>
-        <span style="min-width:0"><span style="display:block;font-size:13.5px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ user.name or user.email }}</span><span style="display:block;font-size:11px;color:var(--muted)">Профиль</span></span>
+        <span style="min-width:0"><span style="display:block;font-size:13.5px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ user.name or user.email }}</span><span data-i18n="profile" style="display:block;font-size:11px;color:var(--muted)">Профиль</span></span>
       </a>
     </aside>
 
     <!-- MAIN AREA -->
-    <main class="lk-sc" style="min-width:0;max-height:100vh;overflow-y:auto;display:flex;flex-direction:column">
+    <main class="lk-sc" onclick="if(!event.target.closest('.dashboard-mobile-toggle')) toggleDashboardNav(false)" style="min-width:0;max-height:100vh;overflow-y:auto;display:flex;flex-direction:column">
       
       <!-- HEADER -->
-      <header style="position:sticky;top:0;z-index:40;height:66px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 26px;border-bottom:1px solid var(--line);background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(16px)">
-        <div style="min-width:0">
-          <h1 style="font-family:'Unbounded';font-weight:700;font-size:18px;letter-spacing:-.03em;margin:0">
-            {% if dashboard_view == 'overview' %}Обзор{% endif %}
-            {% if dashboard_view == 'create' %}{% if edit_site %}AI Редактор{% else %}Создание сайта{% endif %}{% endif %}
+      <header class="{% if dashboard_view in ['create', 'overview', 'billing'] %}dashboard-page-header{% endif %} {% if dashboard_view == 'create' %}create-page-header{% endif %}" style="position:sticky;top:0;z-index:40;height:66px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 26px;border-bottom:1px solid var(--line);background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(16px)">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0">
+          {% if dashboard_view == 'create' %}
+            <div class="create-page-heading">
+              <span class="create-page-eyebrow" data-i18n="createEyebrow">{% if edit_site %}AI editor{% else %}New project{% endif %}</span>
+              <span class="create-page-title" data-i18n="createTitle">{% if edit_site %}AI Редактор{% else %}Создание сайта{% endif %}</span>
+              <span class="create-page-subtitle" data-i18n="createSubtitle">{% if edit_site %}Опишите, что нужно изменить в вашем сайте{% else %}Ответьте на несколько вопросов — мы соберём сайт для вас{% endif %}</span>
+            </div>
+          {% else %}
+          <div style="font-family:'Unbounded';font-weight:700;font-size:18px;letter-spacing:-.03em;margin:0">
+            {% if dashboard_view == 'overview' %}<div class="create-page-heading"><span class="create-page-eyebrow" data-i18n="overviewEyebrow">Workspace</span><span class="create-page-title" data-i18n="overview">Обзор</span><span class="create-page-subtitle" data-i18n="overviewSubtitle">Ваши сайты и последние проекты</span></div>{% endif %}
             {% if dashboard_view == 'site' %}Воркспейс сайта{% endif %}
-            {% if dashboard_view == 'billing' %}Оплата{% endif %}
-          </h1>
+            {% if dashboard_view == 'billing' %}<div class="create-page-heading"><span class="create-page-title" data-i18n="billing">Оплата</span><span class="create-page-subtitle" data-i18n="billingSubtitle">Пополняйте баланс и управляйте доступными слотами</span></div>{% endif %}
+          </div>
+          {% endif %}
         </div>
         <div style="display:flex;gap:10px;align-items:center">
-          <span style="font-size:13px;color:var(--muted)" id="chatStatus"></span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;color:var(--muted)" id="chatStatus"></span>
+          </div>
         </div>
       </header>
 
@@ -110,13 +228,13 @@
 
         <!-- OVERVIEW VIEW -->
         {% if dashboard_view == "overview" %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:16px;max-width:1200px">
-          <a href="/dashboard/create" class="lk-mag" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;height:240px;background:var(--surface);border:1px dashed var(--coral);border-radius:22px;color:var(--coral);box-shadow:var(--shadow)">
+        <div class="dashboard-view-panel" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:16px;max-width:1200px">
+          <a href="/dashboard/create" class="lk-mag dashboard-card" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;height:240px;background:var(--surface);border:1px dashed var(--coral);border-radius:22px;color:var(--coral);box-shadow:var(--shadow)">
             <span style="font-size:28px">＋</span>
-            <span style="font-family:'Unbounded';font-size:15px;font-weight:700">Создать новый</span>
+            <span data-i18n="createNew" style="font-family:'Unbounded';font-size:15px;font-weight:700">Создать новый</span>
           </a>
           {% for site in sites %}
-          <div style="background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;height:240px">
+          <div class="dashboard-card" style="background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;height:240px">
             <div style="flex:1;background:var(--soft-panel);padding:22px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:var(--ink)">
               <div>
                 <h3 style="font-family:'Unbounded';font-size:17px;font-weight:700;margin:0 0 6px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ site.title }}</h3>
@@ -135,7 +253,7 @@
 
         <!-- CREATE / CHAT VIEW -->
         {% if dashboard_view == "create" %}
-        <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1100px;align-items:start">
+        <div class="dashboard-view-panel dashboard-create-grid" style="display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1100px;align-items:start">
           
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);height:calc(100vh - 120px);display:flex;flex-direction:column;overflow:hidden">
             <div id="chat" class="lk-sc" style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:14px;">
@@ -145,15 +263,15 @@
               <div id="inputPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
               <div style="display:flex;gap:10px;align-items:center">
                 <label id="photoBtn" style="width:46px;height:46px;flex-shrink:0;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--muted);display:grid;place-items:center;font-size:17px;cursor:pointer">▧<input type="file" id="photoInput" accept="image/*" multiple hidden onchange="handlePhotos(this)"></label>
-                <textarea id="inp" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" placeholder="{% if edit_site %}Что изменить?{% else %}Напишите ответ...{% endif %}" style="flex:1;min-height:46px;max-height:120px;resize:none;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);padding:13px 14px;font-family:'Golos Text';font-size:14px;outline:none"></textarea>
+                <textarea id="inp" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" data-i18n-placeholder="chatPlaceholder" placeholder="{% if edit_site %}Что изменить?{% else %}Напишите ответ...{% endif %}" style="flex:1;min-height:46px;max-height:120px;resize:none;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);padding:13px 14px;font-family:'Golos Text';font-size:14px;outline:none"></textarea>
                 <button id="sendBtn" onclick="send()" class="lk-mag" style="width:46px;height:46px;flex-shrink:0;border-radius:12px;border:0;background:var(--coral);color:#fff;font-size:18px;cursor:pointer">→</button>
               </div>
             </div>
           </section>
 
           <aside style="background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:22px;position:sticky;top:90px">
-            <h2 style="font-family:'Unbounded';font-weight:700;font-size:16px;letter-spacing:-.02em;margin:0 0 6px">{% if edit_site %}AI Редактор{% else %}План создания{% endif %}</h2>
-            <p style="font-size:12.5px;color:var(--muted);line-height:1.55;margin:0 0 16px">{% if edit_site %}Опишите правки. AI поймет их и обновит страницу.{% else %}Расскажите о бизнесе, и мы соберем страницу.{% endif %}</p>
+            <h2 data-i18n="planTitle" style="font-family:'Unbounded';font-weight:700;font-size:16px;letter-spacing:-.02em;margin:0 0 6px">{% if edit_site %}AI Редактор{% else %}План создания{% endif %}</h2>
+            <p data-i18n="planDescription" style="font-size:12.5px;color:var(--muted);line-height:1.55;margin:0 0 16px">{% if edit_site %}Опишите правки. AI поймет их и обновит страницу.{% else %}Расскажите о бизнесе, и мы соберем страницу.{% endif %}</p>
             <div style="height:6px;border-radius:999px;background:var(--soft-panel);border:1px solid var(--line);overflow:hidden;margin-bottom:16px"><div id="crProgress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--coral),var(--brand2));border-radius:999px;transition:width .5s"></div></div>
             <div id="crSteps" style="display:grid;gap:8px"></div>
           </aside>
@@ -302,7 +420,10 @@
             if(status==='ready')showConfirmation({{ (onboarding.summary if onboarding else []) | tojson }});
             else addMsg('Продолжим с места, где остановились.','bot');
           }else{
-            addMsg('Привет! Расскажи о своём бизнесе — кто ты и чем занимаешься?','bot');
+            const greeting = (localStorage.getItem('lk_lang') || 'ru').toLowerCase() === 'en'
+              ? 'Hi! Tell us about your business. Who are you and what do you do?'
+              : 'Привет! Расскажи о своём бизнесе, кто ты и чем занимаешься?';
+            addMsg(greeting,'bot');
           }
           if(status==='generating'){showGeneration();setStatus('Генерация...');}
         }
@@ -312,7 +433,7 @@
 
         <!-- SITE WORKSPACE VIEW -->
         {% if dashboard_view == "site" %}
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;max-width:1200px;align-items:start">
+        <div class="dashboard-view-panel" style="display:grid;grid-template-columns:1fr 300px;gap:20px;max-width:1200px;align-items:start">
           <div style="display:flex;flex-direction:column;gap:16px">
             <div style="background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden">
               <div style="padding:22px;display:flex;align-items:center;justify-content:space-between">
@@ -414,19 +535,135 @@
 </div>
 
 <script>
-  function toggleTheme() {
+  const DASHBOARD_I18N = {
+    ru: {langLabel:'RU', navOverview:'Панель', navCreate:'Создать страницу', navBilling:'Оплата', devCredits:'Разработка', promoCredits:'Продвижение', freeSlots:'Свободные слоты', profile:'Профиль', overview:'Обзор', overviewEyebrow:'Рабочее пространство', overviewSubtitle:'Ваши сайты и последние проекты', billing:'Оплата', billingSubtitle:'Пополняйте баланс и управляйте доступными слотами', createNew:'Создать новый', createEyebrow:'Новый проект', createTitle:'Создание сайта', createSubtitle:'Ответьте на несколько вопросов — мы соберём сайт для вас', planTitle:'План создания', planDescription:'Расскажите о бизнесе, и мы соберем страницу.', chatPlaceholder:'Напишите ответ...'},
+    kz: {langLabel:'KZ', navOverview:'Басқару тақтасы', navCreate:'Бет жасау', navBilling:'Төлем', devCredits:'Әзірлеу', promoCredits:'Ілгерілету', freeSlots:'Бос слоттар', profile:'Профиль', overview:'Шолу', overviewEyebrow:'Жұмыс кеңістігі', overviewSubtitle:'Сайттарыңыз бен соңғы жобаларыңыз', billing:'Төлем', billingSubtitle:'Балансты толықтырып, қолжетімді слоттарды басқарыңыз', createNew:'Жаңасын жасау', createEyebrow:'Жаңа жоба', createTitle:'Сайт жасау', createSubtitle:'Бірнеше сұраққа жауап беріңіз — сайтыңызды жасап береміз'},
+    en: {langLabel:'EN', navOverview:'Dashboard', navCreate:'Create page', navBilling:'Billing', devCredits:'Development', promoCredits:'Promotion', freeSlots:'Free slots', profile:'Profile', overview:'Overview', overviewEyebrow:'Workspace', overviewSubtitle:'Your sites and recent projects', billing:'Billing', billingSubtitle:'Top up your balance and manage available slots', createNew:'Create new', createEyebrow:'New project', createTitle:'Create your site', createSubtitle:'Answer a few questions and we will build your site', planTitle:'Creation plan', planDescription:'Tell us about your business and we will build your page.', chatPlaceholder:'Write your answer...'}
+  };
+
+  function setDashboardLanguage(lang) {
+    const dict = DASHBOARD_I18N[lang] || DASHBOARD_I18N.ru;
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-lang-control]').forEach(btn => btn.textContent = dict.langLabel);
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const value = dict[el.dataset.i18n];
+      if (value) el.textContent = value;
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const value = dict[el.dataset.i18nPlaceholder];
+      if (value) el.placeholder = value;
+    });
+  }
+
+  function toggleDashboardNav(force) {
+    const side = document.getElementById('dashboardSidebar');
+    const backdrop = document.getElementById('dashboardMobileBackdrop');
+    const open = typeof force === 'boolean' ? force : !side.classList.contains('is-open');
+    side.classList.toggle('is-open', open);
+    backdrop.classList.toggle('is-open', open);
+    const toggle = side.querySelector('.dashboard-rail-toggle');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Закрыть навигацию' : 'Открыть навигацию');
+    }
+  }
+
+  function setThemeIcon(theme) {
+    document.querySelectorAll('.theme-toggle').forEach(btn => {
+      btn.innerHTML = theme === 'dark'
+        ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>'
+        : '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15.2A9 9 0 0 1 8.8 3 9 9 0 1 0 21 15.2Z"/></svg>';
+    });
+  }
+  function revealDashboard(e, update) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce) { update(); return; }
+    const x = e?.clientX ?? window.innerWidth - 60;
+    const y = e?.clientY ?? 40;
+    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    const transition = document.startViewTransition(update);
+    transition.ready.then(() => document.documentElement.animate(
+      {clipPath:[`circle(0px at ${x}px ${y}px)`,`circle(${radius}px at ${x}px ${y}px)`]},
+      {duration:450,easing:'cubic-bezier(0.4, 0, 0.2, 1)',pseudoElement:'::view-transition-new(root)'}
+    ));
+  }
+
+  function cycleLang(e) {
+    const order = ['ru', 'kz', 'en'];
+    const current = (localStorage.getItem('lk_lang') || 'ru').toLowerCase();
+    const next = order[(Math.max(0, order.indexOf(current)) + 1) % order.length];
+    revealDashboard(e, () => {
+      localStorage.setItem('lk_lang', next);
+      setDashboardLanguage(next);
+    });
+  }
+
+  function toggleTheme(e) {
     const el = document.querySelector('.lk');
     const current = el.getAttribute('data-theme') || 'light';
     const next = current === 'dark' ? 'light' : 'dark';
-    el.setAttribute('data-theme', next);
-    localStorage.setItem('lk_theme', next);
-    document.querySelectorAll('.theme-toggle').forEach(btn => btn.textContent = next === 'dark' ? '☀️' : '🌙');
+    revealDashboard(e, () => { el.setAttribute('data-theme', next); localStorage.setItem('lk_theme', next); setThemeIcon(next); });
   }
   document.addEventListener('DOMContentLoaded', () => {
     const theme = localStorage.getItem('lk_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.querySelector('.lk').setAttribute('data-theme', theme);
-    document.querySelectorAll('.theme-toggle').forEach(btn => btn.textContent = theme === 'dark' ? '☀️' : '🌙');
+    setThemeIcon(theme);
+    setDashboardLanguage((localStorage.getItem('lk_lang') || 'ru').toLowerCase());
   });
+</script>
+<script>
+  if (!document.__dashboardSoftNavigationBound) {
+    window.__dashboardSoftNavigation = true;
+    function syncDashboardActiveNav() {
+      const path = window.location.pathname;
+      document.querySelectorAll('.dashboard-nav-link').forEach(link => {
+        const active = new URL(link.href, window.location.href).pathname === path;
+        link.classList.toggle('is-active', active);
+      });
+    }
+    syncDashboardActiveNav();
+    document.addEventListener('DOMContentLoaded', syncDashboardActiveNav);
+    document.__dashboardSoftNavigationBound = true;
+    window.softNavigateDashboard = async function (url, replace) {
+      const target = new URL(url, window.location.href);
+      if (target.origin !== window.location.origin || !/^\/(dashboard(?:\/create|\/billing)?|profile)$/.test(target.pathname)) return false;
+      try {
+        const response = await fetch(target.href, {headers:{'X-Requested-With':'soft-navigation'}});
+        if (!response.ok) return false;
+        const html = await response.text();
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        (replace ? history.replaceState : history.pushState).call(history, {}, '', target.href);
+        const update = () => {
+          document.documentElement.lang = parsed.documentElement.lang || document.documentElement.lang;
+          document.body.replaceChildren(...parsed.body.childNodes);
+          document.body.setAttribute('class', parsed.body.getAttribute('class') || '');
+          document.body.setAttribute('style', parsed.body.getAttribute('style') || '');
+          document.body.dataset.theme = parsed.body.dataset.theme || document.body.dataset.theme;
+          document.querySelectorAll('script').forEach(oldScript => {
+            if (oldScript.src || oldScript === document.currentScript) return;
+            const script = document.createElement('script');
+            script.textContent = oldScript.textContent;
+            oldScript.replaceWith(script);
+          });
+          document.dispatchEvent(new Event('DOMContentLoaded'));
+        };
+        update();
+        window.scrollTo(0, 0);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    };
+    document.addEventListener('click', event => {
+      const link = event.target.closest('a[href]');
+      if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
+      const target = new URL(link.href, window.location.href);
+      if (target.origin !== window.location.origin || !/^\/(dashboard(?:\/create|\/billing)?|profile)$/.test(target.pathname)) return;
+      event.preventDefault();
+      window.softNavigateDashboard(target.href).then(ok => { if (!ok) window.location.assign(target.href); });
+    });
+    window.addEventListener('popstate', () => window.softNavigateDashboard(window.location.href, true));
+  }
 </script>
 </body>
 </html>
