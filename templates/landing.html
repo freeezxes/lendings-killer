@@ -50,6 +50,9 @@
   .landing-head-cta{height:40px;min-width:152px;padding:0 16px;border-radius:12px;--cta-shadow:0 10px 22px -13px rgba(20,18,24,.36)}
   .hero-primary-cta{--cta-shadow:0 16px 30px -16px rgba(20,18,24,.38)}
   main>section.niche-marquee{animation:none!important}
+  /* Fill the first screen so the niche band rests at its bottom on load, yet scrolls away normally. */
+  .hero-fold{min-height:calc(100svh - var(--head-h,68px));display:flex;flex-direction:column}
+  .hero-fold>.hero-grid{flex:1 0 auto}
   .cta-soft-blink{position:relative;overflow:hidden}
   .cta-soft-blink::after{content:"";position:absolute;inset:0;width:32%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:translateX(-140%);pointer-events:none;animation:lk-cta-glint 8s cubic-bezier(.22,1,.36,1) 2s infinite}
   .cta-hover:hover{transform:translateY(-3px);box-shadow:0 14px 26px -16px rgba(20,18,24,.5)}
@@ -130,7 +133,8 @@
   </header>
 
   <main style="position:relative;z-index:1">
-    <!-- HERO -->
+    <!-- HERO + niche band fill the first screen -->
+    <div class="hero-fold">
     <section class="hero-grid" style="max-width:1180px;margin:0 auto;padding:40px 18px 26px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center">
       <div style="min-width:0">
         <h1 style="font-family:'Unbounded';font-weight:800;font-size:clamp(36px,5.6vw,64px);line-height:.98;letter-spacing:-.045em;margin:4px 0 18px;animation:lk-up .6s .06s both">
@@ -193,6 +197,7 @@
         <!-- populated by JS -->
       </div>
     </section>
+    </div>
 
     <!-- HOW IT WORKS -->
     <section id="how" style="max-width:1180px;margin:0 auto;padding:76px 18px 40px;scroll-margin-top:80px">
@@ -552,12 +557,18 @@ function toggleTheme(e) {
 }
 
 // Initial render
+function syncHeadHeight(){
+  const h = document.querySelector('header');
+  if(h) document.documentElement.style.setProperty('--head-h', h.offsetHeight + 'px');
+}
+window.addEventListener('resize', syncHeadHeight);
 document.addEventListener('DOMContentLoaded', () => {
   const lang = localStorage.getItem('lk_lang') || 'ru';
   setLang(lang);
   const theme = localStorage.getItem('lk_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   setThemeIcon(theme);
   bindHeroLabelHover();
+  syncHeadHeight();
 });
 </script>
 </body>
