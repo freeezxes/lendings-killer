@@ -84,17 +84,12 @@ jobs:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          host_keys="$(ssh-keyscan -4 -T 10 -H "${{ secrets.DEPLOY_HOST }}" 2>/dev/null || true)"
-          if [ -z "$host_keys" ]; then
-            echo "Could not retrieve an SSH host key from DEPLOY_HOST" >&2
-            exit 1
-          fi
-          printf '%s\n' "$host_keys" >> ~/.ssh/known_hosts
+          printf '%s\n' '92.38.48.227 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEKGhy193fKzyCR0a+PFsONU2GJIAcDQfOmXSDDvmLxb' >> ~/.ssh/known_hosts
       - name: Deploy with rsync
         run: |
-          for attempt in 1 2 3; do
-            if rsync -avz --partial --timeout=120 --info=progress2 \
-              -e "ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o ConnectTimeout=30" \
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if rsync -avz --partial --timeout=60 --rsync-path="timeout 180 rsync" --info=progress2 \
+              -e "ssh -4 -p 22 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o ConnectTimeout=15 -o ConnectionAttempts=1" \
               --exclude='.git' \
               --exclude='.github' \
               --exclude='__pycache__' \
@@ -109,14 +104,17 @@ jobs:
               exit 0
             fi
             echo "rsync attempt $attempt failed; retrying"
-            sleep 10
+            sleep 20
           done
           exit 1
       - name: Install deps, run migrations & restart service
         run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
+          ssh -4 -p 22 -o ConnectTimeout=30 -o ConnectionAttempts=3 ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
             set -e
             cd /opt/lendings
+            # Ensure the app dir is owned by the service user so SQLite can write its
+            # journal/WAL files (otherwise the app crashes with "readonly database").
+            sudo chown -R deploy:deploy /opt/lendings
             python3 -m venv venv 2>/dev/null || true
             ./venv/bin/pip install -q -r requirements.txt
             ./venv/bin/alembic upgrade head || true

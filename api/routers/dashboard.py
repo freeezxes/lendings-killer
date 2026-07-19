@@ -121,7 +121,7 @@ async def profile_update(
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         safe_name = main.auth_services.validate_name(name)
     except main.auth_services.AuthError:
         return RedirectResponse("/profile?email_error=verification_failed", status_code=302)
@@ -183,7 +183,7 @@ async def profile_update_password(
     if not user:
         return JSONResponse({"error": "Требуется авторизация"}, status_code=401)
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         main.auth_services.validate_password(password, confirm_password, email=user.email, name=user.name)
     except main.auth_services.AuthError as e:
         return RedirectResponse(f"/profile?password_error={e.code}", status_code=302)

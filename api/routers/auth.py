@@ -17,8 +17,8 @@ async def auth_guest(request: Request):
     import main
     if not main._local_guest_enabled(request):
         return HTMLResponse("<h1>404 Not Found</h1>", status_code=404)
-    user = await main._get_or_create_local_guest()
-    sid = await main.auth_services.SessionService.create(user.id)
+    user = main._get_or_create_local_guest()
+    sid = main.auth_services.SessionService.create(user["id"])
     dest = request.query_params.get("next") or "/dashboard"
     if not dest.startswith("/") or dest.startswith("//"):
         dest = "/dashboard"
@@ -144,7 +144,7 @@ async def auth_google_callback(request: Request):
                 })
                 is_new_user = True
 
-        sid = await main.auth_services.SessionService.create(user.id)
+        sid = main.auth_services.SessionService.create(user.id)
         response = RedirectResponse(main._oauth_destination(user, is_new_user), status_code=302)
         main._set_session_cookie(response, request, sid)
         response.delete_cookie(main.OAUTH_STATE_COOKIE, path=main.OAUTH_STATE_COOKIE_PATH)
@@ -169,14 +169,14 @@ async def auth_register(
         "name": main.auth_services.safe_form_value(name, 80),
     }
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         user = await main.auth_services.AuthService.register(
             email=email, password=password, confirm_password=confirm_password, name=name, key=main.auth_services.client_key(request, "register"),
         )
     except main.auth_services.AuthError as exc:
         return main._auth_template(request, error=exc.message, active_tab="register", field=exc.field, values=values, status_code=exc.status_code)
 
-    sid = await main.auth_services.SessionService.create(user.id)
+    sid = main.auth_services.SessionService.create(user.id)
     verification = await main._prepare_and_send_verification(request, user, rate_limit=False)
     verify_param = "sent" if verification.get("ok") else "unavailable"
     response = RedirectResponse(f"/dashboard?verify={verify_param}", status_code=302)
@@ -195,14 +195,14 @@ async def auth_login(
     identity = email or phone
     values = {"email": main.auth_services.safe_form_value(identity, 254)}
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         user = await main.auth_services.AuthService.login(
             email=identity, password=password, key=main.auth_services.client_key(request, "login"),
         )
     except main.auth_services.AuthError as exc:
         return main._auth_template(request, error=exc.message, active_tab="login", field=exc.field, values=values, status_code=exc.status_code)
 
-    sid = await main.auth_services.SessionService.create(user.id)
+    sid = main.auth_services.SessionService.create(user.id)
     dest = "/dashboard"
     response = RedirectResponse(dest, status_code=302)
     main._set_session_cookie(response, request, sid)
@@ -217,7 +217,7 @@ async def auth_forgot_password(
     import main
     values = {"email": main.auth_services.safe_form_value(email, 254)}
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         reset = await main.auth_services.PasswordResetService.request(
             email=email, key=main.auth_services.client_key(request, "forgot"),
         )
@@ -245,14 +245,14 @@ async def auth_reset_password(
 ):
     import main
     try:
-        await main._verify_auth_csrf(request, csrf_token)
+        main._verify_auth_csrf(request, csrf_token)
         user = await main.auth_services.PasswordResetService.reset(
             token=token, password=password, confirm_password=confirm_password, key=main.auth_services.client_key(request, "reset"),
         )
     except main.auth_services.AuthError as exc:
         return main._auth_template(request, error=exc.message, active_tab="reset" if exc.code not in {"invalid_reset_token", "expired_reset_token", "used_reset_token"} else "forgot", field=exc.field, reset_token=token, status_code=exc.status_code)
 
-    sid = await main.auth_services.SessionService.create(user.id)
+    sid = main.auth_services.SessionService.create(user.id)
     response = RedirectResponse("/dashboard?success=password_reset", status_code=302)
     main._set_session_cookie(response, request, sid)
     return response
@@ -262,7 +262,7 @@ async def auth_logout(request: Request):
     import main
     sid = request.cookies.get("sid")
     if sid:
-        await main.auth_services.SessionService.delete(sid)
+        main.auth_services.SessionService.delete(sid)
     response = RedirectResponse("/", status_code=302)
     response.delete_cookie("sid")
     return response
@@ -328,7 +328,7 @@ async def auth_verify_email(request: Request):
         session.add(user)
         await session.commit()
 
-    sid = await main.auth_services.SessionService.create(user.id)
+    sid = main.auth_services.SessionService.create(user.id)
     dest = "/dashboard?email_success=email_verified"
     response = RedirectResponse(dest, status_code=302)
     main._set_session_cookie(response, request, sid)

@@ -18,21 +18,47 @@
   @keyframes lk-flownum{0%,26%{background:color-mix(in oklab,var(--coral) 16%,transparent);color:var(--coral)}34%,100%{background:var(--bg2);color:var(--muted)}}
   @keyframes lk-flowbar{0%{width:0;opacity:1}30%{width:64%;opacity:1}34%{width:100%;opacity:0}38%,100%{width:0;opacity:0}}
   @keyframes lk-sheen{0%{transform:translateX(-120%)}60%,100%{transform:translateX(220%)}}
+  .auth-cta-sheen{display:none!important}
+  .submit{box-shadow:0 14px 30px -12px var(--coral)}
+  .submit-label{position:relative;z-index:2}
   .lk-mag{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .25s,color .25s,border-color .25s}
-  .lk-in{width:100%;height:48px;border-radius:12px;border:1px solid var(--line2);background:var(--bg2);color:var(--ink);padding:0 14px;font-family:'Golos Text';font-size:15px;font-weight:500;outline:none;transition:border-color .18s,box-shadow .18s}
-  .lk-in:focus{border-color:var(--coral);box-shadow:0 0 0 4px color-mix(in oklab,var(--coral) 16%,transparent)}
+  .lk-in{width:100%;height:50px;border-radius:13px;border:1px solid var(--line2);background:var(--bg2);color:var(--ink);padding:0 15px;font-family:'Golos Text';font-size:15px;font-weight:500;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}
+  .lk-in:hover{border-color:color-mix(in oklab,var(--ink) 26%,transparent)}
+  .lk-in:focus{border-color:var(--coral);background:var(--surface);box-shadow:0 0 0 4px color-mix(in oklab,var(--coral) 16%,transparent)}
   .lk-in::placeholder{color:var(--soft)}
+  .lk-ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .lk-ico svg{display:block}
+  .seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:13px;border:1px solid var(--line2);background:var(--surface);backdrop-filter:blur(10px)}
+  .seg-btn{display:inline-flex;align-items:center;justify-content:center;height:36px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:10px;transition:background .25s,color .25s,transform .2s}
+  .seg-btn:hover{color:var(--ink);background:color-mix(in oklab,var(--ink) 6%,transparent)}
+  .seg-btn:active{transform:scale(.92)}
+  .seg-btn:focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+  #langBtn{width:44px;font-family:'Golos Text';font-weight:800;font-size:12px;letter-spacing:.06em}
+  #themeBtn{width:38px}
+  #themeBtn svg{transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+  #themeBtn:hover svg{transform:rotate(18deg)}
+  .auth-head-inner{max-width:1180px!important;padding:14px 18px!important}
+  .auth-head-cta{display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:152px;padding:0 16px;border-radius:12px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:13.5px;text-decoration:none;white-space:nowrap;box-shadow:0 10px 24px -12px var(--coral)}
+  .pw-toggle{position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:color .2s,background .2s}
+  .pw-toggle:hover{color:var(--ink);background:color-mix(in oklab,var(--ink) 6%,transparent)}
+  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;display:inline-block;animation:lk-spin .6s linear infinite;vertical-align:-3px}
+  @keyframes lk-spin{to{transform:rotate(360deg)}}
   .field.invalid .lk-in {border-color:var(--red);box-shadow:0 0 0 4px color-mix(in oklab,var(--red) 16%,transparent)}
   .field-error{display:none;color:var(--red);font-size:12.5px;font-weight:600;margin-top:4px}
   .field.invalid .field-error{display:block}
   .caps-warning{display:none;color:var(--warn);font-size:12.5px;font-weight:600;margin-top:4px}
   .caps-warning.show{display:block}
   
-  .panel{display:none}
-  .panel.active{display:block}
+  .panel{display:none!important}
+  @keyframes lk-panel-from-left{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes lk-panel-from-right{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:translateX(0)}}
+  .panel.active{display:grid!important}
+  .panel.enter-from-left{animation:lk-panel-from-left .35s cubic-bezier(.22,1,.36,1) both}
+  .panel.enter-from-right{animation:lk-panel-from-right .35s cubic-bezier(.22,1,.36,1) both}
   
-  @media(prefers-reduced-motion:reduce){[style*="lk-flow"]{animation:none!important}}
+  @media(prefers-reduced-motion:reduce){[style*="lk-flow"],.auth-cta-sheen,.panel.enter-from-left,.panel.enter-from-right{animation:none!important}}
   @media(max-width:900px){[data-lk-brand]{display:none!important}[data-lk-shell]{grid-template-columns:1fr!important}}
+  @media(max-width:600px){.auth-head-cta{display:none!important}}
   .no-transitions * { transition: none !important; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 </style>
@@ -51,15 +77,21 @@
 <div class="lk-root" id="lk-root" style="font-family:'Golos Text',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;transition:background .5s,color .5s;position:relative">
   <div style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;background:radial-gradient(60% 50% at 82% -5%,color-mix(in oklab,var(--coral) 26%,transparent),transparent 70%),radial-gradient(50% 45% at 10% 8%,color-mix(in oklab,var(--violet) 22%,transparent),transparent 70%)"></div>
 
-  <div style="position:fixed;top:20px;left:22px;z-index:10"><a href="/" style="font-family:'Unbounded';font-weight:800;font-size:19px;letter-spacing:-.03em;color:var(--ink);text-decoration:none">lendings<span style="color:var(--coral)">.kz</span></a></div>
-  <div style="position:fixed;top:18px;right:22px;z-index:10;display:flex;gap:8px">
-    <button onclick="cycleLang()" class="lk-mag" style="width:42px;height:42px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);font-family:'Golos Text';font-weight:800;font-size:12px;cursor:pointer" id="langBtn">RU</button>
-    <button onclick="toggleTheme(event)" class="lk-mag" aria-label="theme" style="width:42px;height:42px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);cursor:pointer;font-size:16px" id="themeBtn">🌙</button>
-  </div>
+  <header style="position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:color-mix(in oklab,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)">
+    <div class="auth-head-inner" style="margin:0 auto;display:flex;align-items:center;gap:14px">
+      <a href="/" class="lk-mag" style="font-family:'Unbounded';font-weight:800;font-size:20px;letter-spacing:-.03em;color:var(--ink);text-decoration:none">lendings<span style="color:var(--coral)">.kz</span></a>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <div class="seg">
+          <button onclick="cycleLang(event)" class="seg-btn" id="langBtn" aria-label="Change language" title="Language">RU</button>
+          <span style="width:1px;height:18px;background:var(--line2)"></span>
+          <button onclick="toggleTheme(event)" class="seg-btn" id="themeBtn" aria-label="Toggle theme" title="Theme"></button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-  <main data-lk-shell style="position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:100px 22px 44px;display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center;min-height:100vh">
+  <main data-lk-shell style="position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:40px 22px 44px;display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center;min-height:calc(100vh - 69px)">
     <section data-lk-brand style="animation:lk-up .6s both">
-      <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:var(--surface);border:1px solid var(--line2);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--coral);margin-bottom:20px"><span style="width:7px;height:7px;border-radius:50%;background:var(--coral)"></span>AI · lendings.kz</div>
       <h1 style="font-family:'Unbounded';font-weight:800;font-size:clamp(34px,5.2vw,56px);line-height:1.0;letter-spacing:-.045em;margin:0 0 28px;max-width:13ch" data-i18n="heroTitle">Сайт для вашего бизнеса за минуты</h1>
       <div style="display:grid;gap:12px;max-width:460px">
         <div style="position:relative;overflow:hidden;display:grid;grid-template-columns:44px 1fr 22px;align-items:center;gap:14px;background:transparent;border:1px solid var(--line);border-radius:16px;padding:13px 15px;animation:lk-flow 8.4s cubic-bezier(.22,1,.36,1) infinite;animation-delay:0s">
@@ -80,11 +112,6 @@
           <div style="justify-self:end;color:var(--soft);font-size:18px">→</div>
           <div style="position:absolute;left:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--coral),var(--violet));border-radius:2px;animation:lk-flowbar 8.4s linear infinite;animation-delay:5.6s"></div>
         </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:26px">
-        <span style="border:1px solid var(--line2);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:700" data-i18n="tr1">5 000 ₸ разово</span>
-        <span style="border:1px solid var(--line2);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:700" data-i18n="tr2">Без подписки</span>
-        <span style="border:1px solid var(--line2);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:700" data-i18n="tr3">RU · KZ · EN</span>
       </div>
     </section>
 
@@ -119,17 +146,17 @@
         <label class="field" data-field="password" style="display:grid;gap:7px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
             <span style="font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)" data-i18n="passLabel">Пароль</span>
-            <button type="button" onclick="showPanel('forgot')" style="background:none;border:0;color:var(--coral);font-family:'Golos Text';font-size:12.5px;font-weight:800;cursor:pointer;padding:0" data-i18n="forgotLink">Забыли пароль?</button>
+            <button type="button" onclick="event.preventDefault(); event.stopPropagation(); showPanel('forgot')" style="background:none;border:0;color:var(--coral);font-family:'Golos Text';font-size:12.5px;font-weight:800;cursor:pointer;padding:0" data-i18n="forgotLink">Забыли пароль?</button>
           </div>
           <div style="position:relative">
             <input id="loginPassword" name="password" type="password" autocomplete="current-password" class="lk-in" style="padding-right:48px" data-i18n-ph="phPassword" placeholder="Введите пароль" required />
-            <button type="button" onclick="togglePassword('loginPassword', this)" aria-label="toggle" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;font-size:16px;display:flex;align-items:center;justify-content:center">👁</button>
+            <button type="button" onclick="togglePassword()" aria-label="Show password" class="pw-toggle"></button>
           </div>
           <div class="caps-warning" data-caps-for="loginPassword">Включён Caps Lock.</div>
           <span class="field-error"></span>
         </label>
         
-        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:50px;border-radius:13px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:2px" data-i18n="loginBtn" data-loading="Входим..."><span style="position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:lk-sheen 4s 1s infinite"></span>Войти</button>
+        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;margin-top:4px"><span class="submit-label" data-i18n="loginBtn">Войти</span></button>
       </form>
 
       <!-- REGISTER PANEL -->
@@ -152,7 +179,7 @@
           <span style="font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)" data-i18n="passLabel">Пароль</span>
           <div style="position:relative">
             <input id="regPassword" name="password" type="password" autocomplete="new-password" class="lk-in" style="padding-right:48px" data-i18n-ph="phMin8" placeholder="Минимум 8 символов" required />
-            <button type="button" onclick="togglePassword('regPassword', this)" aria-label="toggle" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;font-size:16px;display:flex;align-items:center;justify-content:center">👁</button>
+            <button type="button" onclick="event.preventDefault(); event.stopPropagation(); togglePassword()" aria-label="Show password" class="pw-toggle"></button>
           </div>
           <div class="caps-warning" data-caps-for="regPassword">Включён Caps Lock.</div>
           <span class="field-error"></span>
@@ -160,14 +187,11 @@
         
         <label class="field" data-field="confirm_password" style="display:grid;gap:7px">
           <span style="font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)" data-i18n="confirmLabel">Повторите пароль</span>
-          <div style="position:relative">
-            <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="lk-in" style="padding-right:48px" data-i18n-ph="phConfirm" placeholder="Ещё раз пароль" required />
-            <button type="button" onclick="togglePassword('confirmPassword', this)" aria-label="toggle" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;font-size:16px;display:flex;align-items:center;justify-content:center">👁</button>
-          </div>
+          <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="lk-in" data-i18n-ph="phConfirm" placeholder="Ещё раз пароль" required />
           <span class="field-error"></span>
         </label>
-        
-        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:50px;border-radius:13px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:2px" data-i18n="regBtn" data-loading="Создаём..."><span style="position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:lk-sheen 4s 1s infinite"></span>Создать аккаунт</button>
+
+        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;margin-top:4px"><span class="submit-label" data-i18n="regBtn">Создать аккаунт</span></button>
       </form>
 
       <!-- FORGOT PANEL -->
@@ -180,7 +204,7 @@
           <span class="field-error"></span>
         </label>
         
-        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:50px;border-radius:13px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:2px" data-i18n="forgotBtn" data-loading="Отправляем..."><span style="position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:lk-sheen 4s 1s infinite"></span>Получить ссылку</button>
+        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:4px"><span data-i18n="forgotBtn">Получить ссылку</span></button>
         
         <div style="text-align:center;color:var(--muted);font-size:13px;margin-top:2px"><span data-i18n="remembered">Вспомнили пароль?</span> <button type="button" onclick="showPanel('login')" style="background:none;border:0;color:var(--coral);font-family:'Golos Text';font-weight:800;font-size:13px;cursor:pointer" data-i18n="backToLogin">Вернуться ко входу</button></div>
       </form>
@@ -194,7 +218,7 @@
           <span style="font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)" data-i18n="newPw">Новый пароль</span>
           <div style="position:relative">
             <input id="resetPassword" name="password" type="password" autocomplete="new-password" class="lk-in" style="padding-right:48px" data-i18n-ph="phMin8" placeholder="Минимум 8 символов" required />
-            <button type="button" onclick="togglePassword('resetPassword', this)" aria-label="toggle" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;font-size:16px;display:flex;align-items:center;justify-content:center">👁</button>
+            <button type="button" onclick="togglePassword()" aria-label="Show password" class="pw-toggle"></button>
           </div>
           <div class="caps-warning" data-caps-for="resetPassword">Включён Caps Lock.</div>
           <span class="field-error"></span>
@@ -202,14 +226,11 @@
         
         <label class="field" data-field="confirm_password" style="display:grid;gap:7px">
           <span style="font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)" data-i18n="confirmLabel">Повторите пароль</span>
-          <div style="position:relative">
-            <input id="resetConfirm" name="confirm_password" type="password" autocomplete="new-password" class="lk-in" style="padding-right:48px" data-i18n-ph="phConfirm" placeholder="Ещё раз пароль" required />
-            <button type="button" onclick="togglePassword('resetConfirm', this)" aria-label="toggle" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;color:var(--soft);cursor:pointer;border-radius:9px;font-size:16px;display:flex;align-items:center;justify-content:center">👁</button>
-          </div>
+          <input id="resetConfirm" name="confirm_password" type="password" autocomplete="new-password" class="lk-in" data-i18n-ph="phConfirm" placeholder="Ещё раз пароль" required />
           <span class="field-error"></span>
         </label>
         
-        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:50px;border-radius:13px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:2px" data-i18n="resetBtn" data-loading="Сохраняем..."><span style="position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:lk-sheen 4s 1s infinite"></span>Сменить пароль</button>
+        <button type="submit" class="lk-mag submit" style="position:relative;overflow:hidden;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px -12px var(--coral);margin-top:4px"><span style="position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:lk-sheen 4s 1s infinite"></span><span data-i18n="resetBtn">Сменить пароль</span></button>
       </form>
 
       {% if local_guest_enabled or google_configured %}
@@ -237,10 +258,19 @@
 <div id="toast" style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;background:var(--ink);color:var(--bg);padding:13px 22px;border-radius:13px;font-weight:700;font-size:14px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s"></div>
 
 <script>
+// ── Lucide icons (single library, 24×24, stroke 2, round caps) ──
+const IC = {
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  eye:'<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>'
+};
+function svg(name, size, sw){size=size||24;sw=sw||2;return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${IC[name]||''}</svg>`;}
+function setThemeIcon(theme){const b=document.getElementById('themeBtn');if(b)b.innerHTML=svg(theme==='dark'?'sun':'moon',17,2);}
+
 const DICT = {
-  ru:{ langLabel:"RU", heroTitle:"Сайт для вашего бизнеса за минуты",
+  ru:{ langLabel:"RU", backHome:"На главную", heroTitle:"Сайт для вашего бизнеса за минуты",
     flow1:"Создать страницу", flow2:"Улучшить с AI", flow3:"Запустить продвижение",
-    tr1:"5 000 ₸ разово", tr2:"Без подписки", tr3:"RU · KZ · EN",
     welcome:"Добро пожаловать", loginSub:"Войдите, чтобы продолжить", regSub:"Создайте аккаунт",
     forgotTitle:"Восстановление", forgotSub:"Мы отправим безопасную ссылку на ваш email.",
     tabLogin:"Вход", tabReg:"Регистрация", fName:"Имя", phName:"Как к вам обращаться",
@@ -251,9 +281,8 @@ const DICT = {
     remembered:"Вспомнили пароль?", backToLogin:"Вернуться ко входу",
     errEmail:"Введите корректный email.", errName:"Проверьте имя (мин. 2 символа).", errMin8:"Минимум 8 символов.", errPassword:"Введите пароль.", errMatch:"Пароли не совпадают.",
     errInvalid:"Неверный email или пароль.", user_exists:"Этот email уже зарегистрирован.", newPw:"Новый пароль", resetSub:"Придумайте пароль для входа.", resetBtn:"Сменить пароль" },
-  kz:{ langLabel:"KZ", heroTitle:"Бизнес-бетті бірнеше минутта жасаңыз",
+  kz:{ langLabel:"KZ", backHome:"Басты бетке", heroTitle:"Бизнес-бетті бірнеше минутта жасаңыз",
     flow1:"Бет жасау", flow2:"AI-мен жақсарту", flow3:"Жарнаманы қосу",
-    tr1:"5 000 ₸ бір рет", tr2:"Жазылымсыз", tr3:"RU · KZ · EN",
     welcome:"Қош келдіңіз", loginSub:"Жалғастыру үшін кіріңіз", regSub:"Тіркелгі жасаңыз",
     forgotTitle:"Қалпына келтіру", forgotSub:"Біз email-ге қауіпсіз сілтеме жібереміз.",
     tabLogin:"Кіру", tabReg:"Тіркелу", fName:"Аты", phName:"Сізді қалай атаймыз",
@@ -264,9 +293,8 @@ const DICT = {
     remembered:"Есіңізге түсті ме?", backToLogin:"Кіруге қайту",
     errEmail:"Дұрыс email енгізіңіз.", errName:"Атыңызды тексеріңіз (мин. 2 таңба).", errMin8:"Кемінде 8 таңба.", errPassword:"Құпия сөзді енгізіңіз.", errMatch:"Құпия сөздер сәйкес келмейді.",
     errInvalid:"Email немесе құпия сөз қате.", user_exists:"Бұл email тіркелген.", newPw:"Жаңа құпия сөз", resetSub:"Кіру үшін құпия сөз ойлап табыңыз.", resetBtn:"Құпия сөзді өзгерту" },
-  en:{ langLabel:"EN", heroTitle:"A site for your business in minutes",
+  en:{ langLabel:"EN", backHome:"Back to home", heroTitle:"A site for your business in minutes",
     flow1:"Create a page", flow2:"Improve with AI", flow3:"Launch promotion",
-    tr1:"5 000 ₸ one-time", tr2:"No subscription", tr3:"RU · KZ · EN",
     welcome:"Welcome", loginSub:"Sign in to continue", regSub:"Create an account",
     forgotTitle:"Reset password", forgotSub:"We'll send a secure link to your email.",
     tabLogin:"Login", tabReg:"Register", fName:"Name", phName:"How to address you",
@@ -296,66 +324,48 @@ function setLang(lang){
   });
 }
 
-function cycleLang() {
+// Shared circular wave/reveal used for BOTH theme and language switching
+function reveal(e, update) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!document.startViewTransition || reduce) { update(); return; }
+  const x = e ? e.clientX : window.innerWidth - 60;
+  const y = e ? e.clientY : 40;
+  const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const transition = document.startViewTransition(() => {
+    document.documentElement.classList.add('no-transitions');
+    update();
+  });
+  transition.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`] },
+      { duration: 450, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
+    );
+  });
+  transition.finished.finally(() => document.documentElement.classList.remove('no-transitions'));
+}
+
+function cycleLang(e) {
   const current = localStorage.getItem('lk_lang') || 'ru';
   const order = ['ru', 'kz', 'en'];
   const next = order[(order.indexOf(current) + 1) % 3];
-  
-  if (!document.startViewTransition) {
-    localStorage.setItem('lk_lang', next);
-    setLang(next);
-    return;
-  }
-  
-  document.startViewTransition(() => {
-    localStorage.setItem('lk_lang', next);
-    setLang(next);
-  });
+  reveal(e, () => { localStorage.setItem('lk_lang', next); setLang(next); });
 }
 
 function toggleTheme(e) {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'dark' ? 'light' : 'dark';
-  
-  if (!document.startViewTransition || !e) {
+  reveal(e, () => {
     document.documentElement.setAttribute('data-theme', next);
     document.documentElement.className = next === 'dark' ? 'lk-root dark' : 'lk-root';
     localStorage.setItem('lk_theme', next);
-    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
-    return;
-  }
-  
-  const x = e.clientX;
-  const y = e.clientY;
-  const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-  
-  const transition = document.startViewTransition(() => {
-    document.documentElement.classList.add('no-transitions');
-    document.documentElement.setAttribute('data-theme', next);
-    document.documentElement.className = next === 'dark' ? 'lk-root dark' : 'lk-root';
-    localStorage.setItem('lk_theme', next);
-    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
-  });
-  
-  transition.ready.then(() => {
-    const clipPath = [
-      `circle(0px at ${x}px ${y}px)`,
-      `circle(${endRadius}px at ${x}px ${y}px)`
-    ];
-    document.documentElement.animate(
-      { clipPath: clipPath },
-      { duration: 450, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
-    );
-  });
-  
-  transition.finished.finally(() => {
-    document.documentElement.classList.remove('no-transitions');
+    setThemeIcon(next);
   });
 }
 
 function showPanel(name){
   const lang = localStorage.getItem('lk_lang') || 'ru';
   const dict = DICT[lang];
+  const current = document.querySelector('.panel.active');
   const titles = {
     login: [dict.welcome, dict.loginSub],
     register: [dict.welcome, dict.regSub],
@@ -363,8 +373,12 @@ function showPanel(name){
     reset: [dict.newPw, dict.resetSub]
   };
   
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active', 'enter-from-left', 'enter-from-right'));
+  const nextPanel = document.getElementById('panel-' + name);
+  nextPanel.classList.add('active');
+  if(current && current !== nextPanel) {
+    nextPanel.classList.add(name === 'login' ? 'enter-from-left' : 'enter-from-right');
+  }
   
   if (name === 'login' || name === 'register') {
     document.getElementById('mainTabs').style.display = 'grid';
@@ -393,28 +407,17 @@ function showPanel(name){
   }
 }
 
-function togglePassword(id, btn){
-  const input = document.getElementById(id);
-  const visible = input.type !== 'text';
-  const newType = visible ? 'text' : 'password';
-
-  const syncIds = ['regPassword', 'confirmPassword'];
-  const buttons = [btn];
-  if (syncIds.includes(id)) {
-    syncIds.forEach(syncId => {
-      const syncInput = document.getElementById(syncId);
-      if (syncInput) syncInput.type = newType;
-      const syncBtn = document.querySelector(`button[onclick="togglePassword('${syncId}', this)"]`);
-      if (syncBtn && syncBtn !== btn) buttons.push(syncBtn);
-    });
-  } else {
-    input.type = newType;
-  }
-
-  buttons.forEach(b => {
-    b.textContent = visible ? '🙈' : '👁';
+// Single global password-visibility state, shared across every panel/field.
+let pwVisible = false;
+function setPwVisible(v){
+  pwVisible = v;
+  document.querySelectorAll('input[name="password"], input[name="confirm_password"]').forEach(i => { i.type = v ? 'text' : 'password'; });
+  document.querySelectorAll('.pw-toggle').forEach(b => {
+    b.innerHTML = svg(v ? 'eyeOff' : 'eye', 18, 2);
+    b.setAttribute('aria-label', v ? 'Hide password' : 'Show password');
   });
 }
+function togglePassword(){ setPwVisible(!pwVisible); }
 
 function setFieldError(form, field, message){
   const wrap = form.querySelector(`.field[data-field="${field}"]`);
@@ -464,9 +467,9 @@ document.querySelectorAll('form.form').forEach(form => {
     if(!validateAuthForm(form)){ e.preventDefault(); return; }
     const btn = form.querySelector('.submit');
     if(btn.disabled){ e.preventDefault(); return; }
-    const lang = localStorage.getItem('lk_lang') || 'ru';
-    btn.dataset.original = btn.textContent;
-    btn.textContent = "⏳..."; // Simple loading
+    btn.dataset.original = btn.innerHTML;
+    btn.innerHTML = '<span class="spin"></span>';
+    btn.style.opacity = '.92';
     setTimeout(() => { btn.disabled = true; }, 0);
   });
 });
@@ -485,8 +488,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const lang = localStorage.getItem('lk_lang') || 'ru';
   setLang(lang);
   const theme = localStorage.getItem('lk_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
-  
+  setThemeIcon(theme);
+  setPwVisible(false);
+
   showPanel(initialPanel);
   
   if(serverError) {

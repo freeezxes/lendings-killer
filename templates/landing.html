@@ -21,21 +21,76 @@
     --coral:#FF6B4A;--violet:#8C6DFF;--lime:#D8F24E;--shadow:0 24px 60px -24px rgba(0,0,0,.6);
   }
   @keyframes lk-marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-  @keyframes lk-float{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-14px) rotate(var(--r,0deg))}}
+  @keyframes lk-float{0%,100%{transform:translate3d(0,0,0) rotate(var(--r,0deg))}50%{transform:translate3d(0,-14px,0) rotate(var(--r,0deg))}}
+  @keyframes lk-bubble-float{0%,100%{transform:translate3d(0,0,0) rotate(var(--r,0deg))}25%{transform:translate3d(0,-3px,0) rotate(var(--r,0deg))}50%{transform:translate3d(0,-8px,0) rotate(var(--r,0deg))}75%{transform:translate3d(0,-3px,0) rotate(var(--r,0deg))}}
   @keyframes lk-blink{0%,100%{opacity:1}50%{opacity:0}}
   @keyframes lk-up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes lk-down{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
   @keyframes lk-sheen{0%{transform:translateX(-120%)}60%,100%{transform:translateX(220%)}}
+  @keyframes lk-cta-glint{0%,78%{transform:translateX(-140%);opacity:0}82%{opacity:.22}88%{transform:translateX(360%);opacity:0}100%{transform:translateX(360%);opacity:0}}
+  @keyframes lk-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .hero-underline{transform:scaleX(0);transform-origin:left center;animation:lk-draw 2s cubic-bezier(.66,0,.34,1) .45s forwards}
+  .cta-sheen{animation:lk-sheen 2s cubic-bezier(.22,1,.36,1) .45s both}
+  .result-bubble{animation:lk-bubble-float 8.5s cubic-bezier(.37,0,.63,1) .6s infinite}
+  .visual-message,.result-bubble,.visual-domain{transition:rotate .32s cubic-bezier(.22,1,.36,1),translate .32s cubic-bezier(.22,1,.36,1),filter .28s ease,box-shadow .28s ease}
+  .hero-label-hover{rotate:var(--hover-tilt,0deg);translate:var(--hover-x,0px) var(--hover-y,0px);filter:brightness(1.02);box-shadow:0 14px 28px -18px rgba(20,18,24,.28);cursor:default}
+  .visual-reveal{animation:lk-up .8s cubic-bezier(.22,1,.36,1) both}
+  .visual-message{animation-delay:.2s}
+  .visual-result{animation-delay:.34s}
+  .visual-phone{animation-delay:.12s}
+  .visual-domain{animation-delay:.46s}
+  header{animation:lk-down .55s cubic-bezier(.22,1,.36,1) both}
+  main>section{animation:lk-up .7s cubic-bezier(.22,1,.36,1) both}
+  main>section:nth-child(1){animation-delay:.08s}
+  main>section:nth-child(2){animation-delay:.16s}
+  main>section:nth-child(3){animation-delay:.24s}
+  main>section:nth-child(4){animation-delay:.32s}
+  main>section:nth-child(5){animation-delay:.4s}
+  .landing-head-inner{max-width:1180px!important;padding:14px 18px!important}
+  .landing-head-cta{height:40px;min-width:152px;padding:0 16px;border-radius:12px;--cta-shadow:0 10px 22px -13px rgba(20,18,24,.36)}
+  .hero-primary-cta{--cta-shadow:0 16px 30px -16px rgba(20,18,24,.38)}
+  .niche-marquee{position:fixed;left:0;right:0;bottom:0;z-index:30;box-shadow:0 -10px 26px -24px rgba(20,18,24,.4)}
+  main>section.niche-marquee{animation:none!important}
+  .cta-soft-blink{position:relative;overflow:hidden}
+  .cta-soft-blink::after{content:"";position:absolute;inset:0;width:32%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:translateX(-140%);pointer-events:none;animation:lk-cta-glint 8s cubic-bezier(.22,1,.36,1) 2s infinite}
+  .cta-hover:hover{transform:translateY(-3px);box-shadow:0 14px 26px -16px rgba(20,18,24,.5)}
   .lk-reveal{animation:lk-up .7s cubic-bezier(.22,1,.36,1) both;animation-timeline:view();animation-range:entry 0% cover 24%}
-  @media(prefers-reduced-motion:reduce){.lk-reveal,[style*="lk-float"],[style*="lk-marq"]{animation:none!important;opacity:1!important}}
+  @media(prefers-reduced-motion:reduce){header,main>section,.lk-reveal,[style*="lk-float"],[style*="lk-marq"],.result-bubble,.visual-reveal,.cta-soft-blink::after{animation:none!important;opacity:1!important}.hero-underline{transform:scaleX(1)!important;animation:none!important}}
   .lk-mag{transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s,background .3s,color .3s,border-color .3s}
+  .lk-ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .lk-ico svg{display:block}
+  .seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:13px;border:1px solid var(--line2);background:var(--surface)}
+  .seg-btn{display:inline-flex;align-items:center;justify-content:center;height:34px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:10px;transition:background .25s,color .25s,transform .25s}
+  .seg-btn:hover{color:var(--ink);background:color-mix(in oklab,var(--ink) 6%,transparent)}
+  .seg-btn:active{transform:scale(.94)}
+  .seg-btn:focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+  #langBtn{width:44px;font-family:'Golos Text';font-weight:800;font-size:12px;letter-spacing:.06em}
+  #themeBtn{width:38px}
+  #themeBtn svg{transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+  #themeBtn:hover svg{transform:rotate(18deg)}
+  .lk-step-ic{transition:transform .3s cubic-bezier(.22,1,.36,1),background .3s,color .3s,border-color .3s}
+  .lk-step:hover .lk-step-ic{transform:translateY(-3px) rotate(-6deg);background:color-mix(in oklab,var(--coral) 14%,transparent);border-color:transparent}
+  .lk-ex-ic{transition:transform .4s cubic-bezier(.22,1,.36,1)}
+  .lk-ex:hover .lk-ex-ic{transform:translateY(-3px) scale(1.06)}
+  .demo-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:start}
+  .demo-row span{line-height:1.25}
+  .demo-price{text-align:right;white-space:normal}
+  @media(prefers-reduced-motion:reduce){.lk-step:hover .lk-step-ic,.lk-ex:hover .lk-ex-ic,#themeBtn:hover svg{transform:none}}
   @media(max-width:860px){
     .hero-grid{grid-template-columns:1fr!important;gap:24px!important;padding-top:36px!important}
     .hero-visual{min-height:400px!important}
   }
   @media(max-width:560px){
     .header-inner{flex-wrap:wrap!important;row-gap:12px;justify-content:space-between!important}
+    .bubble-spark{display:none!important}
+    .hero-grid h1{font-size:clamp(31px,9.8vw,46px)!important;line-height:1.02!important}
+    .hero-grid h1 span[style*="white-space:nowrap"]{white-space:normal!important}
+    .hero-grid .hero-underline{left:0!important;right:0!important}
   }
   .no-transitions * { transition: none !important; }
+  #lk-root{transition:background .5s,color .5s,opacity .18s ease}
+  #lk-root.lk-switching{opacity:.72}
+  #marquee-container{view-transition-name:none}
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 </style>
 </head>
@@ -50,13 +105,13 @@
   })();
 </script>
 
-<div class="lk-root" id="lk-root" style="font-family:'Golos Text',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;transition:background .5s,color .5s;overflow-x:hidden;position:relative">
+<div class="lk-root" id="lk-root" style="font-family:'Golos Text',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;transition:background .5s,color .5s,opacity .18s ease;overflow-x:hidden;position:relative">
   <div style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;background:radial-gradient(60% 50% at 82% -5%,color-mix(in oklab,var(--coral) 26%,transparent),transparent 70%),radial-gradient(50% 45% at 10% 8%,color-mix(in oklab,var(--violet) 22%,transparent),transparent 70%)"></div>
 
   <!-- ===== TOP BAR ===== -->
   <header style="position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:color-mix(in oklab,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)">
-    <div class="header-inner" style="max-width:1180px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:14px">
-      <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;" style="cursor:pointer;font-family:'Unbounded';font-weight:800;font-size:20px;letter-spacing:-.03em;color:var(--ink);text-decoration:none;flex-shrink:0">lendings<span style="color:var(--coral)">.kz</span></a>
+    <div class="header-inner landing-head-inner" style="margin:0 auto;display:flex;align-items:center;gap:14px">
+      <a href="/" style="cursor:pointer;font-family:'Unbounded';font-weight:800;font-size:20px;letter-spacing:-.03em;color:var(--ink);text-decoration:none;flex-shrink:0">lendings<span style="color:var(--coral)">.kz</span></a>
 
       <nav style="margin-left:auto;display:none;gap:8px;align-items:center" data-lk-links>
         <a href="#how" style="cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);text-decoration:none;padding:8px 10px" data-i18n="lHow">Как работает</a>
@@ -64,69 +119,77 @@
         <a href="#pricing" style="cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);text-decoration:none;padding:8px 10px" data-i18n="lPricing">Тарифы</a>
       </nav>
 
-      <div style="margin-left:auto;display:flex;align-items:center;gap:9px;flex-shrink:0">
-        <button onclick="cycleLang()" class="lk-mag" style="height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);font-family:'Golos Text';font-weight:800;font-size:12px;letter-spacing:.06em;cursor:pointer" id="langBtn">RU</button>
-        <button onclick="toggleTheme(event)" class="lk-mag" aria-label="theme" style="width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px" id="themeBtn">🌙</button>
-        <a href="{% if user %}/dashboard/create{% else %}/auth{% endif %}" class="lk-mag" style="display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 18px;border-radius:12px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:13.5px;text-decoration:none;white-space:nowrap" data-i18n="heroCta">Создать сайт</a>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <a href="{% if user %}/dashboard/create{% else %}/auth{% endif %}" class="lk-mag landing-head-cta" style="display:inline-flex;align-items:center;justify-content:center;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:13.5px;text-decoration:none;white-space:nowrap;box-shadow:var(--cta-shadow)" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform='translateY(0)'" data-i18n="headerCta">Начать</a>
+        <div class="seg">
+          <button onclick="cycleLang(event)" class="seg-btn" id="langBtn" aria-label="Change language" title="Language">RU</button>
+          <span style="width:1px;height:18px;background:var(--line2)"></span>
+          <button onclick="toggleTheme(event)" class="seg-btn" id="themeBtn" aria-label="Toggle theme" title="Theme"></button>
+        </div>
       </div>
     </div>
   </header>
 
   <main style="position:relative;z-index:1">
     <!-- HERO -->
-    <section class="hero-grid" style="max-width:1180px;margin:0 auto;padding:64px 18px 30px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center">
+    <section class="hero-grid" style="max-width:1180px;margin:0 auto;padding:40px 18px 26px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center">
       <div style="min-width:0">
-        <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line2);font-weight:700;font-size:12.5px;letter-spacing:.02em;margin-bottom:22px;animation:lk-up .6s both">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px color-mix(in oklab,var(--coral) 26%,transparent)"></span><span data-i18n="heroBadge">Готовая ссылка сегодня</span>
-        </div>
-        <h1 style="font-family:'Unbounded';font-weight:800;font-size:clamp(38px,6.4vw,72px);line-height:.96;letter-spacing:-.045em;margin:0 0 20px;animation:lk-up .6s .06s both">
-          <span data-i18n="heroA">Твой сайт</span> <span style="color:var(--coral)" data-i18n="heroB">дешевле</span> <span data-i18n="heroC">обеда —</span> <span style="position:relative;white-space:nowrap;color:var(--violet)"><span data-i18n="heroD">за 7 минут</span><span style="position:absolute;left:-2%;right:-2%;bottom:.06em;height:.16em;background:var(--lime);z-index:-1;border-radius:4px"></span></span>
+        <h1 style="font-family:'Unbounded';font-weight:800;font-size:clamp(36px,5.6vw,64px);line-height:.98;letter-spacing:-.045em;margin:4px 0 18px;animation:lk-up .6s .06s both">
+          <span data-i18n="heroA">Твой сайт</span> <span style="color:var(--coral)" data-i18n="heroB">дешевле обеда</span> <span data-i18n="heroC">и готов</span> <span style="position:relative;white-space:nowrap;color:var(--violet)"><span data-i18n="heroD">за 7 минут</span><span class="hero-underline" style="position:absolute;left:-2%;right:-2%;bottom:.06em;height:.16em;background:var(--lime);z-index:-1;border-radius:4px"></span></span>
         </h1>
-        <p style="font-size:clamp(15px,1.7vw,18px);line-height:1.6;color:var(--muted);max-width:490px;margin:0 0 28px;animation:lk-up .6s .12s both" data-i18n="heroSub">Отвечаешь на пару вопросов в чате — ИИ собирает страницу-визитку и выдаёт ссылку для Instagram, WhatsApp и 2GIS.</p>
+        <p style="font-size:clamp(15px,1.7vw,18px);line-height:1.6;color:var(--muted);max-width:490px;margin:0 0 28px;animation:lk-up .6s .12s both" data-i18n="heroSub">Ответь на несколько вопросов в чате, остальное сделает ИИ. Ты получишь готовую страницу и ссылку для Instagram, WhatsApp и 2GIS.</p>
         <div style="display:flex;flex-wrap:wrap;gap:12px;animation:lk-up .6s .18s both">
-          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;position:relative;overflow:hidden;height:56px;padding:0 30px;border-radius:16px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:16px;box-shadow:0 18px 40px -14px var(--coral)" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-            <span style="position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:lk-sheen 3.6s .8s infinite"></span><span data-i18n="heroCta">Создать сайт</span>&nbsp;→
+          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag hero-primary-cta cta-soft-blink" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;position:relative;overflow:hidden;height:56px;padding:0 30px;border-radius:16px;border:0;background:var(--coral);color:#fff;font-family:'Golos Text';font-weight:800;font-size:16px;box-shadow:var(--cta-shadow)" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
+            <span data-i18n="heroCta">Создать сайт</span>&nbsp;→
           </a>
-          <a href="#examples" class="lk-mag" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;height:56px;padding:0 26px;border-radius:16px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);font-family:'Golos Text';font-weight:800;font-size:16px" data-i18n="heroCta2">Смотреть примеры</a>
+          <a href="#examples" class="lk-mag cta-hover" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;height:56px;padding:0 26px;border-radius:16px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);font-family:'Golos Text';font-weight:800;font-size:16px" data-i18n="heroCta2">Смотреть примеры</a>
         </div>
-        <div style="display:flex;gap:26px;margin-top:36px;flex-wrap:wrap;animation:lk-up .6s .24s both">
-          <div><div style="font-family:'Unbounded';font-weight:800;font-size:26px;letter-spacing:-.03em">5 000 ₸</div><div style="font-size:12.5px;color:var(--muted);font-weight:600" data-i18n="st1">один раз, без подписки</div></div>
+        <div style="display:flex;align-items:stretch;gap:clamp(18px,2.4vw,30px);margin-top:38px;flex-wrap:wrap;animation:lk-up .6s .24s both">
+          <div style="min-width:0;flex:1 1 130px">
+            <div style="font-family:'Unbounded';font-weight:800;font-size:clamp(22px,2.6vw,27px);letter-spacing:-.03em;line-height:1">5 000 ₸</div>
+            <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;line-height:1.35" data-i18n="st1">разовый платёж, без подписок</div>
+          </div>
           <div style="width:1px;background:var(--line)"></div>
-          <div><div style="font-family:'Unbounded';font-weight:800;font-size:26px;letter-spacing:-.03em">~7 <span data-i18n="minWord">мин</span></div><div style="font-size:12.5px;color:var(--muted);font-weight:600" data-i18n="st2">от старта до ссылки</div></div>
+          <div style="min-width:0;flex:1 1 130px">
+            <div style="font-family:'Unbounded';font-weight:800;font-size:clamp(22px,2.6vw,27px);letter-spacing:-.03em;line-height:1">~7 <span data-i18n="minWord">мин</span></div>
+            <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;line-height:1.35" data-i18n="st2">от чата до готовой ссылки</div>
+          </div>
           <div style="width:1px;background:var(--line)"></div>
-          <div><div style="font-family:'Unbounded';font-weight:800;font-size:26px;letter-spacing:-.03em">0</div><div style="font-size:12.5px;color:var(--muted);font-weight:600" data-i18n="st3">кода и дизайнеров</div></div>
+          <div style="min-width:0;flex:1 1 130px">
+            <div style="font-family:'Unbounded';font-weight:800;font-size:clamp(22px,2.6vw,27px);letter-spacing:-.03em;line-height:1">0</div>
+            <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;line-height:1.35" data-i18n="st3">строчек кода и дизайнеров</div>
+          </div>
         </div>
       </div>
 
       <!-- HERO VISUAL: chat -> phone -->
       <div class="hero-visual" style="position:relative;display:flex;justify-content:center;align-items:center;min-height:440px">
-        <div style="position:absolute;top:6%;left:-2%;z-index:3;--r:-5deg;animation:lk-float 6s ease-in-out infinite;background:var(--surface);border:1px solid var(--line2);border-radius:18px 18px 18px 6px;padding:12px 15px;box-shadow:var(--shadow);max-width:210px;font-size:13.5px;font-weight:600;line-height:1.4" data-i18n="bubble1">Я мастер маникюра в Астане 💅</div>
-        <div style="position:absolute;bottom:9%;right:-1%;z-index:3;--r:6deg;animation:lk-float 6.6s .6s ease-in-out infinite;background:var(--violet);color:#fff;border:1px solid transparent;border-radius:18px 18px 6px 18px;padding:12px 15px;box-shadow:0 16px 34px -12px var(--violet);max-width:190px;font-size:13.5px;font-weight:700;line-height:1.4" data-i18n="bubble2">Готово! Лови ссылку 🔥</div>
+        <div class="visual-reveal visual-message" style="position:absolute;top:6%;left:-2%;z-index:3;--r:-5deg;background:var(--surface);border:1px solid var(--line2);border-radius:18px 18px 18px 6px;padding:12px 15px;box-shadow:var(--shadow);max-width:210px;font-size:13.5px;font-weight:600;line-height:1.4" data-i18n="bubble1">Я мастер маникюра в Астане</div>
+        <div class="result-bubble visual-reveal visual-result" style="position:absolute;bottom:9%;right:-1%;z-index:3;--r:6deg;background:var(--violet);color:#fff;border:1px solid transparent;border-radius:18px 18px 6px 18px;padding:12px 15px;box-shadow:0 16px 34px -12px var(--violet);max-width:200px;font-size:13.5px;font-weight:700;line-height:1.4;display:flex;align-items:center;gap:8px"><span class="lk-ico bubble-spark" data-icon="sparkles" data-size="16" style="width:16px;height:16px"></span><span data-i18n="bubble2">Готово! Лови ссылку</span></div>
 
         <!-- phone -->
-        <div style="position:relative;z-index:2;width:248px;height:508px;border-radius:44px;background:linear-gradient(160deg,#26252e,#0d0c11);padding:11px;box-shadow:0 40px 80px -28px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);animation:lk-float 7.5s ease-in-out infinite">
+        <div class="visual-reveal visual-phone" style="position:relative;z-index:2;width:248px;height:508px;border-radius:44px;background:linear-gradient(160deg,#26252e,#0d0c11);padding:11px;box-shadow:0 40px 80px -28px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06)">
           <div style="position:absolute;top:22px;left:50%;transform:translateX(-50%);width:78px;height:20px;border-radius:12px;background:#0d0c11;z-index:4"></div>
           <div style="width:100%;height:100%;border-radius:34px;overflow:hidden;background:#fff;position:relative">
             <div style="height:150px;background:linear-gradient(140deg,var(--coral),#ff9166);position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:16px 16px 44px">
               <div style="color:#fff;font-family:'Unbounded';font-weight:700;font-size:19px;letter-spacing:-.02em">Aigul Beauty</div>
-              <div style="color:rgba(255,255,255,.9);font-size:11.5px;font-weight:600;margin-top:2px"><span data-i18n="demoTag">Ногтевой сервис</span> · Астана</div>
+              <div style="color:rgba(255,255,255,.9);font-size:11.5px;font-weight:600;margin-top:2px"><span data-i18n="demoTag">Ногтевой сервис</span> · <span data-i18n="demoCity">Астана</span></div>
             </div>
-            <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(150deg,#ffd9c9,#ffb59b);position:absolute;top:118px;left:16px;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:26px">💅</div>
             <div style="padding:26px 16px 12px;color:#16151A">
               <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#FF5A36;margin-bottom:8px" data-i18n="demoServices">Услуги и цены</div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-bottom:1px solid #f0ece5"><span style="font-weight:600" id="demo_s1">Маникюр + гель</span><span style="font-weight:800">8 000 ₸</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-bottom:1px solid #f0ece5"><span style="font-weight:600" id="demo_s2">Педикюр</span><span style="font-weight:800">10 000 ₸</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0"><span style="font-weight:600" id="demo_s3">Дизайн ногтей</span><span style="font-weight:800" id="demo_p3">от 2 000 ₸</span></div>
+              <div class="demo-row" style="font-size:12.5px;padding:8px 0;border-bottom:1px solid #f0ece5"><span style="font-weight:600" id="demo_s1">Маникюр + гель</span><span class="demo-price" style="font-weight:800">8 000 ₸</span></div>
+              <div class="demo-row" style="font-size:12.5px;padding:8px 0;border-bottom:1px solid #f0ece5"><span style="font-weight:600" id="demo_s2">Педикюр</span><span class="demo-price" style="font-weight:800">10 000 ₸</span></div>
+              <div class="demo-row" style="font-size:12.5px;padding:8px 0"><span style="font-weight:600" id="demo_s3">Дизайн ногтей</span><span class="demo-price" style="font-weight:800" id="demo_p3">от 2 000 ₸</span></div>
             </div>
-            <div style="position:absolute;left:12px;right:12px;bottom:12px;height:42px;border-radius:14px;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:800">WhatsApp</div>
+            <div style="position:absolute;left:12px;right:12px;bottom:12px;height:42px;border-radius:14px;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:800"><img src="/static/whatsapp-svgrepo-com.svg" alt="" aria-hidden="true" style="width:20px;height:20px;border-radius:5px"><span>WhatsApp</span></div>
           </div>
         </div>
-        <div style="position:absolute;top:44%;right:2%;z-index:1;--r:12deg;animation:lk-float 8s 1s ease-in-out infinite;background:var(--lime);color:#16151A;border-radius:14px;padding:8px 12px;font-weight:800;font-size:12px;box-shadow:var(--shadow);transform:rotate(12deg)">aigul.lendings.kz</div>
+        <div class="visual-reveal visual-domain" style="position:absolute;top:44%;right:2%;z-index:1;--r:12deg;background:var(--lime);color:#16151A;border-radius:14px;padding:8px 12px;font-weight:800;font-size:12px;box-shadow:var(--shadow);transform:rotate(12deg)">aigul.lendings.kz</div>
       </div>
     </section>
 
     <!-- MARQUEE of niches -->
-    <section style="padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;background:var(--bg2)">
+    <section class="niche-marquee" style="padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;background:var(--bg2)">
       <div style="display:flex;width:max-content;animation:lk-marq 32s linear infinite" id="marquee-container">
         <!-- populated by JS -->
       </div>
@@ -170,7 +233,7 @@
           <div style="font-family:'Unbounded';font-weight:800;font-size:42px;letter-spacing:-.04em">5 000 ₸</div>
           <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px"><span data-i18n="once">разово</span> · 100 <span data-i18n="credWord">кредитов</span></div>
           <div id="per-feat" style="display:grid;gap:10px;margin-bottom:24px"></div>
-          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag" style="display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;height:52px;border-radius:14px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font-weight:800;font-size:15px" data-i18n="prCta">Начать</a>
+          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag cta-hover" style="display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;height:52px;border-radius:14px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font-weight:800;font-size:15px" data-i18n="personalCta">Выбрать Personal</a>
         </div>
         <div class="lk-reveal lk-mag" style="position:relative;background:var(--ink);color:var(--bg);border:1px solid var(--ink);border-radius:26px;padding:30px;overflow:hidden" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
           <div style="position:absolute;top:16px;right:16px;background:var(--lime);color:#16151A;font-weight:800;font-size:11px;padding:5px 10px;border-radius:999px" data-i18n="popular">Хит</div>
@@ -179,7 +242,7 @@
           <div style="font-family:'Unbounded';font-weight:800;font-size:42px;letter-spacing:-.04em">10 000 ₸</div>
           <div style="font-size:12.5px;opacity:.7;margin-bottom:20px"><span data-i18n="once">разово</span> · 200 <span data-i18n="credWord">кредитов</span></div>
           <div id="bus-feat" style="display:grid;gap:10px;margin-bottom:24px"></div>
-          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag" style="display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-weight:800;font-size:15px" data-i18n="prCta">Начать</a>
+          <a href="{% if user %}/dashboard{% else %}/auth{% endif %}" class="lk-mag cta-hover" style="display:flex;align-items:center;justify-content:center;text-decoration:none;width:100%;height:52px;border-radius:14px;border:0;background:var(--coral);color:#fff;font-weight:800;font-size:15px" data-i18n="businessCta">Выбрать Business</a>
         </div>
       </div>
     </section>
@@ -189,7 +252,7 @@
       <div class="lk-reveal" style="position:relative;overflow:hidden;border-radius:30px;background:linear-gradient(135deg,var(--coral),var(--violet));padding:clamp(34px,5vw,60px);text-align:center;color:#fff">
         <h2 style="font-family:'Unbounded';font-weight:800;font-size:clamp(26px,4.4vw,46px);letter-spacing:-.04em;line-height:1.02;margin:0 0 14px" data-i18n="ctaTitle">Твоя бизнес-ссылка уже сегодня</h2>
         <p style="font-size:16px;opacity:.94;max-width:460px;margin:0 auto 26px" data-i18n="ctaSub">5 000 ₸, 7 минут и ноль головной боли. Без дизайнеров и кода.</p>
-        <a href="{% if user %}/dashboard/create{% else %}/auth{% endif %}" class="lk-mag" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;height:56px;padding:0 34px;border-radius:16px;border:0;background:#fff;color:var(--coral);font-weight:800;font-size:16px"><span data-i18n="heroCta">Создать сайт</span>&nbsp;→</a>
+        <a href="{% if user %}/dashboard/create{% else %}/auth{% endif %}" class="lk-mag cta-hover cta-soft-blink" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;height:56px;padding:0 34px;border-radius:16px;border:0;background:#fff;color:var(--coral);font-weight:800;font-size:16px"><span data-i18n="heroCta">Создать сайт</span>&nbsp;→</a>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-items:center;padding-top:34px;color:var(--muted);font-size:13px;font-weight:600">
         <span style="font-family:'Unbounded';font-weight:800;color:var(--ink)">lendings<span style="color:var(--coral)">.kz</span></span>
@@ -200,117 +263,195 @@
 </div>
 
 <script>
+// ── Lucide icon set (single library, 24×24, stroke 2, round caps) ──
+const IC = {
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>',
+  scissors:'<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>',
+  handHeart:'<path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/>',
+  bookOpen:'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  dumbbell:'<path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/>',
+  coffee:'<path d="M10 2v2M14 2v2M6 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/>',
+  wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  house:'<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  brush:'<path d="m14.622 17.897-10.68-2.913"/><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 9.354a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"/><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  message:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  pencil:'<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>'
+};
+function svg(name, size, sw){size=size||24;sw=sw||2;return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${IC[name]||''}</svg>`;}
+function hydrateIcons(root){(root||document).querySelectorAll('.lk-ico[data-icon]').forEach(el=>{if(el.firstElementChild)return;el.innerHTML=svg(el.dataset.icon, +el.dataset.size||18, +el.dataset.sw||2);});}
+// shared icon order for niches (10) and examples (3)
+const NICHE_IC = ['sparkles','scissors','handHeart','bookOpen','dumbbell','coffee','wrench','house','brush','camera'];
+const STEP_IC = ['message','sparkles','wallet','pencil'];
+const EX_IC = ['sparkles','scissors','bookOpen'];
+function bindHeroLabelHover() {
+  const labels = [
+    '.visual-message', '.result-bubble', '.visual-domain'
+  ];
+  labels.forEach(selector => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.addEventListener('pointerenter', () => {
+      const tilt = (Math.random() * 2.4 - 1.2).toFixed(2);
+      const x = (Math.random() * 2 - 1).toFixed(1);
+      const y = (Math.random() * 2 - 1).toFixed(1);
+      element.style.setProperty('--hover-tilt', `${tilt}deg`);
+      element.style.setProperty('--hover-x', `${x}px`);
+      element.style.setProperty('--hover-y', `${y}px`);
+      element.classList.add('hero-label-hover');
+    });
+    element.addEventListener('pointerleave', () => element.classList.remove('hero-label-hover'));
+  });
+}
+const MARQUEE_STORAGE_KEY = 'lk_marquee_position';
+const MARQUEE_DURATION_SECONDS = 32;
+let marqueePosition = 0;
+let marqueeStartedAt = 0;
+let marqueeSyncTimer = null;
+
 const DICT = {
   ru: {
     langLabel:"RU", lHow:"Как работает", lExamples:"Примеры", lPricing:"Тарифы",
-    heroBadge:"Готовая ссылка сегодня", heroA:"Твой сайт", heroB:"дешевле", heroC:"обеда —", heroD:"за 7 минут",
-    heroSub:"Отвечаешь на пару вопросов в чате — ИИ собирает страницу-визитку и выдаёт ссылку для Instagram, WhatsApp и 2GIS.",
-    heroCta:"Создать сайт", heroCta2:"Смотреть примеры",
-    st1:"один раз, без подписки", st2:"от старта до ссылки", st3:"кода и дизайнеров", minWord:"мин",
-    bubble1:"Я мастер маникюра в Астане 💅", bubble2:"Готово! Лови ссылку 🔥",
+    heroA:"Твой сайт", heroB:"дешевле обеда", heroC:"и готов", heroD:"за 7 минут",
+    heroSub:"Ответь на несколько вопросов в чате, остальное сделает ИИ. Ты получишь готовую страницу и ссылку для Instagram, WhatsApp и 2GIS.",
+    headerCta:"Начать", heroCta:"Создать сайт", heroCta2:"Смотреть примеры", personalCta:"Выбрать Personal", businessCta:"Выбрать Business",
+    st1:"разовый платёж, без подписок", st2:"от чата до готовой ссылки", st3:"строчек кода и дизайнеров", minWord:"мин",
+    bubble1:"Я мастер маникюра в Астане", bubble2:"Готово! Лови ссылку",
     demoTag:"Ногтевой сервис", demoServices:"Услуги и цены",
     howKicker:"Как это работает", howTitle:"От сообщения в чате до живого сайта",
     steps:[
-      {n:"01",t:"Отвечаешь в чате",d:"ИИ спросит про бизнес, услуги и цены. Просто пиши как другу."},
-      {n:"02",t:"ИИ собирает сайт",d:"Через минуту готова страница под твою нишу — с фото, ценами и кнопками."},
-      {n:"03",t:"Оплачиваешь 5 000 ₸",d:"Разово, без подписок. Получаешь ссылку вида name.lendings.kz."},
+      {n:"01",t:"Отвечаешь в чате",d:"ИИ спросит про твой бизнес, услуги и цены. Просто пиши как другу."},
+      {n:"02",t:"ИИ собирает сайт",d:"Через минуту готова страница под твою нишу: с фото, ценами и кнопками."},
+      {n:"03",t:"Платишь 5 000 ₸",d:"Один раз, без подписок. Получаешь ссылку вида name.lendings.kz."},
       {n:"04",t:"Правишь через чат",d:"«Поменяй цену», «добавь фото» — ИИ обновляет сайт за кредиты."}
     ],
     exKicker:"Примеры", exTitle:"Такие сайты уже работают", exCta:"Сделать свой",
     examples:[
-      {e:"💅",name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Мастер маникюра",note:"Записи из Instagram выросли вдвое за месяц.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
-      {e:"💈",name:"Arman Barber",url:"arman.lendings.kz",role:"Барбершоп",note:"Клиенты бронируют прямо через WhatsApp-кнопку.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
-      {e:"📚",name:"Dana Tutor",url:"dana.lendings.kz",role:"Репетитор IELTS",note:"Одна ссылка вместо длинного описания в шапке.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
+      {name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Мастер маникюра",note:"Записи из Instagram выросли вдвое за месяц.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
+      {name:"Arman Barber",url:"arman.lendings.kz",role:"Барбершоп",note:"Клиенты бронируют прямо через кнопку WhatsApp.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
+      {name:"Dana Tutor",url:"dana.lendings.kz",role:"Репетитор IELTS",note:"Одна ссылка вместо длинного описания в шапке.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
     ],
     prKicker:"Тарифы", prTitle:"Плати за результат, не за подписку",
     perFor:"Мастерам и частным специалистам", busFor:"Салонам, кафе и студиям",
-    once:"разово", credWord:"кредитов", popular:"Хит", prCta:"Начать",
+    once:"разово", credWord:"кредитов", popular:"Хит",
     perFeat:["Сайт-визитка через чат","Фото, услуги и цены","Кнопка WhatsApp","Instagram и Telegram","Поддомен name.lendings.kz"],
-    busFeat:["Всё из Personal","Адрес на карте + Kaspi","Форма заявок","Счётчик посещений","200 кредитов на правки"],
-    ctaTitle:"Твоя бизнес-ссылка уже сегодня", ctaSub:"5 000 ₸, 7 минут и ноль головной боли. Без дизайнеров и кода.",
+    busFeat:["Всё из Personal","Адрес на карте и Kaspi","Форма заявок","Счётчик посещений","200 кредитов на правки"],
+    ctaTitle:"Твоя бизнес-ссылка уже сегодня", ctaSub:"Ответь на пару вопросов и получи готовый сайт со ссылкой. Без дизайнеров, кода и подписок.",
     footTerms:"Правила",
-    niches:[{e:"💅",t:"Маникюр"},{e:"💈",t:"Барберы"},{e:"💆",t:"Массаж"},{e:"📚",t:"Репетиторы"},{e:"🏋️",t:"Тренеры"},{e:"☕",t:"Кафе"},{e:"🔧",t:"Ремонт"},{e:"🏠",t:"Аренда"},{e:"💄",t:"Визаж"},{e:"📸",t:"Фотографы"}]
+    niches:["Маникюр","Барберы","Массаж","Репетиторы","Тренеры","Кафе","Ремонт","Аренда","Визаж","Фотографы"]
   },
   kz: {
     langLabel:"KZ", lHow:"Қалай жұмыс істейді", lExamples:"Мысалдар", lPricing:"Тарифтер",
-    heroBadge:"Дайын сілтеме бүгін", heroA:"Сайтың", heroB:"түскі астан", heroC:"арзан —", heroD:"7 минутта",
-    heroSub:"Чатта бірнеше сұраққа жауап бересің — ЖИ бизнес-бетті жинап, Instagram, WhatsApp және 2GIS үшін сілтеме береді.",
-    heroCta:"Сайт жасау", heroCta2:"Мысалдарды көру",
-    st1:"бір рет, жазылымсыз", st2:"бастаудан сілтемеге", st3:"кодсыз, дизайнерсіз", minWord:"мин",
-    bubble1:"Мен Астанадағы маникюр шеберімін 💅", bubble2:"Дайын! Сілтемеңді ал 🔥",
-    demoTag:"Тырнақ сервисі", demoServices:"Қызметтер мен бағалар",
+    heroA:"Сайтың", heroB:"түскі астан арзан", heroC:"әрі дайын", heroD:"7 минутта",
+    heroSub:"Чатта бірнеше сұраққа жауап бер, қалғанын ЖИ жасайды. Дайын бет пен Instagram, WhatsApp, 2GIS сілтемесін аласың.",
+    headerCta:"Бастау", heroCta:"Сайт жасау", heroCta2:"Мысалдарды көру", personalCta:"Personal таңдау", businessCta:"Business таңдау",
+    st1:"бір реттік төлем, жазылымсыз", st2:"чаттан дайын сілтемеге дейін", st3:"жол код пен дизайнер", minWord:"мин",
+    bubble1:"Мен Астанадағы маникюр шеберімін", bubble2:"Дайын! Сілтемеңді ал",
+    demoTag:"Тырнақ сервисі", demoCity:"Астана", demoServices:"Қызметтер мен бағалар",
     howKicker:"Бұл қалай жұмыс істейді", howTitle:"Чаттағы хабарламадан тірі сайтқа дейін",
     steps:[
-      {n:"01",t:"Чатта жауап бересің",d:"ЖИ бизнес, қызмет пен баға туралы сұрайды. Досыңа жазғандай жаз."},
-      {n:"02",t:"ЖИ сайтты жинайды",d:"Бір минутта салаңа сай бет дайын — фото, баға мен батырмалармен."},
+      {n:"01",t:"Чатта жауап бересің",d:"ЖИ бизнесің, қызметің мен бағаң туралы сұрайды. Досыңа жазғандай жаз."},
+      {n:"02",t:"ЖИ сайтты жинайды",d:"Бір минутта салаңа сай бет дайын: фото, баға мен батырмалармен."},
       {n:"03",t:"5 000 ₸ төлейсің",d:"Бір рет, жазылымсыз. name.lendings.kz түріндегі сілтеме аласың."},
       {n:"04",t:"Чат арқылы түзетесің",d:"«Бағаны өзгерт», «фото қос» — ЖИ сайтты кредитке жаңартады."}
     ],
     exKicker:"Мысалдар", exTitle:"Мұндай сайттар жұмыс істеп тұр", exCta:"Өзіңдікін жаса",
     examples:[
-      {e:"💅",name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Маникюр шебері",note:"Instagram-нан жазылу айына екі есе өсті.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
-      {e:"💈",name:"Arman Barber",url:"arman.lendings.kz",role:"Барбершоп",note:"Клиенттер WhatsApp батырмасымен брондайды.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
-      {e:"📚",name:"Dana Tutor",url:"dana.lendings.kz",role:"IELTS репетиторы",note:"Ұзын сипаттаманың орнына бір сілтеме.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
+      {name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Маникюр шебері",note:"Instagram-нан жазылу айына екі есе өсті.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
+      {name:"Arman Barber",url:"arman.lendings.kz",role:"Барбершоп",note:"Клиенттер WhatsApp батырмасымен брондайды.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
+      {name:"Dana Tutor",url:"dana.lendings.kz",role:"IELTS репетиторы",note:"Ұзын сипаттаманың орнына бір сілтеме.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
     ],
     prKicker:"Тарифтер", prTitle:"Нәтиже үшін төле, жазылым үшін емес",
     perFor:"Шеберлер мен жеке мамандарға", busFor:"Салон, кафе, студияларға",
-    once:"бір рет", credWord:"кредит", popular:"Хит", prCta:"Бастау",
+    once:"бір рет", credWord:"кредит", popular:"Хит",
     perFeat:["Чат арқылы сайт","Фото, қызмет, баға","WhatsApp батырмасы","Instagram және Telegram","name.lendings.kz субдомені"],
-    busFeat:["Personal-дың бәрі","Картадағы мекенжай + Kaspi","Өтінім формасы","Кіру санағышы","Түзетуге 200 кредит"],
-    ctaTitle:"Бизнес-сілтемең дәл бүгін", ctaSub:"5 000 ₸, 7 минут және нөл бас ауру. Дизайнерсіз, кодсыз.",
+    busFeat:["Personal-дың бәрі","Картадағы мекенжай және Kaspi","Өтінім формасы","Кіру санағышы","Түзетуге 200 кредит"],
+    ctaTitle:"Бизнес-сілтемең дәл бүгін", ctaSub:"Бірнеше сұраққа жауап бер де, дайын сайт пен сілтеме ал. Дизайнерсіз, кодсыз, жазылымсыз.",
     footTerms:"Ережелер",
-    niches:[{e:"💅",t:"Маникюр"},{e:"💈",t:"Барбер"},{e:"💆",t:"Массаж"},{e:"📚",t:"Репетитор"},{e:"🏋️",t:"Жаттықтырушы"},{e:"☕",t:"Кафе"},{e:"🔧",t:"Жөндеу"},{e:"🏠",t:"Жалдау"},{e:"💄",t:"Визаж"},{e:"📸",t:"Фотограф"}]
+    niches:["Маникюр","Барбер","Массаж","Репетитор","Жаттықтырушы","Кафе","Жөндеу","Жалдау","Визаж","Фотограф"]
   },
   en: {
     langLabel:"EN", lHow:"How it works", lExamples:"Examples", lPricing:"Pricing",
-    heroBadge:"Your link, ready today", heroA:"A site", heroB:"cheaper", heroC:"than lunch —", heroD:"in 7 minutes",
-    heroSub:"Answer a few questions in chat — AI builds your business page and hands you a link for Instagram, WhatsApp and 2GIS.",
-    heroCta:"Create my site", heroCta2:"See examples",
-    st1:"once, no subscription", st2:"from start to link", st3:"code or designers", minWord:"min",
-    bubble1:"I'm a nail artist in Astana 💅", bubble2:"Done! Here's your link 🔥",
-    demoTag:"Nail studio", demoServices:"Services & prices",
+    heroA:"Your site", heroB:"costs less than lunch", heroC:"and goes live", heroD:"in 7 minutes",
+    heroSub:"Answer a few questions in chat and let AI do the rest. You get a ready-made page and a link for Instagram, WhatsApp and 2GIS.",
+    headerCta:"Get started", heroCta:"Create my site", heroCta2:"See examples", personalCta:"Choose Personal", businessCta:"Choose Business",
+    st1:"one payment, no subscription", st2:"from chat to a live link", st3:"lines of code or designers", minWord:"min",
+    bubble1:"I'm a nail artist in Astana", bubble2:"Done! Here's your link",
+    demoTag:"Nail studio", demoCity:"Astana", demoServices:"Services & prices",
     howKicker:"How it works", howTitle:"From a chat message to a live website",
     steps:[
-      {n:"01",t:"Answer in chat",d:"AI asks about your business, services and prices. Just type like to a friend."},
-      {n:"02",t:"AI builds the site",d:"In a minute your page is ready — with photos, prices and buttons."},
+      {n:"01",t:"Answer in chat",d:"AI asks about your business, services and prices. Just type like you would to a friend."},
+      {n:"02",t:"AI builds the site",d:"In a minute your page is ready for your niche: photos, prices and buttons."},
       {n:"03",t:"Pay 5 000 ₸",d:"One-time, no subscription. You get a link like name.lendings.kz."},
       {n:"04",t:"Edit via chat",d:"“Change the price”, “add a photo” — AI updates the site for credits."}
     ],
     exKicker:"Examples", exTitle:"Sites like these already work", exCta:"Make yours",
     examples:[
-      {e:"💅",name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Nail artist",note:"Bookings from Instagram doubled in a month.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
-      {e:"💈",name:"Arman Barber",url:"arman.lendings.kz",role:"Barbershop",note:"Clients book right through the WhatsApp button.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
-      {e:"📚",name:"Dana Tutor",url:"dana.lendings.kz",role:"IELTS tutor",note:"One link instead of a long bio in the header.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
+      {name:"Aigul Beauty",url:"aigul.lendings.kz",role:"Nail artist",note:"Bookings from Instagram doubled in a month.",bg:"linear-gradient(140deg,#FF5A36,#ff9166)"},
+      {name:"Arman Barber",url:"arman.lendings.kz",role:"Barbershop",note:"Clients book right through the WhatsApp button.",bg:"linear-gradient(140deg,#6D4AFF,#a48cff)"},
+      {name:"Dana Tutor",url:"dana.lendings.kz",role:"IELTS tutor",note:"One link instead of a long bio in the header.",bg:"linear-gradient(140deg,#16151A,#3a3846)"}
     ],
     prKicker:"Pricing", prTitle:"Pay for the result, not a subscription",
-    perFor:"For solo pros and masters", busFor:"For salons, cafes and studios",
-    once:"one-time", credWord:"credits", popular:"Popular", prCta:"Start",
+    perFor:"For solo pros and specialists", busFor:"For salons, cafes and studios",
+    once:"one-time", credWord:"credits", popular:"Popular",
     perFeat:["Site built via chat","Photos, services & prices","WhatsApp button","Instagram & Telegram","name.lendings.kz subdomain"],
-    busFeat:["Everything in Personal","Map address + Kaspi","Lead form","Visit counter","200 edit credits"],
-    ctaTitle:"Your business link, today", ctaSub:"5 000 ₸, 7 minutes and zero headache. No designers, no code.",
+    busFeat:["Everything in Personal","Map address and Kaspi","Lead form","Visit counter","200 edit credits"],
+    ctaTitle:"Your business link, ready today", ctaSub:"Answer a few questions and get a finished site with a link. No designers, no code, no subscriptions.",
     footTerms:"Terms",
-    niches:[{e:"💅",t:"Nails"},{e:"💈",t:"Barbers"},{e:"💆",t:"Massage"},{e:"📚",t:"Tutors"},{e:"🏋️",t:"Coaches"},{e:"☕",t:"Cafes"},{e:"🔧",t:"Repair"},{e:"🏠",t:"Rentals"},{e:"💄",t:"Makeup"},{e:"📸",t:"Photographers"}]
+    niches:["Nails","Barbers","Massage","Tutors","Coaches","Cafes","Repair","Rentals","Makeup","Photographers"]
   }
 };
 
 function renderMarquee(dict) {
   const c = document.getElementById('marquee-container');
+  // On language change, update labels in place so the scroll animation never resets.
+  const labels = c.querySelectorAll('.mq-label');
+  if (labels.length) {
+    const n = dict.niches.length;
+    labels.forEach((el, i) => { el.textContent = dict.niches[i % n]; });
+    return;
+  }
   let html = '';
   for(let i=0; i<2; i++){
-    html += `<div style="display:flex;gap:14px;padding-right:14px" ${i===1?'aria-hidden="true"':''}>`;
-    dict.niches.forEach(n => {
-      html += `<span style="display:inline-flex;align-items:center;gap:9px;font-family:'Unbounded';font-weight:600;font-size:clamp(18px,2.4vw,30px);letter-spacing:-.02em;color:var(--ink);opacity:.92;white-space:nowrap">${n.e} ${n.t} <span style="color:var(--coral)">✦</span></span>`;
+    html += `<div style="display:flex;gap:0;padding-right:0" ${i===1?'aria-hidden="true"':''}>`;
+    dict.niches.forEach((t, idx) => {
+      html += `<span style="display:inline-flex;align-items:center;gap:12px;padding:0 26px;font-family:'Unbounded';font-weight:600;font-size:clamp(17px,2.2vw,27px);letter-spacing:-.02em;color:var(--ink);opacity:.88;white-space:nowrap"><span style="display:inline-flex;color:var(--coral)">${svg(NICHE_IC[idx], 26, 2.1)}</span><span class="mq-label">${t}</span><span style="width:5px;height:5px;border-radius:50%;background:var(--coral);opacity:.55;margin-left:14px"></span></span>`;
     });
     html += `</div>`;
   }
   c.innerHTML = html;
+  let position = Number.parseFloat(localStorage.getItem(MARQUEE_STORAGE_KEY));
+  if (!Number.isFinite(position) || position < 0 || position >= 1) {
+    position = Math.random();
+  }
+  marqueePosition = position;
+  marqueeStartedAt = performance.now();
+  c.style.animationDelay = `${-position * MARQUEE_DURATION_SECONDS}s`;
+  if (!marqueeSyncTimer) {
+    const savePosition = () => {
+      const elapsed = (performance.now() - marqueeStartedAt) / 1000;
+      marqueePosition = (marqueePosition + elapsed / MARQUEE_DURATION_SECONDS) % 1;
+      marqueeStartedAt = performance.now();
+      localStorage.setItem(MARQUEE_STORAGE_KEY, String(marqueePosition));
+    };
+    marqueeSyncTimer = window.setInterval(savePosition, 500);
+    window.addEventListener('pagehide', savePosition);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') savePosition();
+    });
+  }
 }
 
 function renderSteps(dict) {
   const c = document.getElementById('steps-container');
-  c.innerHTML = dict.steps.map(s => `
-    <div class="lk-reveal lk-mag" style="background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-      <div style="font-family:'Unbounded';font-weight:800;font-size:15px;width:44px;height:44px;border-radius:13px;background:var(--bg);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--coral);margin-bottom:16px">${s.n}</div>
+  c.innerHTML = dict.steps.map((s, idx) => `
+    <div class="lk-reveal lk-mag lk-step" style="background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)" onmouseenter="this.style.transform='translateY(-5px)'" onmouseleave="this.style.transform='translateY(0)'">
+      <div class="lk-step-ic" style="width:46px;height:46px;border-radius:14px;background:var(--bg);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--coral);margin-bottom:16px">${svg(STEP_IC[idx], 22)}</div>
+      <div style="font-family:'Unbounded';font-weight:800;font-size:11.5px;letter-spacing:.16em;color:var(--muted);margin-bottom:7px">${s.n}</div>
       <div style="font-family:'Unbounded';font-weight:600;font-size:17px;letter-spacing:-.02em;margin-bottom:8px">${s.t}</div>
       <div style="font-size:14px;line-height:1.55;color:var(--muted)">${s.d}</div>
     </div>
@@ -319,20 +460,21 @@ function renderSteps(dict) {
 
 function renderExamples(dict) {
   const c = document.getElementById('examples-container');
-  c.innerHTML = dict.examples.map(x => `
-    <div class="lk-reveal lk-mag" style="border-radius:22px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--surface)" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-      <div style="height:132px;background:${x.bg};position:relative;display:flex;align-items:flex-end;padding:14px">
-        <span style="position:absolute;top:12px;right:12px;font-size:32px">${x.e}</span>
-        <div style="color:#fff"><div style="font-family:'Unbounded';font-weight:700;font-size:17px;letter-spacing:-.02em">${x.name}</div><div style="font-size:11px;font-weight:700;opacity:.92">${x.url}</div></div>
+  c.innerHTML = dict.examples.map((x, idx) => `
+    <div class="lk-reveal lk-mag lk-ex" style="border-radius:22px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--surface)" onmouseenter="this.style.transform='translateY(-5px)'" onmouseleave="this.style.transform='translateY(0)'">
+      <div style="height:132px;background:${x.bg};position:relative;display:flex;align-items:flex-end;padding:16px">
+        <span class="lk-ex-ic" style="position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;color:#fff">${svg(EX_IC[idx], 22)}</span>
+        <div style="color:#fff"><div style="font-family:'Unbounded';font-weight:700;font-size:17px;letter-spacing:-.02em">${x.name}</div><div style="font-size:11.5px;font-weight:700;opacity:.92;margin-top:2px">${x.url}</div></div>
       </div>
-      <div style="padding:16px"><div style="font-size:14px;font-weight:700;margin-bottom:4px">${x.role}</div><div style="font-size:13px;color:var(--muted);line-height:1.5">${x.note}</div></div>
+      <div style="padding:16px 16px 18px"><div style="font-size:14px;font-weight:700;margin-bottom:4px">${x.role}</div><div style="font-size:13px;color:var(--muted);line-height:1.5">${x.note}</div></div>
     </div>
   `).join('');
 }
 
 function renderFeatures(dict) {
-  document.getElementById('per-feat').innerHTML = dict.perFeat.map(f => `<div style="display:flex;gap:10px;font-size:14px;align-items:flex-start"><span style="color:var(--coral);font-weight:800">✓</span><span>${f}</span></div>`).join('');
-  document.getElementById('bus-feat').innerHTML = dict.busFeat.map(f => `<div style="display:flex;gap:10px;font-size:14px;align-items:flex-start"><span style="color:var(--lime);font-weight:800">✓</span><span>${f}</span></div>`).join('');
+  const row = (f, col) => `<div style="display:flex;gap:10px;font-size:14px;align-items:flex-start;line-height:1.4"><span style="color:${col};margin-top:1px;flex-shrink:0">${svg('check', 17, 2.6)}</span><span>${f}</span></div>`;
+  document.getElementById('per-feat').innerHTML = dict.perFeat.map(f => row(f, 'var(--coral)')).join('');
+  document.getElementById('bus-feat').innerHTML = dict.busFeat.map(f => row(f, 'var(--lime)')).join('');
 }
 
 function renderPhoneDemo(dict) {
@@ -357,6 +499,7 @@ function renderPhoneDemo(dict) {
 
 function setLang(lang){
   const dict = DICT[lang];
+  document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = dict.langLabel;
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
@@ -367,62 +510,45 @@ function setLang(lang){
   renderExamples(dict);
   renderFeatures(dict);
   renderPhoneDemo(dict);
+  hydrateIcons();
 }
 
-function cycleLang() {
+function setThemeIcon(theme){
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.innerHTML = svg(theme === 'dark' ? 'sun' : 'moon', 17, 2);
+}
+
+// Shared circular wave/reveal used for BOTH theme and language switching
+function reveal(e, update) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!document.startViewTransition || reduce) { update(); return; }
+  const x = e ? e.clientX : window.innerWidth - 60;
+  const y = e ? e.clientY : 40;
+  const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const transition = document.startViewTransition(update);
+  transition.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`] },
+      { duration: 450, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
+    );
+  });
+}
+
+function cycleLang(e) {
   const current = localStorage.getItem('lk_lang') || 'ru';
   const order = ['ru', 'kz', 'en'];
   const next = order[(order.indexOf(current) + 1) % 3];
-  
-  if (!document.startViewTransition) {
-    localStorage.setItem('lk_lang', next);
-    setLang(next);
-    return;
-  }
-  
-  document.startViewTransition(() => {
-    localStorage.setItem('lk_lang', next);
-    setLang(next);
-  });
+  reveal(e, () => { localStorage.setItem('lk_lang', next); setLang(next); });
 }
 
 function toggleTheme(e) {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'dark' ? 'light' : 'dark';
-  
-  if (!document.startViewTransition || !e) {
+  reveal(e, () => {
     document.documentElement.setAttribute('data-theme', next);
     document.documentElement.className = next === 'dark' ? 'lk-root dark' : 'lk-root';
     localStorage.setItem('lk_theme', next);
-    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
-    return;
-  }
-  
-  const x = e.clientX;
-  const y = e.clientY;
-  const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-  
-  const transition = document.startViewTransition(() => {
-    document.documentElement.classList.add('no-transitions');
-    document.documentElement.setAttribute('data-theme', next);
-    document.documentElement.className = next === 'dark' ? 'lk-root dark' : 'lk-root';
-    localStorage.setItem('lk_theme', next);
-    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
-  });
-  
-  transition.ready.then(() => {
-    const clipPath = [
-      `circle(0px at ${x}px ${y}px)`,
-      `circle(${endRadius}px at ${x}px ${y}px)`
-    ];
-    document.documentElement.animate(
-      { clipPath: clipPath },
-      { duration: 450, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
-    );
-  });
-  
-  transition.finished.finally(() => {
-    document.documentElement.classList.remove('no-transitions');
+    setThemeIcon(next);
   });
 }
 
@@ -431,7 +557,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const lang = localStorage.getItem('lk_lang') || 'ru';
   setLang(lang);
   const theme = localStorage.getItem('lk_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+  setThemeIcon(theme);
+  bindHeroLabelHover();
 });
 </script>
 </body>

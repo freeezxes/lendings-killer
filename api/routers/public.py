@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from core.templating import templates
 
 router = APIRouter(tags=["public"])
 
 @router.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
-    user = getattr(request.state, "user", None)
-    if user:
-        return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse(request, "landing.html", {"error": "", "user": user})
+        user = getattr(request.state, "user", None)
+        return templates.TemplateResponse(request, "landing.html", {"error": "", "user": user})
 
 @router.get("/terms", response_class=HTMLResponse)
 async def terms_page(request: Request):

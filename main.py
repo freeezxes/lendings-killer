@@ -464,9 +464,9 @@ def _get_or_create_local_guest() -> dict:
                    promo_credits=MAX(COALESCE(promo_credits,0), 1000),
                    updated_at=datetime('now')
                WHERE id=?""",
-            (user.id,),
+            (user["id"],),
         )
-    return db.get_user_by_id(user.id) or user
+    return db.get_user_by_id(user["id"]) or user
 
 
 def _auth_context(request: Request, error: str | None = None, active_tab: str | None = None) -> dict:
@@ -1079,8 +1079,6 @@ async def create_page(request: Request):
     if not _require_auth(request):
         return RedirectResponse("/auth", status_code=302)
     return RedirectResponse("/dashboard/create", status_code=302)
-
-
 
 
 
