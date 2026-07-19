@@ -28,8 +28,11 @@
   .dashboard-control{height:38px;min-width:38px;border:1px solid var(--line2);border-radius:12px;background:var(--bg2);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-family:'Golos Text';font-size:12px;font-weight:800;letter-spacing:.04em;cursor:pointer}
   .dashboard-control:hover{transform:translateY(-2px);box-shadow:0 10px 22px -14px var(--coral)}
   .dashboard-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line2);border-radius:13px;background:var(--surface)}
-  .dashboard-seg .dashboard-control{height:34px;min-width:38px;border:0;border-radius:10px;background:transparent}
-  .dashboard-seg .dashboard-control:hover{background:color-mix(in oklab,var(--ink) 6%,transparent);box-shadow:none;transform:none}
+  .dashboard-seg .dashboard-control{height:34px;border:0;border-radius:10px;background:transparent;color:var(--muted);transition:background .25s,color .25s,transform .25s}
+  .dashboard-seg .dashboard-control:hover{background:color-mix(in oklab,var(--ink) 6%,transparent);color:var(--ink);box-shadow:none;transform:none}
+  .dashboard-seg .dashboard-control:active{transform:scale(.94)}
+  .dashboard-seg #langBtn{width:44px;font-family:'Golos Text';font-weight:800;font-size:12px;letter-spacing:.06em}
+  .dashboard-seg #themeBtn{width:38px}
   .dashboard-seg .theme-toggle svg{transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
   .dashboard-seg .theme-toggle:hover svg{transform:rotate(18deg)}
   .dashboard-nav-link{position:relative;color:var(--muted);transition:background .25s,color .25s,transform .25s,box-shadow .25s!important}
@@ -156,9 +159,9 @@
         <button class="dashboard-rail-toggle" onclick="toggleDashboardNav()" aria-label="Открыть навигацию" aria-expanded="false"><span class="dashboard-menu-icon" aria-hidden="true"></span></button>
         <a href="/" class="lk-mag" style="font-family:'Unbounded';font-weight:800;font-size:18px;letter-spacing:-.03em;color:var(--ink);text-decoration:none">lendings<span style="color:var(--coral)">.kz</span></a>
         <div class="dashboard-seg">
-          <button id="langBtn" data-lang-control onclick="cycleLang(event)" class="lk-mag dashboard-control" aria-label="Change language" title="Language">RU</button>
+          <button id="langBtn" data-lang-control onclick="cycleLang(event)" class="dashboard-control" aria-label="Change language" title="Language">RU</button>
           <span style="width:1px;height:18px;background:var(--line2)"></span>
-          <button id="themeBtn" data-theme-control onclick="toggleTheme(event)" class="lk-mag dashboard-control theme-toggle" aria-label="Toggle theme" title="Theme"></button>
+          <button id="themeBtn" data-theme-control onclick="toggleTheme(event)" class="dashboard-control theme-toggle" aria-label="Toggle theme" title="Theme"></button>
         </div>
       </div>
       <nav style="display:grid;gap:4px;margin-top:6px">
@@ -571,8 +574,8 @@
   function setThemeIcon(theme) {
     document.querySelectorAll('.theme-toggle').forEach(btn => {
       btn.innerHTML = theme === 'dark'
-        ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>'
-        : '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15.2A9 9 0 0 1 8.8 3 9 9 0 1 0 21 15.2Z"/></svg>';
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
     });
   }
   function revealDashboard(e, update) {
