@@ -109,17 +109,27 @@ jobs:
           exit 1
       - name: Install deps, run migrations & restart service
         run: |
-          ssh -4 -p 22 -o ConnectTimeout=30 -o ConnectionAttempts=3 ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
-            set -e
-            cd /opt/lendings
-            # Ensure the app dir is owned by the service user so SQLite can write its
-            # journal/WAL files (otherwise the app crashes with "readonly database").
-            sudo chown -R deploy:deploy /opt/lendings
-            python3 -m venv venv 2>/dev/null || true
-            ./venv/bin/pip install -q -r requirements.txt
-            ./venv/bin/alembic upgrade head || true
-            sudo systemctl restart lendings
-          '
+          # The server rate-limits rapid SSH connections, so a connection opened
+          # right after rsync's can be dropped ("Connection closed"). Retry with
+          # backoff so a transient drop doesn't fail the deploy.
+          for attempt in 1 2 3 4 5; do
+            if ssh -4 -p 22 -o ConnectTimeout=30 -o ConnectionAttempts=3 ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
+              set -e
+              cd /opt/lendings
+              # Ensure the app dir is owned by the service user so SQLite can write its
+              # journal/WAL files (otherwise the app crashes with "readonly database").
+              sudo chown -R deploy:deploy /opt/lendings
+              python3 -m venv venv 2>/dev/null || true
+              ./venv/bin/pip install -q -r requirements.txt
+              ./venv/bin/alembic upgrade head || true
+              sudo systemctl restart lendings
+            '; then
+              exit 0
+            fi
+            echo "restart attempt $attempt failed; retrying"
+            sleep 20
+          done
+          exit 1
       - name: Verify deployment health
         run: |
           sleep 5
